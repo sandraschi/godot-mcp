@@ -1,0 +1,5 @@
+; Godot MCP Bridge Project
+[application]
+config/name="Godot MCP Bridge"
+config/features=PackedStringArray("4.0")
+run/main_scene="res://main_bridge.tscn"

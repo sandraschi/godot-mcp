@@ -3,6 +3,7 @@
 import logging
 from typing import Annotated
 
+from fastmcp import Context
 from pydantic import Field
 
 from godot_mcp.services.godot_bridge import get_bridge
@@ -13,7 +14,7 @@ _READ_ONLY = {"readonly": True}
 _MUTATING = {"mutating": True}
 
 
-async def godot_status() -> dict:
+async def godot_status(ctx: Context = None) -> dict:
     """Query the Godot engine for version, scene root node count, and current FPS.
 
     Calls the GDScript bridge over TCP to read live engine state.
@@ -51,6 +52,7 @@ async def godot_import_stl(
     position_x: Annotated[float, Field(description="X position in the scene.", default=0.0)] = 0.0,
     position_y: Annotated[float, Field(description="Y position in the scene.", default=0.0)] = 0.0,
     position_z: Annotated[float, Field(description="Z position in the scene.", default=0.0)] = 0.0,
+    ctx: Context = None,
 ) -> dict:
     """Import an STL mesh into the current Godot scene as a MeshInstance3D.
 
@@ -80,6 +82,7 @@ async def godot_load_velocity_field(
     name: Annotated[
         str, Field(description="Data node name for the velocity field.", default="VelocityField")
     ] = "VelocityField",
+    ctx: Context = None,
 ) -> dict:
     """Load a CSV velocity field dataset into the Godot scene.
 
@@ -102,6 +105,7 @@ async def godot_load_velocity_field(
 
 
 async def godot_spawn_particles(
+    ctx: Context = None,
     count: Annotated[int, Field(description="Number of GPU particles.", default=1000, ge=1, le=1000000)] = 1000,
     name: Annotated[
         str, Field(description="Node name for the GPUParticles3D system.", default="StreamlineParticles")
@@ -144,6 +148,7 @@ async def godot_spawn_particles(
 
 
 async def godot_animate_streamlines(
+    ctx: Context = None,
     velocity_field: Annotated[
         str, Field(description="Name of the velocity field data node.", default="VelocityField")
     ] = "VelocityField",
@@ -175,6 +180,7 @@ async def godot_animate_streamlines(
 
 
 async def godot_create_camera(
+    ctx: Context = None,
     name: Annotated[str, Field(description="Node name for the camera.", default="MCP_Camera")] = "MCP_Camera",
     position_x: Annotated[float, Field(description="Camera X position.", default=0.0)] = 0.0,
     position_y: Annotated[float, Field(description="Camera Y position.", default=5.0)] = 5.0,
@@ -213,6 +219,7 @@ async def godot_create_camera(
 
 
 async def godot_add_light(
+    ctx: Context = None,
     light_type: Annotated[
         str, Field(description="Light type: 'directional', 'ambient', or 'omni'.", default="directional")
     ] = "directional",
@@ -258,6 +265,7 @@ async def godot_set_material(
     roughness: Annotated[
         float, Field(description="PBR roughness (0 = mirror, 1 = matte).", default=0.5, ge=0.0, le=1.0)
     ] = 0.5,
+    ctx: Context = None,
 ) -> dict:
     """Assign a StandardMaterial3D (PBR) to a mesh node in the Godot scene.
 
@@ -279,6 +287,7 @@ async def godot_set_material(
 
 
 async def godot_export_web(
+    ctx: Context = None,
     output_path: Annotated[
         str,
         Field(
@@ -306,7 +315,7 @@ async def godot_export_web(
     return bridge.send("export_web", {"output_path": output_path})
 
 
-async def godot_read_scene_tree() -> dict:
+async def godot_read_scene_tree(ctx: Context = None) -> dict:
     """Read the full Godot scene tree as a nested JSON structure.
 
     Returns the root node with all children recursively, showing name, type, and path
@@ -331,6 +340,7 @@ async def godot_set_config(
     section: Annotated[str, Field(description="Config section name (e.g. 'application', 'rendering').")],
     key: Annotated[str, Field(description="Config key to set.")],
     value: Annotated[str, Field(description="Config value (string).")],
+    ctx: Context = None,
 ) -> dict:
     """Write a setting to the project.godot configuration file.
 
@@ -353,6 +363,7 @@ async def godot_set_config(
 
 
 async def godot_headless_verify(
+    ctx: Context = None,
     script: Annotated[
         str, Field(description="Path to a GDScript file to verify in headless mode.", default="res://dev/mcp_verify.gd")
     ] = "res://dev/mcp_verify.gd",

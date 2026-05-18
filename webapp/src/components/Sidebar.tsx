@@ -1,11 +1,14 @@
 import { motion } from "framer-motion";
 import {
 	Box,
-	FileText,
+	Code2,
 	HelpCircle,
 	LayoutDashboard,
+	LayoutGrid,
 	Logs,
+	MessageSquare,
 	Settings,
+	Wrench,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
@@ -13,6 +16,10 @@ const navItems = [
 	{ path: "/", label: "Dashboard", icon: LayoutDashboard },
 	{ path: "/models", label: "Models", icon: Box },
 	{ path: "/logs", label: "Logs", icon: Logs },
+	{ path: "/apps", label: "Apps Hub", icon: LayoutGrid },
+	{ path: "/tools", label: "Tools", icon: Wrench },
+	{ path: "/chat", label: "Chat", icon: MessageSquare },
+	{ path: "/api-docs", label: "API Docs", icon: Code2 },
 	{ path: "/settings", label: "Settings", icon: Settings },
 	{ path: "/help", label: "Help", icon: HelpCircle },
 ];

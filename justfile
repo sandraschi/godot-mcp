@@ -37,8 +37,25 @@ default:
 
 # ── Lifecycle ─────────────────────────────────────────────────────────────────
 
-# Synchronise all dependencies and dev extras
-bootstrap:
+# Install Godot 4.x engine if not present (headless + editor)
+install-godot version=4.4:
+    $dest = "$env:USERPROFILE\.local\bin\godot.exe"; \
+    if (Get-Command godot.exe -ErrorAction SilentlyContinue) { Write-Host "Godot already installed: $(godot --version)" -ForegroundColor Green; exit 0 }; \
+    Write-Host "Downloading Godot {{version}}..." -ForegroundColor Cyan; \
+    $url = "https://github.com/godotengine/godot/releases/download/{{version}}-stable/Godot_v{{version}}-stable_win64.exe.zip"; \
+    $tmp = "$env:TEMP\godot.zip"; \
+    Invoke-WebRequest -Uri $url -OutFile $tmp -UseBasicParsing; \
+    Expand-Archive -Path $tmp -DestinationPath "$env:TEMP\godot-tmp" -Force; \
+    $exe = Get-ChildItem "$env:TEMP\godot-tmp" -Filter "Godot_v{{version}}-stable_win64.exe" | Select-Object -First 1; \
+    if (-not $exe) { Write-Host "Download failed" -ForegroundColor Red; exit 1 }; \
+    New-Item -ItemType Directory -Path "$env:USERPROFILE\.local\bin" -Force | Out-Null; \
+    Move-Item -Path $exe.FullName -Destination $dest -Force; \
+    Remove-Item "$env:TEMP\godot-tmp" -Recurse -Force; \
+    Remove-Item $tmp -Force; \
+    Write-Host "Godot {{version}} installed to $dest" -ForegroundColor Green
+
+# Synchronise all dependencies and dev extras (auto-installs Godot)
+bootstrap: install-godot
     uv sync --all-extras
     Set-Location '{{justfile_directory()}}\webapp'
     cmd /c npm install
@@ -76,14 +93,16 @@ dev port=PORT:
 
 # ── Quality ───────────────────────────────────────────────────────────────────
 
-# Execute linting (ruff)
+# Execute linting (ruff + biome)
 lint:
-    uv run ruff check src/
+    uv run ruff check src/ tests/
+    -cmd /c npx biome lint webapp/src/
 
 # Execute auto-fixes and formatting
 fix:
-    uv run ruff check src/ --fix
-    uv run ruff format src/
+    uv run ruff check src/ tests/ --fix
+    uv run ruff format src/ tests/
+    -cmd /c npx biome check --write webapp/src/
 
 # Fast quality check (lint + tests)
 check: lint test

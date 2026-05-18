@@ -14,6 +14,7 @@ var _camera: Camera3D = null
 
 func _ready():
 	print("[MCP-Bridge] Initializing Godot MCP bridge v0.1.0...")
+	start_server(_port)
 
 func start_server(port: int = 9080) -> bool:
 	_port = port
@@ -444,7 +445,7 @@ func _cmd_set_config(request_id: String, params: Dictionary):
 	cfg.set_value(section, key, value)
 	cfg.save(path)
 
-	_send_response(request_id, {"updated": True, "section": section, "key": key, "value": value})
+	_send_response(request_id, {"updated": true, "section": section, "key": key, "value": value})
 
 func _cmd_headless_verify(request_id: String, params: Dictionary):
 	var script_path: String = params.get("script", "res://dev/mcp_verify.gd")
@@ -478,7 +479,7 @@ func _cmd_add_node(request_id: String, params: Dictionary):
 	node.name = node_name
 	parent.add_child(node)
 
-	_send_response(request_id, {"added": True, "path": str(node.get_path()), "type": node_type, "name": node_name})
+	_send_response(request_id, {"added": true, "path": str(node.get_path()), "type": node_type, "name": node_name})
 
 func _cmd_remove_node(request_id: String, params: Dictionary):
 	var node_path: String = params.get("path", "")
@@ -487,7 +488,7 @@ func _cmd_remove_node(request_id: String, params: Dictionary):
 		_send_error("Node '%s' not found" % node_path, request_id)
 		return
 	node.queue_free()
-	_send_response(request_id, {"removed": True, "path": node_path})
+	_send_response(request_id, {"removed": true, "path": node_path})
 
 func _cmd_save_scene(request_id: String, params: Dictionary):
 	var path: String = params.get("path", "res://mcp_scene.tscn")
@@ -594,4 +595,4 @@ func _send_json(data: Dictionary):
 	if not _peer:
 		return
 	var json_str := JSON.stringify(data) + "\n"
-	_peer.put_string(json_str)
+	_peer.put_data(json_str.to_utf8_buffer())

@@ -1,0 +1,28 @@
+{
+  "productName": "Godot MCP",
+  "version": "0.1.0",
+  "identifier": "ai.fleet.godot-mcp",
+  "build": {
+    "frontendDist": "../webapp/dist",
+    "devUrl": "http://localhost:10992",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [{
+      "title": "Godot MCP",
+      "width": 1200,
+      "height": 800,
+      "minWidth": 800,
+      "minHeight": 600
+    }],
+    "security": {
+      "csp": null
+    }
+  },
+  "plugins": {
+    "shell": { "open": true },
+    "fs": { "scope": ["$APPDATA/**", "$HOME/**"] },
+    "process": { "all": true }
+  }
+}

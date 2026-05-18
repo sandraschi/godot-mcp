@@ -21,7 +21,13 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastmcp import FastMCP
+from fastmcp.server import create_proxy
 from pydantic import BaseModel, Field
+
+try:
+    from fastmcp.experimental.transforms import CodeMode
+except ImportError:
+    CodeMode = None
 
 from godot_mcp.services.godot_bridge import GODOT_HOST, GODOT_PATH, GODOT_PORT, GodotBridge
 from godot_mcp.tools import register_all
@@ -105,8 +111,6 @@ for url in bridge_urls.split(","):
     url = url.strip()
     if url:
         try:
-            from fastmcp.server import create_proxy
-
             mcp.add_provider(create_proxy(url))
             _bridge_proxies.append(url)
         except Exception:
@@ -164,28 +168,27 @@ class ToolRequest(BaseModel):
 @app.post("/api/v1/control/tool")
 async def execute_tool(req: ToolRequest):
     """Execute a Godot MCP tool via REST bridge."""
+    action_map = {
+        "godot_status": (None, "status"),
+        "godot_import_stl": (None, "import_stl"),
+        "godot_load_velocity_field": (None, "load_velocity_field"),
+        "godot_spawn_particles": (None, "spawn_particles"),
+        "godot_animate_streamlines": (None, "animate_streamlines"),
+        "godot_create_camera": (None, "create_camera"),
+        "godot_add_light": (None, "add_light"),
+        "godot_set_material": (None, "set_material"),
+        "godot_export_web": (None, "export_web"),
+        "godot_read_scene_tree": (None, "read_scene_tree"),
+        "godot_set_config": (None, "set_config"),
+        "godot_headless_verify": (None, "headless_verify"),
+    }
+    if req.tool not in action_map:
+        raise HTTPException(400, f"Unknown tool: {req.tool}")
     try:
         if not _bridge.connected:
             conn_result = _bridge.connect()
             if not conn_result["success"]:
                 return {"success": False, "message": conn_result.get("error", "Bridge not connected"), "tool": req.tool}
-
-        action_map = {
-            "godot_status": (None, "status"),
-            "godot_import_stl": (None, "import_stl"),
-            "godot_load_velocity_field": (None, "load_velocity_field"),
-            "godot_spawn_particles": (None, "spawn_particles"),
-            "godot_animate_streamlines": (None, "animate_streamlines"),
-            "godot_create_camera": (None, "create_camera"),
-            "godot_add_light": (None, "add_light"),
-            "godot_set_material": (None, "set_material"),
-            "godot_export_web": (None, "export_web"),
-            "godot_read_scene_tree": (None, "read_scene_tree"),
-            "godot_set_config": (None, "set_config"),
-            "godot_headless_verify": (None, "headless_verify"),
-        }
-        if req.tool not in action_map:
-            raise HTTPException(400, f"Unknown tool: {req.tool}")
 
         result = _bridge.send(action_map[req.tool][1], req.arguments)
         return {
@@ -195,6 +198,8 @@ async def execute_tool(req: ToolRequest):
             "data": result.get("data", {}),
             "arguments": req.arguments,
         }
+    except HTTPException:
+        raise
     except Exception as e:
         return {"success": False, "message": str(e), "tool": req.tool, "arguments": req.arguments}
 
@@ -243,7 +248,11 @@ def main():
     parser.add_argument("--mode", choices=["stdio", "http", "dual"], default="stdio")
     parser.add_argument("--host", default=DEFAULT_HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    parser.add_argument("--agentic", action="store_true", help="Enable CodeMode BM25 discovery")
     args = parser.parse_args()
+
+    if args.agentic and CodeMode is not None:
+        mcp._transforms.append(CodeMode())
 
     if args.mode == "stdio":
         asyncio.run(_run_stdio())

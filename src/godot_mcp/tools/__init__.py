@@ -1,6 +1,6 @@
 """Godot MCP tools — portmanteau registration for FastMCP 3.2.
 
-[RATIONALALE] Consolidates 12 Godot engine tools into a single register_all()
+[RATIONALE] Consolidates 12 Godot engine tools into a single register_all()
 entry point. Each module's register() function fires @mcp.tool decorators at
 import time for server boot discovery.
 """

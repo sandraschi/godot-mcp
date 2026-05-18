@@ -1,19 +1,26 @@
 import { Loader2, Wifi, WifiOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
+import { useAppStore } from "../store";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
 	const [collapsed, setCollapsed] = useState(false);
 	const [connected, setConnected] = useState<boolean | null>(null);
+	const { setConnectionStatus, setServerVersion, setGodotAvailable } = useAppStore();
 
 	useEffect(() => {
 		const check = async () => {
 			try {
 				const r = await fetch("/api/v1/status");
 				const j = await r.json();
-				setConnected(j.service === "godot-mcp");
+				const ok = j.service === "godot-mcp";
+				setConnected(ok);
+				setConnectionStatus(ok ? "connected" : "disconnected");
+				setServerVersion(j.version || "");
+				setGodotAvailable(j.godot?.available || false);
 			} catch {
 				setConnected(false);
+				setConnectionStatus("disconnected");
 			}
 		};
 		check();

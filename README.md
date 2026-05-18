@@ -9,97 +9,61 @@
 [![Godot](https://img.shields.io/badge/Godot-4.0-478cbf?style=flat-square&logo=godot-engine&logoColor=white)](https://godotengine.org/)
 [![Just](https://img.shields.io/badge/Built-Just-000000?style=flat-square&logo=gnu-bash&logoColor=white)](https://github.com/casey/just)
 
-**AI-driven Godot 4.0 engine control — STL import, GPU particles, velocity fields, material assignment, Web export, and simulation via MCP tools.** 10 planned tools. Your AI assistant becomes a Godot engine operator.
+AI-driven Godot 4.0 engine control via MCP tools. Import STL geometry, load CFD velocity fields, spawn GPU particle systems, assign PBR materials, control cameras, and export HTML5 builds — all through FastMCP 3.2 tools over SSE transport. Designed as the visualization endpoint for the fleet CAD→CFD→render pipeline (qcad-mcp → freecad-mcp → FluidX3D → godot-mcp).
 
-| | |
-|--:|--|
-| **You might use this if…** | You want your AI to import CAD geometry, spawn GPU particle systems, animate velocity fields from FluidX3D, assign PBR materials, control cameras, and export Web/HTML5 builds — all through MCP tools. |
-| **What it connects to** | Godot 4.0 engine (local or headless) via **WebSocket bridge** (port 9080) + `qcad-mcp` STL pipeline + `FluidX3D` velocity data |
-| **Ports** | Backend **10993**, Frontend **10992** |
-| **Start** | `just bootstrap` then `start.ps1` |
+## Contents
 
-## Engine
-
-| Component | Status | Purpose |
-|-----------|--------|---------|
-| **Godot 4.0** | Required | Scene graph, GPU particles, physics, Web export |
-| **WebSocket bridge** | Required | MCP ↔ Godot communication on port 9080 |
-| **MCP Plugin** | Required | Godot addon that listens for MCP commands |
-
-## Planned Tools (10)
-
-| Tool | Access | Purpose |
-|------|--------|---------|
-| `godot_status` | READ_ONLY | Engine availability, version, scene info |
-| `godot_import_stl` | MUTATING | Import STL mesh from qcad-mcp pipeline |
-| `godot_spawn_particles` | MUTATING | GPU particle system with configuration |
-| `godot_load_velocity` | MUTATING | Load FluidX3D velocity field data |
-| `godot_animate_streamline` | MUTATING | Animate particles along streamlines |
-| `godot_set_material` | MUTATING | Assign PBR materials to mesh surfaces |
-| `godot_add_light` | MUTATING | Add dynamic lights (point, spot, directional) |
-| `godot_create_camera` | MUTATING | Create and position render cameras |
-| `godot_export_web` | MUTATING | Export scene to HTML5/WebAssembly |
-| `godot_run_simulation` | MUTATING | Trigger physics/particle simulation |
-
-## Cross-Repo Pipeline
-
-```
-qcad-mcp plan_extrude → STL
-    │
-    └── godot-mcp godot_import_stl → Godot scene
-            │
-            ├── godot_load_velocity → FluidX3D velocity field
-            ├── godot_spawn_particles → GPU particles
-            ├── godot_set_material → PBR materials
-            ├── godot_add_light → scene lighting
-            ├── godot_create_camera → render cameras
-            ├── godot_animate_streamline → particle animation
-            └── godot_export_web → HTML5 build or residonite-mcp export
-```
+- [Installation](docs/install.md)
+- [Architecture](docs/architecture.md)
+- [Godot 4 Docs](docs/godot.md)
+- [MCP Server](docs/mcp-server.md)
+- [API Reference](docs/api.md)
+- [AI Game Dev Flows](docs/ai-flows.md)
+- [CLI Reference](docs/cli.md)
+- [Comparison: Godot vs Unity vs Unreal](docs/comparison.md)
+- [Example Projects](docs/examples.md)
+- [Agentic Game Dev](docs/agentic-game-dev.md)
+- [Community](docs/community.md)
+- [History](docs/history.md)
 
 ## Quick Start
 
 ```powershell
-# 1. Bootstrap
-just bootstrap   # uv sync + npm install
-
-# 2. Set Godot path if not in PATH
-$env:GODOT_PATH = "C:\Program Files\Godot\godot.exe"
-
-# 3. Launch
-start.ps1        # kills zombies, starts backend + frontend, opens browser
+just bootstrap      # uv sync + npm install
+just serve          # start backend (port 10993)
+just web            # start frontend (port 10992)
 ```
+Or `.\start.ps1` — kills zombies, starts both, opens browser.
 
-## MCP Client Config
+## Key Features
 
-```json
-{
-  "mcpServers": {
-    "godot": {
-      "url": "http://localhost:10993/sse",
-      "transport": "sse"
-    }
-  }
-}
+- **12 MCP tools** — godot_status, godot_import_stl, godot_spawn_particles, godot_load_velocity, godot_animate_streamline, godot_set_material, godot_add_light, godot_create_camera, godot_export_web, godot_run_simulation, godot_set_scene_property, godot_query_scene
+- **Godot 4 engine control** — scene graph manipulation via WebSocket bridge (port 9080)
+- **STL import** — load CAD geometry from the qcad-mcp pipeline
+- **CFD velocity fields** — load FluidX3D data, animate streamlines with GPU particles
+- **PBR materials** — assign physically-based materials to any mesh surface
+- **HTML5 export** — build WebAssembly/WebGL deployable anywhere
+- **REST API** — FastAPI gateway on port 10993 alongside MCP SSE
+- **Tauri native wrapper** — `native/` directory for desktop distribution (~5 MB)
+
+## Cross-Repo Pipeline
+
 ```
-
-Once connected, call `godot_status` to verify engine availability, then `godot_import_stl` to bring in CAD geometry from the qcad-mcp pipeline.
-
-## Industrial Quality Stack
-
-- **Python (Core)**: [Ruff](https://astral.sh/ruff) for linting. 10 planned MCP tools on FastMCP 3.2.
-- **Webapp (UI)**: Vite + React + Tailwind CSS 3.4. Fleet-standard 5-page dashboard.
-- **Protocol**: FastMCP 3.2 SSE transport + REST API.
-- **Automation**: [Justfile](./justfile) recipes for all fleet operations.
-
-## Links
-
-- [Godot 4.0 Documentation](https://docs.godotengine.org/en/stable/)
-- [Godot Engine](https://godotengine.org/)
-- [FluidX3D](https://github.com/ProjectPhysX/FluidX3D)
-- [qcad-mcp](https://github.com/sandraschi/qcad-mcp) — STL source pipeline
-- [resonite-mcp](https://github.com/sandraschi/resonite-mcp) — XR world export target
+qcad-mcp (DXF/STL) → freecad-mcp (BIM/IFC) → FluidX3D (GPU CFD)
+                                                  ↓
+                                          CSV velocity field
+                                                  ↓
+                                          godot-mcp (import + visualize)
+                                                  ↓
+                              ┌───────────────────┼───────────────────┐
+                              ↓                   ↓                   ↓
+                        Resonite (XR)      Web (HTML5)        Tauri (native)
+```
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+- [Godot Engine](https://godotengine.org/)
+- [FluidX3D](https://github.com/ProjectPhysX/FluidX3D)
+- [qcad-mcp](https://github.com/sandraschi/qcad-mcp)
