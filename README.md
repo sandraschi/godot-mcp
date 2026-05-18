@@ -1,12 +1,13 @@
 # Godot MCP
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue?style=flat-square)](https://github.com/sandraschi/godot-mcp)
+[![CI](https://github.com/sandraschi/godot-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/sandraschi/godot-mcp/actions/workflows/ci.yml)
+[![Version](https://img.shields.io/badge/version-0.1.0--alpha-blue?style=flat-square)](https://github.com/sandraschi/godot-mcp)
 [![Python](https://img.shields.io/badge/python-3.12|3.13-blue?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
-[![FastMCP](https://img.shields.io/badge/FastMCP-3.2.0-6366f1?style=flat-square&logo=python&logoColor=white)](https://github.com/jlowin/fastmcp)
+[![FastMCP](https://img.shields.io/badge/FastMCP-3.3-6366f1?style=flat-square&logo=python&logoColor=white)](https://github.com/jlowin/fastmcp)
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-8B5CF6?style=flat-square)](https://modelcontextprotocol.io)
-[![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Godot](https://img.shields.io/badge/Godot-4.0-478cbf?style=flat-square&logo=godot-engine&logoColor=white)](https://godotengine.org/)
+[![Godot](https://img.shields.io/badge/Godot-4.4-478cbf?style=flat-square&logo=godot-engine&logoColor=white)](https://godotengine.org/)
 [![Just](https://img.shields.io/badge/Built-Just-000000?style=flat-square&logo=gnu-bash&logoColor=white)](https://github.com/casey/just)
 
 AI-driven Godot 4.0 engine control via MCP tools. Import STL geometry, load CFD velocity fields, spawn GPU particle systems, assign PBR materials, control cameras, and export HTML5 builds — all through FastMCP 3.2 tools over SSE transport. Designed as the visualization endpoint for the fleet CAD→CFD→render pipeline (qcad-mcp → freecad-mcp → FluidX3D → godot-mcp).

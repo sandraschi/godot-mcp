@@ -7,3 +7,19 @@ node_modules/
 dist/
 .env
 *.egg-info/
+
+# Rust / Tauri
+native/target/
+
+# Godot exports
+*.wasm
+*.pck
+*.zip
+
+# Coverage
+htmlcov/
+.coverage
+
+# OS
+Thumbs.db
+.DS_Store
