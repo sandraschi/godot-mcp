@@ -1,0 +1,8 @@
+{
+  "mcpb_version": "0.1.0",
+  "type": "project",
+  "name": "Open World RPG (skelerealms)",
+  "description": "Bethesda-style 3D open world RPG framework with AI, inventory, factions.",
+  "source": "samples/skelerealms",
+  "tags": ["open-world", "rpg", "3d", "framework"]
+}

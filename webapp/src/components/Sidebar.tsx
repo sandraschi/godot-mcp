@@ -1,27 +1,71 @@
 import { motion } from "framer-motion";
 import {
+	Archive,
+	Book,
+	BookOpen,
 	Box,
 	Code2,
+	Database,
 	HelpCircle,
 	LayoutDashboard,
 	LayoutGrid,
 	Logs,
 	MessageSquare,
+	Package,
+	Play,
 	Settings,
+	Sparkles,
 	Wrench,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
-const navItems = [
-	{ path: "/", label: "Dashboard", icon: LayoutDashboard },
-	{ path: "/models", label: "Models", icon: Box },
-	{ path: "/logs", label: "Logs", icon: Logs },
-	{ path: "/apps", label: "Apps Hub", icon: LayoutGrid },
-	{ path: "/tools", label: "Tools", icon: Wrench },
-	{ path: "/chat", label: "Chat", icon: MessageSquare },
-	{ path: "/api-docs", label: "API Docs", icon: Code2 },
-	{ path: "/settings", label: "Settings", icon: Settings },
-	{ path: "/help", label: "Help", icon: HelpCircle },
+const navGroups = [
+	{
+		label: "Core",
+		items: [
+			{ path: "/", label: "Dashboard", icon: LayoutDashboard },
+			{ path: "/models", label: "Models", icon: Box },
+			{ path: "/logs", label: "Logs", icon: Logs },
+		],
+	},
+	{
+		label: "Fleet",
+		items: [
+			{ path: "/apps", label: "Apps Hub", icon: LayoutGrid },
+			{ path: "/tools", label: "Tools", icon: Wrench },
+			{ path: "/api-docs", label: "API Docs", icon: Code2 },
+		],
+	},
+	{
+		label: "Marketplace",
+		items: [
+			{ path: "/marketplace", label: "Marketplace", icon: Package },
+			{ path: "/depot", label: "Depot", icon: Database },
+		],
+	},
+	{
+		label: "Agentic",
+		items: [
+			{ path: "/workflows", label: "Workflows", icon: Play },
+			{ path: "/prefabs", label: "Prefabs", icon: Box },
+			{ path: "/prompts", label: "Prompts", icon: Sparkles },
+		],
+	},
+	{
+		label: "Advanced",
+		items: [
+			{ path: "/bundles", label: "Bundles", icon: Archive },
+			{ path: "/skills", label: "Skills", icon: BookOpen },
+			{ path: "/chat", label: "Chat", icon: MessageSquare },
+		],
+	},
+	{
+		label: "Support",
+		items: [
+			{ path: "/settings", label: "Settings", icon: Settings },
+			{ path: "/help", label: "Help", icon: HelpCircle },
+		],
+	},
 ];
 
 export default function Sidebar({
@@ -41,25 +85,36 @@ export default function Sidebar({
 					</span>
 				)}
 			</div>
-			<nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-				{navItems.map((item) => (
-					<NavLink
-						key={item.path}
-						to={item.path}
-						end={item.path === "/"}
-						className={({ isActive }) =>
-							`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-								isActive
-									? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
-									: "text-slate-400 hover:text-slate-200 hover:bg-white/[0.12]"
-							}`
-						}
-					>
-						<item.icon size={18} className="shrink-0" />
+			<nav className="flex-1 p-3 overflow-y-auto space-y-4">
+				{navGroups.map((group) => (
+					<div key={group.label}>
 						{!collapsed && (
-							<span className="whitespace-nowrap">{item.label}</span>
+							<p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+								{group.label}
+							</p>
 						)}
-					</NavLink>
+						<div className="space-y-0.5">
+							{group.items.map((item) => (
+								<NavLink
+									key={item.path}
+									to={item.path}
+									end={item.path === "/"}
+									className={({ isActive }) =>
+										`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+											isActive
+												? "bg-blue-600/20 text-blue-400"
+												: "text-slate-400 hover:text-slate-200 hover:bg-white/[0.08]"
+										}`
+									}
+								>
+									<item.icon size={16} className="shrink-0" />
+									{!collapsed && (
+										<span className="whitespace-nowrap">{item.label}</span>
+									)}
+								</NavLink>
+							))}
+						</div>
+					</div>
 				))}
 			</nav>
 			<button

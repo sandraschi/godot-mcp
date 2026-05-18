@@ -1,0 +1,13 @@
+{
+  "mcpb_version": "0.1.0",
+  "type": "scene",
+  "name": "2D Platformer (official demo)",
+  "description": "Recreates the Godot 2D platformer demo scene using MCP tools.",
+  "source": "godot-demo-projects/2d/platformer",
+  "tools": [
+    {"tool": "godot_create_camera", "params": {"name": "LevelCamera", "position_y": 0, "position_z": 10}},
+    {"tool": "godot_add_light", "params": {"light_type": "ambient", "intensity": 0.5}},
+    {"tool": "godot_add_light", "params": {"light_type": "directional", "intensity": 1.0}}
+  ],
+  "tags": ["2d", "platformer", "demo", "official"]
+}

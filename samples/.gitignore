@@ -1,0 +1,6 @@
+# Ignore cloned sample repos (they're large references)
+# Keep only bundles/ manifests and this README
+godot-demo-projects/
+godot-4-procedural-generation/
+Heart-Platformer-Godot-4/
+skelerealms/

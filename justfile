@@ -39,7 +39,7 @@ default:
 # ── Lifecycle ─────────────────────────────────────────────────────────────────
 
 # Install Godot 4.x engine if not present (headless + editor)
-install-godot version=4.4:
+install-godot version="4.4":
     $dest = "$env:USERPROFILE\.local\bin\godot.exe"; \
     if (Get-Command godot.exe -ErrorAction SilentlyContinue) { Write-Host "Godot already installed: $(godot --version)" -ForegroundColor Green; exit 0 }; \
     Write-Host "Downloading Godot {{version}}..." -ForegroundColor Cyan; \

@@ -1,0 +1,8 @@
+{
+  "mcpb_version": "0.1.0",
+  "type": "project",
+  "name": "Procedural Generation Demos",
+  "description": "Procedural dungeon, world, and weapon generation for Godot 4.",
+  "source": "samples/godot-4-procedural-generation",
+  "tags": ["procedural", "pcg", "dungeon", "generation"]
+}

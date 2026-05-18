@@ -29,6 +29,7 @@ try:
 except ImportError:
     CodeMode = None
 
+from godot_mcp.artifacts.routes import router as artifacts_router
 from godot_mcp.services.godot_bridge import GODOT_HOST, GODOT_PATH, GODOT_PORT, GodotBridge
 from godot_mcp.tools import register_all
 
@@ -101,7 +102,32 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
+# Register artifact marketplace routes
+app.include_router(artifacts_router)
+
 mcp = FastMCP.from_fastapi(app, name="Godot MCP")
+
+# ── Skills Provider (FastMCP 3.1+ Resource-based) ──────────────────────────
+
+try:
+    from godot_mcp.skills import get_skill_markdown, list_skills
+
+    @mcp.resource("skill://{skill_name}/SKILL.md")
+    async def skill_resource(skill_name: str) -> str:
+        content = get_skill_markdown(skill_name)
+        if content is None:
+            raise ValueError(f"Skill not found: {skill_name}")
+        return content
+
+    @mcp.resource("skill://list")
+    async def skill_list_resource() -> str:
+        import json
+
+        return json.dumps(list_skills())
+
+    logger.info("Skills provider registered")
+except Exception as e:
+    logger.warning("Skills provider not loaded: %s", e)
 
 # ── MCP Bridge Proxies ───────────────────────────────────────────────────────
 

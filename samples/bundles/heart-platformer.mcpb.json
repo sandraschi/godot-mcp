@@ -1,0 +1,14 @@
+{
+  "mcpb_version": "0.1.0",
+  "type": "project",
+  "name": "Heart Platformer (uheartbeast)",
+  "description": "2D platformer movement template with coyote time, jump buffering, and juice effects.",
+  "source": "samples/heart-platformer",
+  "tools": [
+    {"tool": "godot_create_scene", "params": {"name": "Game", "root_type": "Node2D"}},
+    {"tool": "godot_create_node", "params": {"parent": "Game", "name": "Player", "type": "CharacterBody2D"}},
+    {"tool": "godot_add_script", "params": {"node": "Player", "path": "res://player.gd"}},
+    {"tool": "godot_create_tilemap", "params": {"name": "Terrain", "cell_size": 16}}
+  ],
+  "tags": ["2d", "platformer", "movement", "juice"]
+}
