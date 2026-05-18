@@ -15,7 +15,7 @@ $job = Start-Job -Name "godot-mcp" -ScriptBlock {
 Start-Sleep -Seconds 3
 
 # Start webapp
-Push-Location webapp
+Push-Location web_sota
 Start-Process cmd -ArgumentList "/c", "npm", "run", "dev"
 Pop-Location
 

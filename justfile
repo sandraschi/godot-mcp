@@ -58,13 +58,13 @@ install-godot version="4.4":
 # Synchronise all dependencies and dev extras (auto-installs Godot)
 bootstrap: install-godot
     uv sync --all-extras
-    Set-Location '{{justfile_directory()}}\webapp'
+    Set-Location '{{justfile_directory()}}\web_sota'
     cmd /c npm install
 
 # Pin all deps to exact versions and freeze lockfiles
 freeze:
     uv sync --all-extras && uv lock --upgrade
-    Set-Location '{{justfile_directory()}}\webapp'
+    Set-Location '{{justfile_directory()}}\web_sota'
     cmd /c npm install --package-lock-only
 
 # Upgrade all Python deps to latest compatible
@@ -113,7 +113,7 @@ clean:
 # Nuke and reinstall everything from scratch
 reset: clean
     if (Test-Path -Path ".venv") { Remove-Item -Recurse -Force ".venv" }; \
-    if (Test-Path -Path "webapp\node_modules") { Remove-Item -Recurse -Force "webapp\node_modules" }; \
+    if (Test-Path -Path "web_sota\node_modules") { Remove-Item -Recurse -Force "web_sota\node_modules" }; \
     if (Test-Path -Path "native\target") { Remove-Item -Recurse -Force "native\target" }; \
     Write-Host "Cleaned. Run 'just bootstrap' to rebuild." -ForegroundColor Yellow
 
@@ -141,10 +141,10 @@ dev port=PORT:
 
 # Start the Vite dashboard
 web:
-    Set-Location '{{justfile_directory()}}\webapp'
+    Set-Location '{{justfile_directory()}}\web_sota'
     cmd /c npm run dev
 
-# Start everything (backed + webapp) via start script
+# Start everything (backed + web_sota) via start script
 start:
     & '{{justfile_directory()}}\start.ps1'
 
@@ -190,23 +190,23 @@ godot-export path="user://export/web/index.html":
 # Execute linting (ruff + biome)
 lint:
     uv run ruff check src/ tests/
-    -cmd /c npx biome lint webapp/src/
+    -cmd /c npx biome lint web_sota/src/
 
 # Execute auto-fixes and formatting
 fix:
     uv run ruff check src/ tests/ --fix
     uv run ruff format src/ tests/
-    cmd /c npx biome check --write webapp/src/
+    cmd /c npx biome check --write web_sota/src/
 
 # TypeScript type checking (biome check already covers, add explicit tsc)
 typecheck:
-    Set-Location '{{justfile_directory()}}\webapp'
+    Set-Location '{{justfile_directory()}}\web_sota'
     cmd /c npx tsc --noEmit
 
 # Full format check (CI style)
 format-check:
     uv run ruff format src/ tests/ --check
-    cmd /c npx biome format webapp/src/ --check
+    cmd /c npx biome format web_sota/src/ --check
 
 # Security scan (Python)
 security:
@@ -258,24 +258,24 @@ test-seq:
 
 # ── Webapp ────────────────────────────────────────────────────────────────────
 
-# Build webapp for production
+# Build web_sota for production
 web-build:
-    Set-Location '{{justfile_directory()}}\webapp'
+    Set-Location '{{justfile_directory()}}\web_sota'
     cmd /c npm run build
 
 # Preview production build
 web-preview:
-    Set-Location '{{justfile_directory()}}\webapp'
+    Set-Location '{{justfile_directory()}}\web_sota'
     cmd /c npm run preview
 
-# Install webapp deps only
+# Install web_sota deps only
 web-install:
-    Set-Location '{{justfile_directory()}}\webapp'
+    Set-Location '{{justfile_directory()}}\web_sota'
     cmd /c npm install
 
-# Add a webapp dependency (usage: just web-add <package>)
+# Add a web_sota dependency (usage: just web-add <package>)
 web-add package:
-    Set-Location '{{justfile_directory()}}\webapp'
+    Set-Location '{{justfile_directory()}}\web_sota'
     cmd /c npm install {{package}}
 
 # ── Tauri Native ──────────────────────────────────────────────────────────────

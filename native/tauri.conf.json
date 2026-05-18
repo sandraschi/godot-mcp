@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "identifier": "ai.fleet.godot-mcp",
   "build": {
-    "frontendDist": "../webapp/dist",
+    "frontendDist": "../web_sota/dist",
     "devUrl": "http://localhost:10992",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build"
