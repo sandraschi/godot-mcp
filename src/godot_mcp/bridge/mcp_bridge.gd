@@ -82,6 +82,10 @@ func _handle_message(raw: String):
 			_cmd_status(request_id)
 		"import_stl":
 			_cmd_import_stl(request_id, params)
+		"import_glb":
+			_cmd_import_glb(request_id, params)
+		"import_obj":
+			_cmd_import_obj(request_id, params)
 		"load_velocity_field":
 			_cmd_load_velocity(request_id, params)
 		"spawn_particles":
@@ -173,6 +177,61 @@ func _cmd_import_stl(request_id: String, params: Dictionary):
 		"vertices": mesh.get_surface_count() > 0 if mesh else 0,
 		"aabb": {"size_x": aabb.size.x, "size_y": aabb.size.y, "size_z": aabb.size.z},
 	})
+
+func _cmd_import_glb(request_id: String, params: Dictionary):
+	var path: String = params.get("path", "")
+	var import_name: String = params.get("name", "GLB_Import")
+
+	if path.is_empty():
+		_send_error("Missing path parameter", request_id)
+		return
+
+	if not FileAccess.file_exists(path):
+		_send_error("File not found: %s" % path, request_id)
+		return
+
+	# Godot 4.0+ native GLTF import via GLTFDocument
+	var gltf_doc := GLTFDocument.new()
+	var gltf_state := GLTFState.new()
+	var err := gltf_doc.append_from_file(path, gltf_state, 0)
+	if err != OK:
+		_send_error("Failed to import GLB/GLTF: error %d" % err, request_id)
+		return
+
+	var imported_scene := gltf_doc.generate_scene(gltf_state)
+	if not imported_scene:
+		_send_error("GLTFDocument.generate_scene returned null", request_id)
+		return
+
+	imported_scene.name = import_name
+
+	var scale_vec: float = params.get("scale", 1.0)
+	var pos: Dictionary = params.get("position", {"x": 0, "y": 0, "z": 0})
+	imported_scene.scale = Vector3(scale_vec, scale_vec, scale_vec)
+	imported_scene.position = Vector3(
+		pos.get("x", 0.0), pos.get("y", 0.0), pos.get("z", 0.0)
+	)
+
+	var parent := _get_or_create_container("GLB_Imports")
+	parent.add_child(imported_scene)
+
+	# Count total nodes and meshes in the imported scene
+	var node_count := _count_nodes(imported_scene)
+	var mesh_count := 0
+	_count_meshes(imported_scene, mesh_count)
+
+	_send_response(request_id, {
+		"imported": true,
+		"name": imported_scene.name,
+		"total_nodes": node_count,
+		"mesh_count": mesh_count,
+	})
+
+func _count_meshes(node: Node, counter: int) -> void:
+	if node is MeshInstance3D:
+		counter += 1
+	for child in node.get_children():
+		_count_meshes(child, counter)
 
 func _cmd_load_velocity(request_id: String, params: Dictionary):
 	var csv_path: String = params.get("csv_path", "")
@@ -414,6 +473,62 @@ func _cmd_set_material(request_id: String, params: Dictionary):
 	(node as MeshInstance3D).set_surface_override_material(0, mat)
 
 	_send_response(request_id, {"set": true, "node": node_name, "color": color_hex, "roughness": roughness})
+
+func _count_meshes(node: Node, counter: int) -> void:
+	if node is MeshInstance3D:
+		counter += 1
+	for child in node.get_children():
+		_count_meshes(child, counter)
+
+func _cmd_import_obj(request_id: String, params: Dictionary):
+	var path: String = params.get("path", "")
+	var import_name: String = params.get("name", "OBJ_Import")
+
+	if path.is_empty():
+		_send_error("Missing path parameter", request_id)
+		return
+
+	if not FileAccess.file_exists(path):
+		_send_error("File not found: %s" % path, request_id)
+		return
+
+	# Godot 4 supports OBJ/MTL via ResourceLoader
+	var imported := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE)
+	if not imported:
+		_send_error("ResourceLoader failed to load OBJ: %s" % path, request_id)
+		return
+
+	# OBJ import may return a PackedScene or an ArrayMesh directly
+	var scene_root: Node3D
+	if imported is PackedScene:
+		scene_root = imported.instantiate() as Node3D
+		if not scene_root:
+			_send_error("OBJ PackedScene instantiation returned null", request_id)
+			return
+	elif imported is ArrayMesh:
+		var mi := MeshInstance3D.new()
+		mi.mesh = imported
+		scene_root = mi
+	else:
+		_send_error("Unsupported OBJ import result type: %s" % imported.get_class(), request_id)
+		return
+
+	scene_root.name = import_name
+
+	var scale_vec: float = params.get("scale", 1.0)
+	var pos: Dictionary = params.get("position", {"x": 0, "y": 0, "z": 0})
+	scene_root.scale = Vector3(scale_vec, scale_vec, scale_vec)
+	scene_root.position = Vector3(
+		pos.get("x", 0.0), pos.get("y", 0.0), pos.get("z", 0.0)
+	)
+
+	var parent := _get_or_create_container("OBJ_Imports")
+	parent.add_child(scene_root)
+
+	_send_response(request_id, {
+		"imported": true,
+		"name": scene_root.name,
+	})
 
 func _cmd_export_web(request_id: String, params: Dictionary):
 	var output_path: String = params.get("output_path", "user://export/web/index.html")

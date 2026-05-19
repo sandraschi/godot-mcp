@@ -1,7 +1,7 @@
 # Godot MCP
 
 [![CI](https://github.com/sandraschi/godot-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/sandraschi/godot-mcp/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.1.0--alpha-blue?style=flat-square)](https://github.com/sandraschi/godot-mcp)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue?style=flat-square)](https://github.com/sandraschi/godot-mcp)
 [![Python](https://img.shields.io/badge/python-3.12|3.13-blue?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![FastMCP](https://img.shields.io/badge/FastMCP-3.3-6366f1?style=flat-square&logo=python&logoColor=white)](https://github.com/jlowin/fastmcp)
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-8B5CF6?style=flat-square)](https://modelcontextprotocol.io)
@@ -10,7 +10,7 @@
 [![Godot](https://img.shields.io/badge/Godot-4.4-478cbf?style=flat-square&logo=godot-engine&logoColor=white)](https://godotengine.org/)
 [![Just](https://img.shields.io/badge/Built-Just-000000?style=flat-square&logo=gnu-bash&logoColor=white)](https://github.com/casey/just)
 
-AI-driven Godot 4.0 engine control via MCP tools. Import STL geometry, load CFD velocity fields, spawn GPU particle systems, assign PBR materials, control cameras, and export HTML5 builds — all through FastMCP 3.2 tools over SSE transport. Designed as the visualization endpoint for the fleet CAD→CFD→render pipeline (qcad-mcp → freecad-mcp → FluidX3D → godot-mcp).
+AI-driven Godot 4.0 engine control via MCP tools. Import STL/GLB/OBJ geometry, load CFD velocity fields, spawn GPU particle systems, assign PBR materials, control cameras, and export HTML5 builds — all through FastMCP 3.2 tools over SSE transport. Designed as the visualization endpoint for the fleet CAD→CFD→render pipeline (qcad-mcp → freecad-mcp → FluidX3D → godot-mcp) and the blender-mcp → godot-mcp game asset pipeline.
 
 ## Contents
 
@@ -38,12 +38,12 @@ Or `.\start.ps1` — kills zombies, starts both, opens browser.
 
 ## Key Features
 
-- **12 MCP tools** — godot_status, godot_import_stl, godot_spawn_particles, godot_load_velocity, godot_animate_streamline, godot_set_material, godot_add_light, godot_create_camera, godot_export_web, godot_run_simulation, godot_set_scene_property, godot_query_scene
+- **14 MCP tools** — godot_status, godot_import_stl, godot_import_glb, godot_import_obj, godot_spawn_particles, godot_load_velocity, godot_animate_streamline, godot_set_material, godot_add_light, godot_create_camera, godot_export_web, godot_run_simulation, godot_set_scene_property, godot_query_scene
 - **Godot 4 engine control** — scene graph manipulation via WebSocket bridge (port 9080)
-- **STL import** — load CAD geometry from the qcad-mcp pipeline
+- **Multi-format import** — STL (binary), GLB/GLTF (via GLTFDocument), OBJ (via ResourceLoader)
 - **CFD velocity fields** — load FluidX3D data, animate streamlines with GPU particles
 - **PBR materials** — assign physically-based materials to any mesh surface
-- **HTML5 export** — build WebAssembly/WebGL deployable anywhere
+- **HTML5 export** — build WebAssembly/WebGL with `godot --headless --export-release` fallback
 - **REST API** — FastAPI gateway on port 10993 alongside MCP SSE
 - **Tauri native wrapper** — `native/` directory for desktop distribution (~5 MB)
 

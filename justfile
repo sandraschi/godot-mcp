@@ -327,9 +327,28 @@ bridge-test:
 
 # List all registered MCP tools
 tools:
-    uv run python -c "from godot_mcp.tools import register_all; print('12 tools registered')"
+    uv run python -c "from godot_mcp.tools import register_all; print('14 tools registered')"
 
-# ── Git ───────────────────────────────────────────────────────────────────────
+# Import a GLB/STL/OBJ from the fleet exchange depot into Godot
+depot-import:
+    Set-Location '{{justfile_directory()}}'
+    param($file, $name="DepotImport"); \
+    $body = @{tool="godot_import_glb"; arguments=@{path=$file; name=$name}} | ConvertTo-Json -Compress; \
+    try { Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/control/tool" -Method POST -Body $body -ContentType "application/json" -UseBasicParsing -TimeoutSec 30 | ForEach-Object { ($_.Content | ConvertFrom-Json) | ConvertTo-Json } } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
+
+# Export current scene to HTML5 via godot CLI
+depot-export:
+    Set-Location '{{justfile_directory()}}'
+    param($output="D:\Dev\repos\_exchange\models\godot_export"); \
+    $body = @{tool="godot_export_web"; arguments=@{output_path=$output}} | ConvertTo-Json -Compress; \
+    try { Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/control/tool" -Method POST -Body $body -ContentType "application/json" -UseBasicParsing -TimeoutSec 300 | ForEach-Object { ($_.Content | ConvertFrom-Json) | ConvertTo-Json } } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
+
+# ── Fleet Exchange ─────────────────────────────────────────────────────────────
+
+# Show available files in the fleet exchange depot for godot import
+depot-ls:
+    Set-Location '{{justfile_directory()}}'
+    @Get-ChildItem "D:\Dev\repos\_exchange" -Recurse -File | Where-Object { $_.Extension -match '\.(stl|glb|gltf|obj|csv)$' } | Format-Table Name, Length, LastWriteTime -AutoSize
 
 # Show pending changes summary
 git-status:

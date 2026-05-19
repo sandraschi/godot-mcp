@@ -77,6 +77,90 @@ async def godot_import_stl(
     )
 
 
+async def godot_import_glb(
+    path: Annotated[str, Field(description="Absolute path to GLB or GLTF file on disk.")],
+    name: Annotated[
+        str, Field(description="Node name for the resulting import root.", default="GLB_Import")
+    ] = "GLB_Import",
+    scale: Annotated[
+        float, Field(description="Uniform scale factor applied to the imported scene.", default=1.0, ge=0.001)
+    ] = 1.0,
+    position_x: Annotated[float, Field(description="X position in the scene.", default=0.0)] = 0.0,
+    position_y: Annotated[float, Field(description="Y position in the scene.", default=0.0)] = 0.0,
+    position_z: Annotated[float, Field(description="Z position in the scene.", default=0.0)] = 0.0,
+    ctx: Context = None,
+) -> dict:
+    """Import a GLB/GLTF 3D model into the current Godot scene.
+
+    Uses Godot 4.0's native GLTFDocument importer to load meshes, materials,
+    and node hierarchy from glTF 2.0 binary (.glb) or text (.gltf) files.
+    This unlocks the blender-mcp → godot-mcp pipeline.
+
+    ## Return Format
+    {"success": bool, "data": {"imported": bool, "name": str, "total_nodes": int, "mesh_count": int}}
+
+    ## Examples
+    await godot_import_glb(path="C:/exchange/robot.glb", name="Robot", scale=0.01)
+    await godot_import_glb(path="C:/exchange/scene.gltf")
+    """
+    bridge = get_bridge()
+    if not bridge.connected:
+        result = bridge.connect()
+        if not result["success"]:
+            return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
+
+    return bridge.send(
+        "import_glb",
+        {
+            "path": path,
+            "name": name,
+            "scale": scale,
+            "position": {"x": position_x, "y": position_y, "z": position_z},
+        },
+    )
+
+
+async def godot_import_obj(
+    path: Annotated[str, Field(description="Absolute path to OBJ file on disk.")],
+    name: Annotated[
+        str, Field(description="Node name for the resulting import root.", default="OBJ_Import")
+    ] = "OBJ_Import",
+    scale: Annotated[
+        float, Field(description="Uniform scale factor applied to the imported mesh.", default=1.0, ge=0.001)
+    ] = 1.0,
+    position_x: Annotated[float, Field(description="X position in the scene.", default=0.0)] = 0.0,
+    position_y: Annotated[float, Field(description="Y position in the scene.", default=0.0)] = 0.0,
+    position_z: Annotated[float, Field(description="Z position in the scene.", default=0.0)] = 0.0,
+    ctx: Context = None,
+) -> dict:
+    """Import an OBJ 3D model into the current Godot scene.
+
+    Uses Godot 4.0's ResourceLoader to import Wavefront OBJ files (.obj + .mtl).
+    Supports the freecad-mcp CFD streamline export → godot-mcp pipeline.
+
+    ## Return Format
+    {"success": bool, "data": {"imported": bool, "name": str}}
+
+    ## Examples
+    await godot_import_obj(path="C:/exchange/streamlines.obj", name="CFD_Streamlines")
+    """
+    bridge = get_bridge()
+    if not bridge.connected:
+        result = bridge.connect()
+        if not result["success"]:
+            return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
+
+    return bridge.send(
+        "import_obj",
+        {
+            "path": path,
+            "name": name,
+            "scale": scale,
+            "position": {"x": position_x, "y": position_y, "z": position_z},
+        },
+    )
+
+
 async def godot_load_velocity_field(
     csv_path: Annotated[str, Field(description="Absolute path to CSV velocity field file (x,y,z,vx,vy,vz columns).")],
     name: Annotated[
@@ -291,28 +375,97 @@ async def godot_export_web(
     output_path: Annotated[
         str,
         Field(
-            description="Output path for the export (res:// path or absolute).", default="user://export/web/index.html"
+            description="Output path for the export (absolute or res:// path).", default="user://export/web/index.html"
         ),
     ] = "user://export/web/index.html",
+    resolution_x: Annotated[
+        int, Field(description="Viewport width in pixels.", default=1280, ge=64)
+    ] = 1280,
+    resolution_y: Annotated[
+        int, Field(description="Viewport height in pixels.", default=720, ge=64)
+    ] = 720,
 ) -> dict:
     """Export the current Godot scene to HTML5/WebAssembly.
 
-    Godot 4 must have the HTML5 export template installed. Falls back to CLI
-    instructions if export templates are not available in-editor.
+    Attempts in-editor export via the GDScript bridge first. Falls back to
+    godot --headless --export-release if the bridge reports templates unavailable.
 
     ## Return Format
-    {"success": bool, "data": {"exported": bool, "message": str, "requires_cli": bool}}
+    {"success": bool, "data": {"exported": bool, "message": str, "output_path": str}}
 
     ## Examples
     await godot_export_web(output_path="C:/builds/godot-web/index.html")
     """
     bridge = get_bridge()
-    if not bridge.connected:
-        result = bridge.connect()
-        if not result["success"]:
-            return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
+    if bridge.connected:
+        result = bridge.send("export_web", {"output_path": output_path})
+        if result.get("success") and result.get("data", {}).get("exported"):
+            return result
 
-    return bridge.send("export_web", {"output_path": output_path})
+    # Fallback: run godot CLI
+    import os
+    import shutil
+    import subprocess
+    from pathlib import Path
+
+    godot_exe = os.getenv("GODOT_PATH", "")
+    if not godot_exe or not Path(godot_exe).is_file():
+        godot_exe = shutil.which("godot") or shutil.which("godot.exe") or ""
+    if not godot_exe:
+        candidates = [
+            r"C:\Program Files\Godot\godot.exe",
+            r"C:\Program Files (x86)\Godot\godot.exe",
+            str(Path.home() / "Godot" / "godot.exe"),
+        ]
+        for p in candidates:
+            if Path(p).is_file():
+                godot_exe = p
+                break
+
+    if not godot_exe:
+        return {
+            "success": False,
+            "error": "Godot executable not found. Set GODOT_PATH env var or install Godot.",
+        }
+
+    # Build export command
+    abs_output = str(Path(output_path).resolve())
+    output_dir = str(Path(abs_output).parent)
+    os.makedirs(output_dir, exist_ok=True)
+
+    cmd = [
+        godot_exe,
+        "--headless",
+        "--export-release",
+        "Web",
+        abs_output,
+    ]
+
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=300,
+            cwd=str(Path(__file__).resolve().parent.parent.parent.parent),
+        )
+        if proc.returncode == 0 and Path(abs_output).exists():
+            return {
+                "success": True,
+                "data": {
+                    "exported": True,
+                    "message": f"Exported to {abs_output}",
+                    "output_path": abs_output,
+                },
+            }
+        return {
+            "success": False,
+            "error": f"Export failed (code {proc.returncode}): {proc.stderr[:500]}",
+        }
+    except subprocess.TimeoutExpired:
+        return {"success": False, "error": "Export timed out after 300s"}
+    except Exception as e:
+        return {"success": False, "error": f"Export error: {e}"}
 
 
 async def godot_read_scene_tree(ctx: Context = None) -> dict:
@@ -391,6 +544,8 @@ async def godot_headless_verify(
 def register(mcp):
     mcp.tool(annotations=_READ_ONLY, version="0.1.0")(godot_status)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_import_stl)
+    mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_import_glb)
+    mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_import_obj)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_load_velocity_field)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_spawn_particles)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_animate_streamlines)
