@@ -1,6 +1,7 @@
 import { Archive, Loader2, PackagePlus, Search, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { apiFetch } from "../lib/api";
 
 export default function BundlesPage() {
 	const [name, setName] = useState("");
@@ -24,7 +25,7 @@ export default function BundlesPage() {
 				setBuildResult("Error: Invalid JSON in tool sequence.");
 				return;
 			}
-			const r = await fetch("/api/v1/control/tool", {
+			const j = await apiFetch("/api/v1/control/tool", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
@@ -32,7 +33,6 @@ export default function BundlesPage() {
 					args: { name, description, tool_sequence: sequence },
 				}),
 			});
-			const j = await r.json();
 			setBuildResult(JSON.stringify(j, null, 2));
 		} catch (e) {
 			setBuildResult(`Error: ${e}`);
@@ -45,7 +45,7 @@ export default function BundlesPage() {
 		setInspecting(true);
 		setInspectResult(null);
 		try {
-			const r = await fetch("/api/v1/control/tool", {
+			const j = await apiFetch("/api/v1/control/tool", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
@@ -53,7 +53,6 @@ export default function BundlesPage() {
 					args: { path: inspectPath },
 				}),
 			});
-			const j = await r.json();
 			setInspectResult(JSON.stringify(j, null, 2));
 		} catch (e) {
 			setInspectResult(`Error: ${e}`);

@@ -1,5 +1,6 @@
-import { Box, Camera, CircuitBoard, Cpu, FileText, Lightbulb, Play, Settings } from "lucide-react";
+import { AlertTriangle, Box, Camera, CircuitBoard, Cpu, FileText, Lightbulb, Play, RefreshCw, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
+import { apiFetch } from "../lib/api";
 
 interface GodotStatus {
 	available: boolean;
@@ -18,12 +19,12 @@ interface StatusData {
 
 export default function Dashboard() {
 	const [status, setStatus] = useState<StatusData | null>(null);
+	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
-		fetch("/api/v1/status")
-			.then((r) => r.json())
+		apiFetch<StatusData>("/api/v1/status")
 			.then(setStatus)
-			.catch(() => {});
+			.catch((e) => setError(e instanceof Error ? e.message : "Failed to reach backend"));
 	}, []);
 
 	const g = status?.godot;
@@ -31,16 +32,34 @@ export default function Dashboard() {
 	return (
 		<div className="space-y-6">
 			<h1 className="text-2xl font-bold text-white">Dashboard</h1>
+			{error && (
+				<div className="flex items-center gap-3 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+					<AlertTriangle size={16} />
+					<span className="flex-1">{error}</span>
+					<button
+						type="button"
+						onClick={() => {
+							setError(null);
+							apiFetch<StatusData>("/api/v1/status")
+								.then(setStatus)
+								.catch((e) => setError(e instanceof Error ? e.message : "Failed to reach backend"));
+						}}
+						className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500/30 transition-all"
+					>
+						<RefreshCw size={12} /> Retry
+					</button>
+				</div>
+			)}
 			<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 				<div className="bg-[#1e1e26] border border-white/10 rounded-2xl p-5 space-y-3">
 					<div className="flex items-center gap-2 text-blue-400">
 						<Cpu size={18} /> Godot Engine
 					</div>
 					<p className="text-sm text-slate-300">
-						{g?.available ? `Found: ${g.path}` : "Godot not detected"}
+						{!status ? "..." : g?.available ? `Found: ${g.path}` : "Godot not detected"}
 					</p>
 					<p className="text-sm text-slate-400">
-						{g?.ws_connected ? "WebSocket connected" : "WebSocket: not connected"}
+						{!status ? "..." : g?.ws_connected ? "WebSocket connected" : "WebSocket: not connected"}
 					</p>
 				</div>
 				<div className="bg-[#1e1e26] border border-white/10 rounded-2xl p-5 space-y-3">
@@ -48,10 +67,10 @@ export default function Dashboard() {
 						<CircuitBoard size={18} /> Server
 					</div>
 					<p className="text-2xl font-bold text-white">
-						v{status?.version || "..."}
+						{status ? `v${status.version}` : "..."}
 					</p>
 					<p className="text-sm text-slate-400">
-						{status?.service || "godot-mcp"} — {status?.ok ? "Ready" : "Loading..."}
+						{status?.service || "godot-mcp"} — {status?.ok ? "Ready" : "Waiting..."}
 					</p>
 				</div>
 				<div className="bg-[#1e1e26] border border-white/10 rounded-2xl p-5 space-y-3">

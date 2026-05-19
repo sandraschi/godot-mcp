@@ -1,6 +1,7 @@
-import { Database, Loader2, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { AlertTriangle, Database, Loader2, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
+import { apiFetch } from "../lib/api";
 
 interface ArtifactEntry {
 	id: string;
@@ -16,17 +17,19 @@ const artifactTypes = ["Scene", "Mesh", "Material", "Particle", "Script", "Audio
 export default function DepotPage() {
 	const [artifacts, setArtifacts] = useState<ArtifactEntry[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 	const [showForm, setShowForm] = useState(false);
 	const [form, setForm] = useState({ name: "", type: "Mesh", description: "", author: "", tags: "" });
 	const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
 	const load = useCallback(async () => {
 		setLoading(true);
+		setError(null);
 		try {
-			const r = await fetch("/api/v1/artifacts");
-			const j = await r.json();
-			setArtifacts(j.artifacts || j || []);
-		} catch {
+			const data = await apiFetch<{ artifacts?: ArtifactEntry[] }>("/api/v1/artifacts");
+			setArtifacts(data.artifacts || []);
+		} catch (e) {
+			setError(e instanceof Error ? e.message : "Failed to load artifacts");
 		} finally {
 			setLoading(false);
 		}
@@ -36,20 +39,28 @@ export default function DepotPage() {
 
 	const handleRegister = async () => {
 		const tags = form.tags.split(",").map((t) => t.trim()).filter(Boolean);
-		await fetch("/api/v1/artifacts", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ name: form.name, type: form.type, description: form.description, author: form.author, tags }),
-		});
-		setShowForm(false);
-		setForm({ name: "", type: "Mesh", description: "", author: "", tags: "" });
-		load();
+		try {
+			await apiFetch("/api/v1/artifacts", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ name: form.name, type: form.type, description: form.description, author: form.author, tags }),
+			});
+			setShowForm(false);
+			setForm({ name: "", type: "Mesh", description: "", author: "", tags: "" });
+			load();
+		} catch {
+			// register failed — load will show error
+		}
 	};
 
 	const handleDelete = async (id: string) => {
-		await fetch(`/api/v1/artifacts/${id}`, { method: "DELETE" });
-		setConfirmDelete(null);
-		load();
+		try {
+			await apiFetch(`/api/v1/artifacts/${id}`, { method: "DELETE" });
+			setConfirmDelete(null);
+			load();
+		} catch {
+			// delete failed — load will show error
+		}
 	};
 
 	return (
@@ -142,6 +153,19 @@ export default function DepotPage() {
 			{loading ? (
 				<div className="flex justify-center py-16">
 					<Loader2 className="animate-spin text-amber-500" size={32} />
+				</div>
+			) : error ? (
+				<div className="text-center py-16 text-red-400">
+					<AlertTriangle size={48} className="mx-auto mb-4 opacity-70" />
+					<p className="text-lg font-bold mb-2">Failed to load artifacts</p>
+					<p className="text-sm mb-4">{error}</p>
+					<button
+						type="button"
+						onClick={load}
+						className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 text-amber-400 text-sm font-bold hover:bg-amber-500/30 transition-all"
+					>
+						<RefreshCw size={14} /> Retry
+					</button>
 				</div>
 			) : artifacts.length === 0 ? (
 				<div className="text-center py-16 text-slate-400">

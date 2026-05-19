@@ -1,11 +1,11 @@
 import { motion } from "framer-motion";
 import {
 	Archive,
-	Book,
 	BookOpen,
 	Box,
 	Code2,
 	Database,
+	Gamepad2,
 	HelpCircle,
 	LayoutDashboard,
 	LayoutGrid,
@@ -40,6 +40,7 @@ const navGroups = [
 		label: "Marketplace",
 		items: [
 			{ path: "/marketplace", label: "Marketplace", icon: Package },
+			{ path: "/projects", label: "Projects", icon: Gamepad2 },
 			{ path: "/depot", label: "Depot", icon: Database },
 		],
 	},

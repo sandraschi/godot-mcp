@@ -1,6 +1,7 @@
-import { Book, BookOpen, FileText, Loader2 } from "lucide-react";
+import { AlertTriangle, Book, BookOpen, FileText, Loader2, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { apiFetch } from "../lib/api";
 
 interface SkillInfo {
 	name: string;
@@ -17,23 +18,32 @@ interface SkillDetail {
 export default function SkillsPage() {
 	const [skills, setSkills] = useState<SkillInfo[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 	const [selected, setSelected] = useState<SkillDetail | null>(null);
 	const [detailLoading, setDetailLoading] = useState(false);
 
-	useEffect(() => {
-		fetch("/api/v1/skills")
-			.then((r) => r.json())
-			.then((data) => setSkills(data.skills || data || []))
-			.catch(() => {})
-			.finally(() => setLoading(false));
+	const load = useCallback(async () => {
+		setLoading(true);
+		setError(null);
+		try {
+			const data = await apiFetch<{ skills?: SkillInfo[] }>("/api/v1/skills");
+			setSkills(data.skills || []);
+		} catch (e) {
+			setError(e instanceof Error ? e.message : "Failed to load skills");
+		} finally {
+			setLoading(false);
+		}
 	}, []);
+
+	useEffect(() => { load(); }, [load]);
 
 	const viewSkill = async (skill: SkillInfo) => {
 		setDetailLoading(true);
 		setSelected(null);
 		try {
-			const r = await fetch(`/api/v1/skills/${encodeURIComponent(skill.name)}`);
-			const j = await r.json();
+			const j = await apiFetch<{ name?: string; content?: string; tools?: string[]; workflows?: string[] }>(
+				`/api/v1/skills/${encodeURIComponent(skill.name)}`
+			);
 			setSelected({
 				name: j.name || skill.name,
 				content: j.content || "",
@@ -69,6 +79,18 @@ export default function SkillsPage() {
 					{loading ? (
 						<div className="flex justify-center py-8">
 							<Loader2 className="animate-spin text-amber-500" size={24} />
+						</div>
+					) : error ? (
+						<div className="text-center py-8 text-red-400">
+							<AlertTriangle size={24} className="mx-auto mb-2 opacity-70" />
+							<p className="text-xs mb-3">{error}</p>
+							<button
+								type="button"
+								onClick={load}
+								className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-400 text-xs font-bold hover:bg-amber-500/30 transition-all"
+							>
+								<RefreshCw size={12} /> Retry
+							</button>
 						</div>
 					) : skills.length === 0 ? (
 						<p className="text-sm text-slate-400">No skills registered.</p>

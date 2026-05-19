@@ -1,6 +1,7 @@
-import { Download, Filter, Loader2, Package, Search } from "lucide-react";
+import { AlertTriangle, Download, Filter, Loader2, Package, RefreshCw, Search } from "lucide-react";
 import { motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { apiFetch } from "../lib/api";
 
 interface Artifact {
 	id: string;
@@ -26,16 +27,24 @@ const typeColors: Record<string, string> = {
 export default function Marketplace() {
 	const [artifacts, setArtifacts] = useState<Artifact[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 	const [search, setSearch] = useState("");
 	const [filterType, setFilterType] = useState("All");
 
-	useEffect(() => {
-		fetch("/api/v1/artifacts")
-			.then((r) => r.json())
-			.then((data) => setArtifacts(data.artifacts || data || []))
-			.catch(() => {})
-			.finally(() => setLoading(false));
+	const load = useCallback(async () => {
+		setLoading(true);
+		setError(null);
+		try {
+			const data = await apiFetch<{ artifacts?: Artifact[] }>("/api/v1/artifacts");
+			setArtifacts(data.artifacts || []);
+		} catch (e) {
+			setError(e instanceof Error ? e.message : "Failed to load artifacts");
+		} finally {
+			setLoading(false);
+		}
 	}, []);
+
+	useEffect(() => { load(); }, [load]);
 
 	const filtered = useMemo(() => {
 		return artifacts.filter((a) => {
@@ -91,6 +100,19 @@ export default function Marketplace() {
 			{loading ? (
 				<div className="flex justify-center py-16">
 					<Loader2 className="animate-spin text-amber-500" size={32} />
+				</div>
+			) : error ? (
+				<div className="text-center py-16 text-red-400">
+					<AlertTriangle size={48} className="mx-auto mb-4 opacity-70" />
+					<p className="text-lg font-bold mb-2">Failed to load artifacts</p>
+					<p className="text-sm mb-4">{error}</p>
+					<button
+						type="button"
+						onClick={load}
+						className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 text-amber-400 text-sm font-bold hover:bg-amber-500/30 transition-all"
+					>
+						<RefreshCw size={14} /> Retry
+					</button>
 				</div>
 			) : filtered.length === 0 ? (
 				<div className="text-center py-16 text-slate-400">

@@ -11,6 +11,7 @@ import LogsPage from "./pages/LogsPage";
 import Marketplace from "./pages/Marketplace";
 import ModelsPage from "./pages/ModelsPage";
 import PrefabsPage from "./pages/PrefabsPage";
+import ProjectsPage from "./pages/ProjectsPage";
 import PromptsPage from "./pages/PromptsPage";
 import SettingsPage from "./pages/SettingsPage";
 import SkillsPage from "./pages/SkillsPage";
@@ -32,6 +33,7 @@ export default function App() {
 				<Route path="/depot" element={<DepotPage />} />
 				<Route path="/workflows" element={<WorkflowsPage />} />
 				<Route path="/prefabs" element={<PrefabsPage />} />
+				<Route path="/projects" element={<ProjectsPage />} />
 				<Route path="/prompts" element={<PromptsPage />} />
 				<Route path="/bundles" element={<BundlesPage />} />
 				<Route path="/skills" element={<SkillsPage />} />

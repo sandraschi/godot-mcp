@@ -1,6 +1,7 @@
 import { Box, Layers, Loader2, Sliders, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { apiFetch } from "../lib/api";
 
 interface PrefabParam {
 	name: string;
@@ -87,12 +88,11 @@ export default function PrefabsPage() {
 			prefab.params.forEach((p) => {
 				args[p.name] = paramValues[p.name];
 			});
-			const r = await fetch("/api/v1/control/tool", {
+			const j = await apiFetch("/api/v1/control/tool", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ tool: "prefab_apply", args }),
 			});
-			const j = await r.json();
 			setResult(JSON.stringify(j, null, 2));
 		} catch (e) {
 			setResult(`Error: ${e}`);

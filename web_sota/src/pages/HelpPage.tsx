@@ -1,15 +1,11 @@
 import {
 	BookOpen,
 	Box,
-	Cpu,
 	ExternalLink,
 	HelpCircle,
-	Layers,
 	Network,
 	Package,
-	Play,
 	Wrench,
-	Zap,
 } from "lucide-react";
 import { useState } from "react";
 

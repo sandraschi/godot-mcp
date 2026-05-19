@@ -1,5 +1,5 @@
 import { Activity, Circle, Download, Filter, Pause, Play, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export default function LogsPage() {
 	const [lines, setLines] = useState<string[]>([]);

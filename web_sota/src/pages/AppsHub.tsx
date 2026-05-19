@@ -1,5 +1,6 @@
-import { Activity, Server, Wifi } from "lucide-react";
+import { Activity, AlertTriangle, RefreshCw, Server, Wifi } from "lucide-react";
 import { useEffect, useState } from "react";
+import { apiFetch } from "../lib/api";
 
 interface ServiceCard {
 	name: string;
@@ -18,12 +19,12 @@ const fleetServices: ServiceCard[] = [
 
 export default function AppsHub() {
 	const [localStatus, setLocalStatus] = useState<string | null>(null);
+	const [statusError, setStatusError] = useState(false);
 
 	useEffect(() => {
-		fetch("/api/v1/status")
-			.then((r) => r.json())
+		apiFetch<{ service?: string }>("/api/v1/status")
 			.then((j) => setLocalStatus(j.service || "unknown"))
-			.catch(() => setLocalStatus(null));
+			.catch(() => setStatusError(true));
 	}, []);
 
 	return (
@@ -33,9 +34,28 @@ export default function AppsHub() {
 				<div className="flex items-center gap-2 text-emerald-400">
 					<Server size={18} /> This Server
 				</div>
-				<p className="text-sm text-slate-300">
-					{localStatus ? `Service: ${localStatus}` : "Checking..."}
-				</p>
+				{statusError ? (
+					<div className="flex items-center gap-2 text-red-400 text-sm">
+						<AlertTriangle size={14} />
+						<span>Backend unreachable</span>
+						<button
+							type="button"
+							onClick={() => {
+								setStatusError(false);
+								apiFetch<{ service?: string }>("/api/v1/status")
+									.then((j) => setLocalStatus(j.service || "unknown"))
+									.catch(() => setStatusError(true));
+							}}
+							className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500/30 transition-all"
+						>
+							<RefreshCw size={10} /> Retry
+						</button>
+					</div>
+				) : (
+					<p className="text-sm text-slate-300">
+						{localStatus ? `Service: ${localStatus}` : "Checking..."}
+					</p>
+				)}
 				<p className="text-sm text-slate-400">Port: 10992 (frontend) / 10993 (backend)</p>
 			</div>
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
