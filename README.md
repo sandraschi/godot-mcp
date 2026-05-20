@@ -1,15 +1,13 @@
 # Godot MCP
 
-[![CI](https://github.com/sandraschi/godot-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/sandraschi/godot-mcp/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.2.0-blue?style=flat-square)](https://github.com/sandraschi/godot-mcp)
-[![Python](https://img.shields.io/badge/python-3.12|3.13-blue?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
-[![FastMCP](https://img.shields.io/badge/FastMCP-3.3-6366f1?style=flat-square&logo=python&logoColor=white)](https://github.com/jlowin/fastmcp)
-[![MCP](https://img.shields.io/badge/MCP-2024--11--05-8B5CF6?style=flat-square)](https://modelcontextprotocol.io)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Godot](https://img.shields.io/badge/Godot-4.4-478cbf?style=flat-square&logo=godot-engine&logoColor=white)](https://godotengine.org/)
-[![Just](https://img.shields.io/badge/Built-Just-000000?style=flat-square&logo=gnu-bash&logoColor=white)](https://github.com/casey/just)
+<p align="center">
+  <a href="https://github.com/casey/just"><img src="https://img.shields.io/badge/just-ready_to_go-7c5cfc?style=flat-square&logo=just&logoColor=white" alt="Just"></a>
+  <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
+  <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.13+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python"></a>
+  <a href="https://github.com/PrefectHQ/fastmcp"><img src="https://img.shields.io/badge/FastMCP-3.2-7c5cfc?style=flat-square" alt="FastMCP"></a>
+</p>
 
+[![CI](https://github.com/sandraschi/godot-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/sandraschi/godot-mcp/actions/workflows/ci.yml)
 AI-driven Godot 4.0 engine control via MCP tools. Import STL/GLB/OBJ geometry, load CFD velocity fields, spawn GPU particle systems, assign PBR materials, control cameras, and export HTML5 builds — all through FastMCP 3.2 tools over SSE transport. Designed as the visualization endpoint for the fleet CAD→CFD→render pipeline (qcad-mcp → freecad-mcp → FluidX3D → godot-mcp) and the blender-mcp → godot-mcp game asset pipeline.
 
 ## Contents
