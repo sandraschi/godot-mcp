@@ -1,52 +1,66 @@
 # Status — godot-mcp
 
-**Status**: v0.1.0 — 12 MCP tools implemented. TCP bridge client ready.
+**Status**: v0.2.1 — 14 MCP tools; TCP bridge verified end-to-end; sample demos runnable.
 
-**Repo**: `D:\Dev\repos\godot-mcp`
-**Ports**: Backend 10993, Frontend 10992
-**Created**: 2026-05
+**Repo**: `D:\Dev\repos\godot-mcp`  
+**Ports**: Backend 10993, Frontend 10992, Bridge 9080  
+**Updated**: 2026-05-22
+
+## Runtime (two processes)
+
+| Process | Command | Port |
+|---------|---------|------|
+| MCP gateway | `just serve` or `start.ps1` | 10993 / 10992 |
+| Godot bridge | `just godot-bridge` | 9080 |
+
+Verify: `just bridge-test` → `Bridge OK - Godot 4.4.x @ … FPS`
+
+Startup log warning `Connection refused at 127.0.0.1:9080` is expected until the bridge runs.
 
 ## Architecture
 
-Godot 4.0 engine → TCP bridge (port 9080) → MCP server → REST API + SSE + Vite webapp.
+Godot 4 engine → TCP bridge (`mcp_bridge.gd` in `main_bridge.tscn`) → Python MCP → REST/SSE + webapp.
 
-Core bridge: Godot 4.0 GDScript TCPServer addon (`src/godot_mcp/bridge/mcp_bridge.gd`) that listens for JSON commands on a local TCP server. The MCP server connects as a client via `godot_mcp.services.godot_bridge` and relays MCP tool calls.
+See `docs/architecture.md`, `docs/PRD.md`.
 
-See `ARCHITECTURE.md` for full design.
+## MCP tools (14)
 
-## Implemented (12 tools)
+| Tool | Status |
+|------|--------|
+| `godot_status` | Verified live |
+| `godot_import_stl` | Implemented |
+| `godot_import_glb` | Implemented |
+| `godot_import_obj` | Implemented |
+| `godot_load_velocity_field` | Implemented |
+| `godot_spawn_particles` | Implemented |
+| `godot_animate_streamlines` | Implemented |
+| `godot_create_camera` | Implemented |
+| `godot_add_light` | Implemented |
+| `godot_set_material` | Implemented |
+| `godot_export_web` | Implemented (+ CLI fallback) |
+| `godot_read_scene_tree` | Implemented |
+| `godot_set_config` | Implemented |
+| `godot_headless_verify` | Implemented |
 
-| Tool | Access | Status |
-|------|--------|--------|
-| `godot_status` | READ_ONLY | Implemented |
-| `godot_import_stl` | MUTATING | Implemented |
-| `godot_load_velocity_field` | MUTATING | Implemented |
-| `godot_spawn_particles` | MUTATING | Implemented |
-| `godot_animate_streamlines` | MUTATING | Implemented |
-| `godot_create_camera` | MUTATING | Implemented |
-| `godot_add_light` | MUTATING | Implemented |
-| `godot_set_material` | MUTATING | Implemented |
-| `godot_export_web` | MUTATING | Implemented |
-| `godot_read_scene_tree` | READ_ONLY | Implemented |
-| `godot_set_config` | MUTATING | Implemented |
-| `godot_headless_verify` | READ_ONLY | Implemented |
+## Sample games
 
-## Implemented
+| Recipe | Demo |
+|--------|------|
+| `just demo-run` | Heart Platformer (4.0) |
+| `just demo-run platformer` | Official 2D platformer (4.4-patched) |
+| `just demo-run pong` | Pong |
+| `just demo-list` | All aliases |
 
-- FastMCP 3.2 server scaffold with dual-mode (stdio/http/dual)
-- REST API: /api/v1/status, /api/v1/control/tool, /api/v1/logs/stream
-- SSE log streaming endpoint
-- Godot engine auto-detection (PATH + GODOT_PATH env var)
-- CORS middleware, lifespan state management
-- TCP bridge client with connect/disconnect/send/recv JSON protocol
-- Bridge auto-connect in server lifespan startup/shutdown
-- Fleet-standard Vite + React webapp (5 pages)
-- justfile with bootstrap, serve, web, dev, lint, fix, test, check, health
-- start.ps1 + start.bat fleet-standard launch scripts
+## Done recently (2026-05-22)
 
-## Next Steps
+- Bridge parse fix; port 9080 listens
+- Justfile parses under just 1.50
+- Platformer animation libraries fixed for 4.4
+- MCD project page + PRD
 
-1. Deploy GDScript bridge addon in a Godot 4.0 project
-2. Integration test with running Godot engine
-3. Connect qcad-mcp STL pipeline → godot_mcp import → FluidX3D velocity → particles
-4. Integration test with freecad-mcp STL → godot import
+## Next steps
+
+1. Optional: auto-launch bridge from `start.ps1`
+2. CI job with headless Godot + bridge smoke test
+3. qcad/freecad → import integration test on `_exchange` depot
+4. Godot 4.6 as optional `just install-godot version="4.6"` for unpatched demos

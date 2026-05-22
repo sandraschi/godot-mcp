@@ -170,7 +170,7 @@ async def api_status():
     return {
         "ok": True,
         "service": "godot-mcp",
-        "version": "0.1.0",
+        "version": "0.2.1",
         "godot": {
             "available": _state.get("godot_available", False),
             "path": _state.get("godot_path", ""),

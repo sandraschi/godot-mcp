@@ -24,20 +24,27 @@ AI-driven Godot 4.0 engine control via MCP tools. Import STL/GLB/OBJ geometry, l
 - [Agentic Game Dev](docs/agentic-game-dev.md)
 - [Community](docs/community.md)
 - [History](docs/history.md)
+- [PRD](docs/PRD.md)
+- [Sample Games](samples/README.md)
 
 ## Quick Start
 
 ```powershell
-just bootstrap      # uv sync + npm install
-just serve          # start backend (port 10993)
-just web            # start frontend (port 10992)
+just bootstrap       # uv sync + npm install + Godot
+just serve           # MCP + REST (10993)
+just godot-bridge    # TCP bridge in Godot (9080) — required for engine tools
+just bridge-test     # confirm godot_status
+just web             # dashboard (10992)
 ```
-Or `.\start.ps1` — kills zombies, starts both, opens browser.
+
+Or `.\start.ps1` for backend + webapp only (start bridge separately).
+
+**Play a sample game:** `just demo-list` then `just demo-run platformer` (see [samples/README.md](samples/README.md)).
 
 ## Key Features
 
 - **14 MCP tools** — godot_status, godot_import_stl, godot_import_glb, godot_import_obj, godot_spawn_particles, godot_load_velocity, godot_animate_streamline, godot_set_material, godot_add_light, godot_create_camera, godot_export_web, godot_run_simulation, godot_set_scene_property, godot_query_scene
-- **Godot 4 engine control** — scene graph manipulation via WebSocket bridge (port 9080)
+- **Godot 4 engine control** — scene graph via TCP bridge (port 9080)
 - **Multi-format import** — STL (binary), GLB/GLTF (via GLTFDocument), OBJ (via ResourceLoader)
 - **CFD velocity fields** — load FluidX3D data, animate streamlines with GPU particles
 - **PBR materials** — assign physically-based materials to any mesh surface

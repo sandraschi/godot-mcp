@@ -5,6 +5,24 @@ All notable changes to **godot-mcp** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-05-22
+
+### Added
+- **Sample games workflow**: `samples/` with official `godot-demo-projects`, Heart Platformer, procedural generation, skelerealms; `just demo-list`, `just demo-run`, `just demo-import` (auto `--import` on first run).
+- **Bridge diagnostics**: `just bridge-test`, `just bridge-status`, `just godot-bridge` (headless bridge project).
+- **Product docs**: `docs/PRD.md`; MCD fleet pages at `mcp-central-docs/projects/godot-mcp/`.
+
+### Fixed
+- **GDScript bridge**: Removed duplicate `_count_meshes` in `mcp_bridge.gd` (parse error blocked TCP listener on 9080).
+- **Justfile 1.50**: Quoted recipe defaults (`mode="dual"`, `count="10"`), PowerShell-safe `doctor`/`freeze`, `depot-import`/`tool` args.
+- **Platformer on Godot 4.4**: Patched `libraries/ = SubResource(...)` → `libraries = { "": SubResource(...) }` in six `.tscn` files (fixes missing `idle`/`walk` animations).
+
+### Changed
+- `samples/README.md` — demo catalog, import notes, 4.4 vs 4.6 guidance.
+- `docs/install.md`, `docs/cli.md`, `STATUS.md` — two-process startup, bridge troubleshooting.
+
+---
+
 ## [0.2.0] - 2026-05-19
 
 ### Added

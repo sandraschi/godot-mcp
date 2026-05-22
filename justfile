@@ -39,7 +39,8 @@ bootstrap: install-godot
 
 # Pin all deps to exact versions and freeze lockfiles
 freeze:
-    uv sync --all-extras && uv lock --upgrade
+    uv sync --all-extras
+    uv lock --upgrade
     Set-Location '{{justfile_directory()}}\web_sota'
     cmd /c npm install --package-lock-only
 
@@ -64,7 +65,7 @@ doctor:
     npm --version; \
     Write-Host "=== Ports ===" -ForegroundColor Cyan; \
     $ports = @({{PORT}}, {{WEB_PORT}}, {{BRIDGE_PORT}}); \
-    foreach ($p in $ports) { $tcp = Get-NetTCPConnection -LocalPort $p -ErrorAction SilentlyContinue; if ($tcp) { Write-Host "  Port $p: $($tcp.State) PID=$($tcp.OwningProcess)" -ForegroundColor Green } else { Write-Host "  Port $p: free" -ForegroundColor Gray } }; \
+    foreach ($p in $ports) { $tcp = Get-NetTCPConnection -LocalPort $p -ErrorAction SilentlyContinue; if ($tcp) { Write-Host "  Port ${p}: $($tcp.State) PID=$($tcp.OwningProcess)" -ForegroundColor Green } else { Write-Host "  Port ${p}: free" -ForegroundColor Gray } }; \
     Write-Host "=== Ruff ===" -ForegroundColor Cyan; \
     uv run ruff --version; \
     Write-Host "=== Biome ===" -ForegroundColor Cyan; \
@@ -100,7 +101,7 @@ setup: clean bootstrap
 # ── Server ────────────────────────────────────────────────────────────────────
 
 # Start the Godot MCP server (Unified Gateway, dual mode)
-serve mode=dual port=PORT:
+serve mode="dual" port=PORT:
     uv run python -m godot_mcp.server --mode {{mode}} --port {{port}}
 
 # Start in stdio mode (for MCP clients)
@@ -156,9 +157,57 @@ bridge-status:
         ($r.Content | ConvertFrom-Json).godot | Format-Table; \
     } catch { Write-Host "Backend not reachable: $_" -ForegroundColor Red }
 
+# List downloaded sample games under samples/
+demo-list:
+    Write-Host "Sample games (just demo-run <name>):" -ForegroundColor Cyan; \
+    Write-Host "  heart       Heart-Platformer-Godot-4 (2D, Godot 4.0)" -ForegroundColor White; \
+    Write-Host "  platformer  Official 2D platformer (physics, shooting)" -ForegroundColor White; \
+    Write-Host "  dodge       Dodge the Creeps (first-game tutorial)" -ForegroundColor White; \
+    Write-Host "  pong        Classic Pong" -ForegroundColor White; \
+    Write-Host "  procedural  GDQuest procedural generation demos" -ForegroundColor White; \
+    Write-Host "  skelerealms Open-world RPG framework (3D)" -ForegroundColor White; \
+    Write-Host "  demos       Open godot-demo-projects folder (50+ mini-demos)" -ForegroundColor Gray
+
+# Import sample assets once (required before first run if .godot/ is missing)
+demo-import game="heart":
+    $root = '{{justfile_directory()}}'; \
+    $proj = switch ('{{game}}') { \
+        'heart' { Join-Path $root 'samples\Heart-Platformer-Godot-4' } \
+        'platformer' { Join-Path $root 'samples\godot-demo-projects\2d\platformer' } \
+        'dodge' { Join-Path $root 'samples\godot-demo-projects\2d\dodge_the_creeps' } \
+        'pong' { Join-Path $root 'samples\godot-demo-projects\2d\pong' } \
+        'procedural' { Join-Path $root 'samples\godot-4-procedural-generation' } \
+        'skelerealms' { Join-Path $root 'samples\skelerealms' } \
+        'demos' { Join-Path $root 'samples\godot-demo-projects' } \
+        default { Write-Host "Unknown demo: {{game}}. Run: just demo-list" -ForegroundColor Red; exit 1 } \
+    }; \
+    if (-not (Test-Path (Join-Path $proj 'project.godot'))) { Write-Host "Missing project: $proj" -ForegroundColor Red; exit 1 }; \
+    Write-Host "Importing {{game}} -> $proj" -ForegroundColor Cyan; \
+    & (Get-Command godot.exe).Source --path $proj --import; \
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; \
+    Write-Host "Import done." -ForegroundColor Green
+
+# Run a sample game (separate Godot window; MCP bridge can stay on godot-mcp root)
+demo-run game="heart":
+    $root = '{{justfile_directory()}}'; \
+    $proj = switch ('{{game}}') { \
+        'heart' { Join-Path $root 'samples\Heart-Platformer-Godot-4' } \
+        'platformer' { Join-Path $root 'samples\godot-demo-projects\2d\platformer' } \
+        'dodge' { Join-Path $root 'samples\godot-demo-projects\2d\dodge_the_creeps' } \
+        'pong' { Join-Path $root 'samples\godot-demo-projects\2d\pong' } \
+        'procedural' { Join-Path $root 'samples\godot-4-procedural-generation' } \
+        'skelerealms' { Join-Path $root 'samples\skelerealms' } \
+        'demos' { Join-Path $root 'samples\godot-demo-projects' } \
+        default { Write-Host "Unknown demo: {{game}}. Run: just demo-list" -ForegroundColor Red; exit 1 } \
+    }; \
+    if (-not (Test-Path (Join-Path $proj 'project.godot'))) { Write-Host "Missing project: $proj" -ForegroundColor Red; exit 1 }; \
+    if (-not (Test-Path (Join-Path $proj '.godot\imported'))) { Write-Host "First run: importing assets for {{game}}..." -ForegroundColor Yellow; & (Get-Command godot.exe).Source --path $proj --import; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }; \
+    Write-Host "Launching {{game}} -> $proj" -ForegroundColor Cyan; \
+    Start-Process -FilePath (Get-Command godot.exe).Source -ArgumentList '--path', $proj
+
 # Export Godot scene to HTML5/WebAssembly via MCP tool
 godot-export path="user://export/web/index.html":
-    $body = @{tool="godot_export_web"; arguments=@{output_path="{{path}}""}} | ConvertTo-Json -Compress; \
+    $body = @{tool="godot_export_web"; arguments=@{output_path="{{path}}"}} | ConvertTo-Json -Compress; \
     try { Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/control/tool" -Method POST -Body $body -ContentType "application/json" -UseBasicParsing -TimeoutSec 30 } catch { Write-Host "Export failed: $_" }
 
 # ── Quality ───────────────────────────────────────────────────────────────────
@@ -283,8 +332,8 @@ health:
     try { Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/status" -UseBasicParsing -TimeoutSec 5 | ForEach-Object { ($_.Content | ConvertFrom-Json) | ConvertTo-Json } } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
 
 # Test a tool via REST bridge (usage: just tool godot_status)
-tool name="godot_status" args='{}':
-    $body = @{tool="{{name}}"; arguments=(${{args}} | ConvertFrom-Json)} | ConvertTo-Json -Compress; \
+tool name="godot_status" args="{}":
+    $body = @{tool="{{name}}"; arguments=('{{args}}' | ConvertFrom-Json)} | ConvertTo-Json -Compress; \
     try { Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/control/tool" -Method POST -Body $body -ContentType "application/json" -UseBasicParsing -TimeoutSec 15 | ForEach-Object { ($_.Content | ConvertFrom-Json) | ConvertTo-Json } } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
 
 # Stream live logs from backend
@@ -305,18 +354,16 @@ bridge-test:
 tools:
     uv run python -c "from godot_mcp.tools import register_all; print('14 tools registered')"
 
-# Import a GLB/STL/OBJ from the fleet exchange depot into Godot
-depot-import:
+# Import a GLB/STL/OBJ from the fleet exchange depot into Godot (usage: just depot-import path/to/model.glb)
+depot-import file name="DepotImport":
     Set-Location '{{justfile_directory()}}'
-    param($file, $name="DepotImport"); \
-    $body = @{tool="godot_import_glb"; arguments=@{path=$file; name=$name}} | ConvertTo-Json -Compress; \
+    $body = @{tool="godot_import_glb"; arguments=@{path="{{file}}"; name="{{name}}"}} | ConvertTo-Json -Compress; \
     try { Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/control/tool" -Method POST -Body $body -ContentType "application/json" -UseBasicParsing -TimeoutSec 30 | ForEach-Object { ($_.Content | ConvertFrom-Json) | ConvertTo-Json } } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
 
 # Export current scene to HTML5 via godot CLI
-depot-export:
+depot-export output="D:/Dev/repos/_exchange/models/godot_export":
     Set-Location '{{justfile_directory()}}'
-    param($output="D:\Dev\repos\_exchange\models\godot_export"); \
-    $body = @{tool="godot_export_web"; arguments=@{output_path=$output}} | ConvertTo-Json -Compress; \
+    $body = @{tool="godot_export_web"; arguments=@{output_path="{{output}}"}} | ConvertTo-Json -Compress; \
     try { Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/control/tool" -Method POST -Body $body -ContentType "application/json" -UseBasicParsing -TimeoutSec 300 | ForEach-Object { ($_.Content | ConvertFrom-Json) | ConvertTo-Json } } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
 
 # ── Fleet Exchange ─────────────────────────────────────────────────────────────
@@ -335,5 +382,5 @@ git-diff:
     git diff --stat
 
 # Show recent commits
-git-log count=10:
+git-log count="10":
     git log --oneline -{{count}}

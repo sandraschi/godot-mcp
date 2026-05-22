@@ -1,6 +1,6 @@
 # Godot MCP — Architecture
 
-**Version**: 0.1.0 | **Ports**: Backend 10993, Frontend 10992, Bridge 9080
+**Version**: 0.2.1 | **Ports**: Backend 10993, Frontend 10992, Bridge 9080
 
 ## System Overview
 
@@ -38,11 +38,15 @@ Located at `src/godot_mcp/bridge/mcp_bridge.gd`. This is an **Autoload** script 
 - Dispatches to 15 action handlers (`match action` block)
 - Returns JSON responses: `{"type": "response", "request_id": "...", "success": true, "data": {...}}`
 
-**Placement**: Must be added as an Autoload in your Godot project's `project.godot`:
+**Placement (this repo):** `main_bridge.tscn` attaches the script at runtime — use `just godot-bridge`.
+
+**Placement (your game project):** Add as Autoload in `project.godot`:
 ```ini
 [autoload]
 MCPBridge="*res://mcp_bridge.gd"
 ```
+
+**Sample games** under `samples/` are separate Godot projects for playtesting (`just demo-run`); they do not host the MCP bridge unless you add the autoload yourself.
 
 ### 2. Python Backend (FastAPI + FastMCP 3.2 — Port 10993)
 

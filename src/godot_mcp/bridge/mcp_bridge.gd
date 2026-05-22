@@ -217,8 +217,7 @@ func _cmd_import_glb(request_id: String, params: Dictionary):
 
 	# Count total nodes and meshes in the imported scene
 	var node_count := _count_nodes(imported_scene)
-	var mesh_count := 0
-	_count_meshes(imported_scene, mesh_count)
+	var mesh_count := _count_meshes(imported_scene)
 
 	_send_response(request_id, {
 		"imported": true,
@@ -227,11 +226,13 @@ func _cmd_import_glb(request_id: String, params: Dictionary):
 		"mesh_count": mesh_count,
 	})
 
-func _count_meshes(node: Node, counter: int) -> void:
+func _count_meshes(node: Node) -> int:
+	var count := 0
 	if node is MeshInstance3D:
-		counter += 1
+		count += 1
 	for child in node.get_children():
-		_count_meshes(child, counter)
+		count += _count_meshes(child)
+	return count
 
 func _cmd_load_velocity(request_id: String, params: Dictionary):
 	var csv_path: String = params.get("csv_path", "")
@@ -473,12 +474,6 @@ func _cmd_set_material(request_id: String, params: Dictionary):
 	(node as MeshInstance3D).set_surface_override_material(0, mat)
 
 	_send_response(request_id, {"set": true, "node": node_name, "color": color_hex, "roughness": roughness})
-
-func _count_meshes(node: Node, counter: int) -> void:
-	if node is MeshInstance3D:
-		counter += 1
-	for child in node.get_children():
-		_count_meshes(child, counter)
 
 func _cmd_import_obj(request_id: String, params: Dictionary):
 	var path: String = params.get("path", "")

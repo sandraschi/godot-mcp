@@ -15,10 +15,26 @@ Each is a full Godot project you can open and run.
 ## Opening a Sample
 
 ```powershell
+just demo-list
+just demo-run                  # default: Heart Platformer (Godot 4.0)
+just demo-run platformer       # official 2D platformer
+just demo-run dodge            # Dodge the Creeps
+just demo-run pong
+just demo-run procedural
+just demo-run skelerealms
+```
+
+Or open a project directly:
+
+```powershell
 godot --path samples\godot-demo-projects\2d\platformer
 ```
 
-Or open the Godot editor and click "Import" → navigate to the sample's project.godot.
+MCP bridge (`just godot-bridge`) uses the repo root `main_bridge.tscn` project. Sample games run in a **second** Godot window and do not replace the bridge.
+
+**First run:** cloned demos have no `.godot/imported/` cache until Godot imports PNGs/audio for your engine version. `just demo-run` does this automatically; or run `just demo-import pong` once manually.
+
+**Godot 4.6 demos on 4.4 engine:** Official `godot-demo-projects` target 4.6 (`libraries/` scene syntax). This repo patches the platformer for 4.4, or install 4.6: `just install-godot version="4.6"`. **Heart Platformer** is native 4.0 and needs no patch.
 
 ## MCPB Bundles
 

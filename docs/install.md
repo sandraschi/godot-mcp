@@ -168,10 +168,29 @@ Or add Godot to your system PATH via Windows Settings > System > About > Advance
 
 ### "Connection refused at 127.0.0.1:9080"
 
-The TCP bridge is not running. You must:
-1. Open your Godot project
-2. Ensure `mcp_bridge.gd` is set as an Autoload in Project Settings > Autoload
-3. Run the project (F5) — the bridge starts listening on port 9080
+The TCP bridge is not running. The MCP server still starts; this is a **warning**, not a fatal error.
+
+**Fleet quick fix (this repo):**
+
+```powershell
+just godot-bridge
+just bridge-test
+```
+
+**Manual:** Run the bridge project (`main_bridge.tscn` at repo root) or add `mcp_bridge.gd` as Autoload in your own Godot project and press F5.
+
+### Sample demo: missing textures or animations
+
+**Missing `.godot/imported/` (paddle.png, etc.):** First run needs import:
+
+```powershell
+just demo-import pong
+just demo-run pong
+```
+
+`just demo-run` runs import automatically when `.godot/imported` is absent.
+
+**Animation not found: idle / walk (platformer on Godot 4.4):** Official demos target 4.6 scene syntax. This repo patches the platformer for 4.4, or install 4.6: `just install-godot version="4.6"`. Use `just demo-run heart` for a native 4.0 project.
 
 ### "Module not found" errors
 

@@ -1,6 +1,6 @@
 # Godot MCP — CLI Reference
 
-**Version**: 0.1.0
+**Version**: 0.2.1
 
 ---
 
@@ -104,6 +104,33 @@ just check
 
 ### Utility Commands
 
+#### `just godot-bridge`
+
+Start Godot headless with the repo bridge project (`main_bridge.tscn`). Listens on TCP **9080**. Run in a separate terminal from `just serve`.
+
+```powershell
+just godot-bridge
+```
+
+#### `just bridge-test`
+
+POST `godot_status` to the REST API. Requires **both** `just serve` and `just godot-bridge`.
+
+```powershell
+just bridge-test
+```
+
+#### `just demo-list` / `just demo-run` / `just demo-import`
+
+Run cloned sample games under `samples/`. First run imports assets via `godot --import`.
+
+```powershell
+just demo-list
+just demo-run              # default: heart
+just demo-run platformer
+just demo-import pong
+```
+
 #### `just health`
 
 Ping the live server's `/api/v1/status` endpoint. Requires the server to be running.
@@ -114,7 +141,7 @@ just health
 
 **Expected output**:
 ```json
-{"ok": true, "service": "godot-mcp", "version": "0.1.0", "godot": {...}}
+{"ok": true, "service": "godot-mcp", "version": "0.2.1", "godot": {"ws_connected": true, ...}}
 ```
 
 #### `just clean`
