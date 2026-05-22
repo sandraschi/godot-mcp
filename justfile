@@ -305,15 +305,17 @@ web-add package:
 
 # ── Tauri Native ──────────────────────────────────────────────────────────────
 
-# Build Tauri native desktop app (dev mode)
+# Build Tauri native desktop app (dev mode — expects web_sota dev server on 10992)
 tauri-dev:
-    Set-Location '{{justfile_directory()}}\native'
-    cargo tauri dev
+    pwsh -NoProfile -File '{{justfile_directory()}}\native\build.ps1' -Mode dev
 
-# Build Tauri native desktop app (release)
+# Full release: web_sota + PyInstaller sidecar + NSIS installer
 tauri-build:
-    Set-Location '{{justfile_directory()}}\native'
-    cargo tauri build
+    pwsh -NoProfile -File '{{justfile_directory()}}\native\build.ps1'
+
+# PyInstaller backend only (for Tauri sidecar)
+tauri-sidecar:
+    pwsh -NoProfile -File '{{justfile_directory()}}\native\build-sidecar.ps1'
 
 # ── Docker ────────────────────────────────────────────────────────────────────
 

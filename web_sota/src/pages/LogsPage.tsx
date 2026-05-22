@@ -1,5 +1,6 @@
 import { Activity, Circle, Download, Filter, Pause, Play, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { API_BASE } from "../lib/api";
 
 export default function LogsPage() {
 	const [lines, setLines] = useState<string[]>([]);
@@ -13,7 +14,7 @@ export default function LogsPage() {
 	}, [paused]);
 
 	useEffect(() => {
-		const es: EventSource | null = new EventSource("/api/v1/logs/stream");
+		const es: EventSource | null = new EventSource(`${API_BASE}/api/v1/logs/stream`);
 		setSseState("connecting");
 		es.onopen = () => setSseState("open");
 		es.onmessage = (ev) => {

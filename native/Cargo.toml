@@ -1,6 +1,6 @@
 [package]
 name = "godot-mcp-native"
-version = "0.1.0"
+version = "0.2.1"
 description = "Native desktop wrapper for Godot MCP"
 edition = "2021"
 

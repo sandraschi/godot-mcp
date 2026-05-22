@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.1] - 2026-05-22
 
 ### Added
+- **Tauri 2.0 native app** (`native/`): PyInstaller sidecar `godot-mcp-backend`, auto-starts MCP on 10993, bundles `web_sota` dashboard. Build: `just tauri-build`. Scripts: `native/build.ps1`, `build-sidecar.ps1`, `scripts/generate-tauri-icon.ps1`, `scripts/patch-platformer-godot44.ps1`.
 - **Sample games workflow**: `samples/` with official `godot-demo-projects`, Heart Platformer, procedural generation, skelerealms; `just demo-list`, `just demo-run`, `just demo-import` (auto `--import` on first run).
 - **Bridge diagnostics**: `just bridge-test`, `just bridge-status`, `just godot-bridge` (headless bridge project).
 - **Product docs**: `docs/PRD.md`; MCD fleet pages at `mcp-central-docs/projects/godot-mcp/`.

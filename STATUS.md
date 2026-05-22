@@ -51,11 +51,28 @@ See `docs/architecture.md`, `docs/PRD.md`.
 | `just demo-run pong` | Pong |
 | `just demo-list` | All aliases |
 
+## Tauri native app (v0.2.1)
+
+| Artifact | Path |
+|----------|------|
+| NSIS installer | `native/target/release/bundle/nsis/Godot MCP_0.2.1_x64-setup.exe` |
+| MSI installer | `native/target/release/bundle/msi/Godot MCP_0.2.1_x64_en-US.msi` |
+| Dev binary | `native/target/release/godot-mcp-native.exe` |
+
+Build (requires Rust, Node 20+, uv, ~10 min first run):
+
+```powershell
+just tauri-build
+```
+
+Sidecar only: `just tauri-sidecar`. Dev shell: `just tauri-dev` (expects `web_sota` on 10992).
+
 ## Done recently (2026-05-22)
 
 - Bridge parse fix; port 9080 listens
 - Justfile parses under just 1.50
-- Platformer animation libraries fixed for 4.4
+- Platformer patch script `scripts/patch-platformer-godot44.ps1`
+- Tauri 2.0 + PyInstaller sidecar (~27 MB backend bundled)
 - MCD project page + PRD
 
 ## Next steps
@@ -63,4 +80,3 @@ See `docs/architecture.md`, `docs/PRD.md`.
 1. Optional: auto-launch bridge from `start.ps1`
 2. CI job with headless Godot + bridge smoke test
 3. qcad/freecad → import integration test on `_exchange` depot
-4. Godot 4.6 as optional `just install-godot version="4.6"` for unpatched demos

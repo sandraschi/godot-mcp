@@ -10,6 +10,12 @@ dist/
 
 # Rust / Tauri
 native/target/
+native/binaries/
+native/gen/
+native/icons/android/
+native/icons/ios/
+build/godot-mcp-backend/
+dist/godot-mcp-backend.exe
 
 # Godot exports
 *.wasm
