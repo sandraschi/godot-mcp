@@ -5,13 +5,35 @@ All notable changes to **godot-mcp** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Game Builder pipeline** (`godot_mcp/game_builder/`) — AI-native game creation from natural language. 6 MCP tools:
+  - `design_game` — LLM decomposes concept into GamePlan (worlds, scenes, scripts, controls, scoring, export)
+  - `generate_game_worlds` — calls worldlabs-mcp via bridge for each world, polls until completion
+  - `compose_game_scene` — imports Marble GLBs into Godot, sets up lighting/camera/node structure
+  - `generate_game_logic` — AI writes all GDScript files via `ctx.sample()`
+  - `export_and_ship` — HTML5 export + optional itch.io push
+  - `build_game` — master tool: design → worlds → compose → logic → export
+- **GamePlan schema** (`plan.py`) — Pydantic model for AI-generated game plans
+- **System prompts** (`prompts.py`) — LLM prompts for game design + GDScript generation
+- **Pipeline orchestration** (`pipeline.py`) — bridges worldlabs-mcp, godot-mcp, and LLM sampling
+- **Spec document** (`docs/SPEC_GAME_BUILDER.md`)
+
+### Changed
+- **Tool count**: 43 → 49 MCP tools (added 6 game_builder tools)
+
 ## [0.2.1] - 2026-05-22
 
 ### Added
+- **itch.io / Butler shipping** (`godot_mcp/itch/`): export sample games, `push-preview`, `push`, and one-shot `ship_to_itch`. Six MCP tools; REST at `/api/v1/itch/*`; dashboard **`/ship`** page; `ship_web_itch` workflow. Env: `BUTLER_API_KEY`, `ITCH_TARGET`, `BUTLER_PATH`, `ITCH_CHANNEL_WEB`, `ITCH_CHANNEL_WIN`, `GODOT_EXPORT_GAME`. Just: `itch-status`, `itch-push-preview`, `itch-push`, `ship`.
+- **Little-game export** (`scripts/little-game-export.ps1`, `templates/little-game-export_presets.cfg`): `just install-export-templates`, `just little-game-export`, `just little-game-pack`. Output under `build/little-game/<game>/`.
 - **Tauri 2.0 native app** (`native/`): PyInstaller sidecar `godot-mcp-backend`, auto-starts MCP on 10993, bundles `web_sota` dashboard. Build: `just tauri-build`. Scripts: `native/build.ps1`, `build-sidecar.ps1`, `scripts/generate-tauri-icon.ps1`, `scripts/patch-platformer-godot44.ps1`.
 - **Sample games workflow**: `samples/` with official `godot-demo-projects`, Heart Platformer, procedural generation, skelerealms; `just demo-list`, `just demo-run`, `just demo-import` (auto `--import` on first run).
 - **Bridge diagnostics**: `just bridge-test`, `just bridge-status`, `just godot-bridge` (headless bridge project).
-- **Product docs**: `docs/PRD.md`; MCD fleet pages at `mcp-central-docs/projects/godot-mcp/`.
+- **VibeCode Runner** sample (`samples/vibecode-runner/`) — vibecoding-themed side-scroller (AI-assisted scaffold example).
+- **Fleet pipeline** (`godot_mcp/fleet/`): exchange listing, World Labs mesh download/import, splat staging, REST `/api/v1/fleet/*`, six MCP tools. Docs: `docs/fleet-game-pipeline.md`, `docs/FLEET_ASSESSMENT.md`. Just: `fleet-status`, `fleet-import`, `fleet-worldlabs-*`.
+- **Product docs**: `docs/PRD.md`, `docs/ai-and-indie-games.md`; MCD fleet pages at `mcp-central-docs/projects/godot-mcp/`.
 
 ### Fixed
 - **GDScript bridge**: Removed duplicate `_count_meshes` in `mcp_bridge.gd` (parse error blocked TCP listener on 9080).
@@ -19,8 +41,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Platformer on Godot 4.4**: Patched `libraries/ = SubResource(...)` → `libraries = { "": SubResource(...) }` in six `.tscn` files (fixes missing `idle`/`walk` animations).
 
 ### Changed
+- `GET /api/v1/status` includes `itch` block (Butler path, API key set, defaults, last ship) and **`fleet`** block (exchange root, asset count, splat/mesh flags).
+- `POST /api/v1/control/tool` dispatches itch + workflow tools without Godot bridge.
 - `samples/README.md` — demo catalog, import notes, 4.4 vs 4.6 guidance.
-- `docs/install.md`, `docs/cli.md`, `STATUS.md` — two-process startup, bridge troubleshooting.
+- `docs/install.md`, `docs/cli.md`, `docs/little-game-guide.md`, `STATUS.md` — export/ship recipes, Butler env, `/ship` UI.
+- MCD: `projects/godot-mcp/`, `docs/gamedev/` — Butler via godot-mcp (not a separate butler-mcp repo).
 
 ---
 

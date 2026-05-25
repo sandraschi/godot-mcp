@@ -22,9 +22,15 @@ AI-driven Godot 4.0 engine control via MCP tools. Import STL/GLB/OBJ geometry, l
 - [Comparison: Godot vs Unity vs Unreal](docs/comparison.md)
 - [Example Projects](docs/examples.md)
 - [Agentic Game Dev](docs/agentic-game-dev.md)
+- [Little Game Guide](docs/little-game-guide.md) — study repos, AI workflow, Windows/iOS distribution
+- [AI and Indie Games](docs/ai-and-indie-games.md) — is AI the death of indie? (scope, hobby vs career)
+- [Ship to itch.io](docs/ship-to-itch.md) — Butler tools, `/ship` dashboard, env vars
+- [Fleet game pipeline](docs/fleet-game-pipeline.md) — blender/worldlabs → Godot; splats vs GLB
+- [Fleet assessment](docs/FLEET_ASSESSMENT.md) — implementation status and gaps
 - [Community](docs/community.md)
 - [History](docs/history.md)
 - [PRD](docs/PRD.md)
+- [Game Builder Pipeline](docs/SPEC_GAME_BUILDER.md) — AI-native game creation: prompt → worlds → Godot → itch.io
 - [Sample Games](samples/README.md)
 
 ## Quick Start
@@ -41,14 +47,18 @@ Or `.\start.ps1` for backend + webapp only (start bridge separately).
 
 **Play a sample game:** `just demo-list` then `just demo-run platformer` (see [samples/README.md](samples/README.md)).
 
+**Export & ship a sample:** `just little-game-export web dodge` then open **`/ship`** in the dashboard, or `just ship web dodge` (requires `BUTLER_API_KEY` + `ITCH_TARGET`).
+
 ## Key Features
 
-- **14 MCP tools** — godot_status, godot_import_stl, godot_import_glb, godot_import_obj, godot_spawn_particles, godot_load_velocity, godot_animate_streamline, godot_set_material, godot_add_light, godot_create_camera, godot_export_web, godot_run_simulation, godot_set_scene_property, godot_query_scene
+- **Game Builder** — 6 new MCP tools: `design_game`, `generate_game_worlds`, `compose_game_scene`, `generate_game_logic`, `export_and_ship`, `build_game`. Natural language → GamePlan → Marble worlds → Godot scene → GDScript → HTML5. See [SPEC](docs/SPEC_GAME_BUILDER.md).
+- **6 itch ship tools** — `itch_status`, `godot_export_release`, `itch_push_preview`, `itch_push`, `itch_latest_version`, `ship_to_itch`
 - **Godot 4 engine control** — scene graph via TCP bridge (port 9080)
 - **Multi-format import** — STL (binary), GLB/GLTF (via GLTFDocument), OBJ (via ResourceLoader)
 - **CFD velocity fields** — load FluidX3D data, animate streamlines with GPU particles
 - **PBR materials** — assign physically-based materials to any mesh surface
 - **HTML5 export** — build WebAssembly/WebGL with `godot --headless --export-release` fallback
+- **itch.io shipping** — Butler push from CLI, MCP, REST, or dashboard `/ship` (export → preview → push)
 - **REST API** — FastAPI gateway on port 10993 alongside MCP SSE
 - **Tauri native wrapper** — `native/` directory for desktop distribution (~5 MB)
 

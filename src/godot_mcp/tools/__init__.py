@@ -8,6 +8,9 @@ import time for server boot discovery.
 
 def register_all(mcp):
     from godot_mcp.artifacts.tools import register as reg_artifacts
+    from godot_mcp.fleet.tools import register as reg_fleet
+    from godot_mcp.game_builder.tools import register as reg_game_builder
+    from godot_mcp.itch.tools import register as reg_itch
     from godot_mcp.mcp_bridge.tools import register as reg_bridge
     from godot_mcp.mcpb.tools import register as reg_mcpb
     from godot_mcp.prefabs.tools import register as reg_prefabs
@@ -18,9 +21,12 @@ def register_all(mcp):
 
     reg_core(mcp)
     reg_artifacts(mcp)
+    reg_fleet(mcp)
+    reg_game_builder(mcp)
     reg_sampling(mcp)
     reg_workflows(mcp)
     reg_prefabs(mcp)
     reg_prompts(mcp)
     reg_bridge(mcp)
     reg_mcpb(mcp)
+    reg_itch(mcp)
