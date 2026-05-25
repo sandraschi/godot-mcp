@@ -131,6 +131,54 @@ just demo-run platformer
 just demo-import pong
 ```
 
+#### `just install-export-templates`
+
+Download Godot export templates (required once per Godot version for `little-game-export`).
+
+```powershell
+just install-export-templates
+```
+
+#### `just little-game-export` / `just little-game-pack`
+
+Export a sample game to `build/little-game/<game>/` for itch.io or desktop sharing.
+
+```powershell
+just little-game-export web dodge
+just little-game-export windows dodge
+just little-game-pack web dodge          # also creates zip
+```
+
+See [ship-to-itch.md](./ship-to-itch.md) and [little-game-guide.md](./little-game-guide.md).
+
+#### `just itch-status` / `just itch-push-preview` / `just itch-push` / `just ship`
+
+Butler / itch.io shipping via REST (server on 10993). Requires `BUTLER_API_KEY` and `ITCH_TARGET` for push.
+
+```powershell
+just itch-status
+just little-game-export web dodge
+just itch-push-preview build/little-game/dodge/web
+just itch-push build/little-game/dodge/web
+just ship web dodge
+```
+
+Dashboard alternative: `just web` → **Ship** (`/ship`).
+
+#### `just fleet-status` / `just fleet-import` / `just fleet-worldlabs-*`
+
+Fleet exchange + World Labs mesh pipeline (REST on 10993). Import tools need `just godot-bridge`; World Labs tools need worldlabs-mcp bridge on **10865**.
+
+```powershell
+just fleet-status
+just fleet-import "D:\Dev\repos\_exchange\models\prop.glb" MyProp
+just fleet-worldlabs-info YOUR_WORLD_ID
+just fleet-worldlabs-stage-mesh YOUR_WORLD_ID
+just fleet-worldlabs-import YOUR_WORLD_ID LevelCollider
+```
+
+See [fleet-game-pipeline.md](./fleet-game-pipeline.md) and [FLEET_ASSESSMENT.md](./FLEET_ASSESSMENT.md).
+
 #### `just health`
 
 Ping the live server's `/api/v1/status` endpoint. Requires the server to be running.
@@ -266,6 +314,12 @@ uv run python -m godot_mcp.server `
 | `GODOT_PORT` | `9080` | Port for the Godot TCP bridge |
 | `GODOT_PATH` | auto-detect | Absolute path to `godot.exe`. Overrides PATH-based discovery |
 | `MCP_BRIDGE_URLS` | `""` | Comma-separated list of SSE URLs for cross-repo MCP bridge proxies |
+| `BUTLER_API_KEY` | — | itch.io API key for Butler push (never commit) |
+| `ITCH_TARGET` | — | Default itch.io slug `user/game` |
+| `BUTLER_PATH` | auto | Path to `butler.exe` if not on PATH |
+| `ITCH_CHANNEL_WEB` | `html` | Butler channel for web exports |
+| `ITCH_CHANNEL_WIN` | `win` | Butler channel for Windows exports |
+| `GODOT_EXPORT_GAME` | `dodge` | Default sample for export/ship tools |
 | `PORT` | `10993` | HTTP server port (alternative to `--port`) |
 | `WEB_PORT` | `10992` | Webapp Vite dev server port |
 | `LOG_LEVEL` | `INFO` | Python logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |

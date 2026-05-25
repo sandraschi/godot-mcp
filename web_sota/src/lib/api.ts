@@ -13,12 +13,16 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+export async function apiFetch<T>(
+  path: string,
+  options?: RequestInit & { timeoutMs?: number },
+): Promise<T> {
+  const { timeoutMs = DEFAULT_TIMEOUT, ...fetchOptions } = options ?? {};
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(`${API_BASE}${path}`, {
-      ...options,
+      ...fetchOptions,
       signal: controller.signal,
     });
     if (!res.ok) throw new ApiError(`HTTP ${res.status}`, res.status);

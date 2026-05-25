@@ -508,6 +508,13 @@ Server health and Godot connectivity status. Returns immediately, does not requi
     "host": "127.0.0.1",
     "port": 9080,
     "ws_connected": true
+  },
+  "itch": {
+    "success": true,
+    "butler": { "found": true, "path": "...", "version": "..." },
+    "auth": { "api_key_set": true },
+    "defaults": { "game": "dodge", "itch_target": "user/game", "channel_web": "html", "channel_windows": "win" },
+    "last_ship": {}
   }
 }
 ```
@@ -522,6 +529,22 @@ Server health and Godot connectivity status. Returns immediately, does not requi
 | `godot.host` | string | Bridge host |
 | `godot.port` | int | Bridge port |
 | `godot.ws_connected` | bool | TCP bridge currently connected |
+| `itch` | object | Butler status, auth, defaults, last ship (v0.2.1+) |
+
+### itch.io REST (`/api/v1/itch/*`) — v0.2.1
+
+| Method | Path | Body / query |
+|--------|------|--------------|
+| `GET` | `/api/v1/itch/status` | — |
+| `POST` | `/api/v1/itch/export` | `{target, game, project_path?, output_path?}` |
+| `POST` | `/api/v1/itch/push-preview` | `{upload_dir, itch_target?, channel?}` |
+| `POST` | `/api/v1/itch/push` | `{upload_dir, itch_target?, channel?, hidden?}` |
+| `POST` | `/api/v1/itch/ship` | `{target, game, itch_target?, channel?, preview?, push?, hidden?}` |
+| `GET` | `/api/v1/itch/latest` | `?itch_target=&channel=` |
+
+Python tools (`itch_*`, `ship_to_itch`, `workflow_*`) also dispatch via `POST /api/v1/control/tool` without requiring the Godot bridge.
+
+See [ship-to-itch.md](./ship-to-itch.md).
 
 ### `POST /api/v1/control/tool`
 

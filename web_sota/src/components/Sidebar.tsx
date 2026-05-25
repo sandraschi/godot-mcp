@@ -13,6 +13,7 @@ import {
 	MessageSquare,
 	Package,
 	Play,
+	Rocket,
 	Settings,
 	Sparkles,
 	Wrench,
@@ -40,6 +41,7 @@ const navGroups = [
 		label: "Marketplace",
 		items: [
 			{ path: "/marketplace", label: "Marketplace", icon: Package },
+			{ path: "/ship", label: "Ship", icon: Rocket },
 			{ path: "/projects", label: "Projects", icon: Gamepad2 },
 			{ path: "/depot", label: "Depot", icon: Database },
 		],

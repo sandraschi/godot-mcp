@@ -49,6 +49,10 @@ class Workflow:
                     params[k] = self.context.get(key, v)
             result = await step.execute(execute_tool_fn)
             results.append({"step": step.name, "tool": step.tool, "result": result})
+            if result.get("success") and step.tool == "godot_export_release":
+                data = result.get("data") or {}
+                if data.get("upload_dir"):
+                    self.context["upload_dir"] = data["upload_dir"]
             if not result.get("success", False):
                 self.status = "failed"
                 self.completed_at = datetime.now(UTC).isoformat()
@@ -81,7 +85,30 @@ PARTICLE_CFD_WORKFLOW = (
     .add_step("Animate Streamlines", "godot_animate_streamlines", {})
 )
 
+SHIP_WEB_WORKFLOW = (
+    Workflow(
+        "Ship Web to itch.io",
+        "Export HTML5 build, preview Butler diff, push to itch.io.",
+    )
+    .add_step(
+        "Export Web",
+        "godot_export_release",
+        {"target": "web", "game": "{context.game}"},
+    )
+    .add_step(
+        "Preview Push",
+        "itch_push_preview",
+        {"upload_dir": "{context.upload_dir}", "itch_target": "{context.itch_target}", "channel": "{context.channel}"},
+    )
+    .add_step(
+        "Push",
+        "itch_push",
+        {"upload_dir": "{context.upload_dir}", "itch_target": "{context.itch_target}", "channel": "{context.channel}"},
+    )
+)
+
 BUILTIN_WORKFLOWS = {
     "scene_setup": SCENE_SETUP_WORKFLOW,
     "particle_cfd": PARTICLE_CFD_WORKFLOW,
+    "ship_web_itch": SHIP_WEB_WORKFLOW,
 }

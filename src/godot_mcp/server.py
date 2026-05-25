@@ -30,6 +30,8 @@ except ImportError:
     CodeMode = None
 
 from godot_mcp.artifacts.routes import router as artifacts_router
+from godot_mcp.fleet.routes import router as fleet_router
+from godot_mcp.itch.routes import router as itch_router
 from godot_mcp.services.godot_bridge import GODOT_HOST, GODOT_PATH, GODOT_PORT, GodotBridge
 from godot_mcp.tools import register_all
 
@@ -104,6 +106,8 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 # Register artifact marketplace routes
 app.include_router(artifacts_router)
+app.include_router(fleet_router)
+app.include_router(itch_router)
 
 mcp = FastMCP.from_fastapi(app, name="Godot MCP")
 
@@ -167,6 +171,11 @@ register_all(mcp)
 @app.get("/api/v1/status")
 async def api_status():
     """Server status including Godot engine and WebSocket bridge info."""
+    from godot_mcp.fleet.service import fleet_exchange_status
+    from godot_mcp.itch.service import itch_status
+
+    itch = itch_status()
+    fleet = fleet_exchange_status()
     return {
         "ok": True,
         "service": "godot-mcp",
@@ -178,6 +187,8 @@ async def api_status():
             "port": _state.get("godot_port", GODOT_PORT),
             "ws_connected": _state.get("ws_connected", False),
         },
+        "itch": itch,
+        "fleet": fleet,
     }
 
 
@@ -185,10 +196,76 @@ async def api_status():
 
 
 class ToolRequest(BaseModel):
-    tool: str = Field(
-        description="Tool name: godot_status, godot_import_stl, godot_load_velocity_field, godot_spawn_particles, godot_animate_streamlines, godot_create_camera, godot_add_light, godot_set_material, godot_export_web, godot_read_scene_tree, godot_set_config, godot_headless_verify"
-    )
+    tool: str = Field(description="Tool name (godot_* or itch_* / ship_to_itch)")
     arguments: dict = Field(default_factory=dict, description="Tool arguments as a dict")
+
+
+async def _run_python_tool(tool: str, arguments: dict) -> dict:
+    from godot_mcp.itch import service as itch_service
+
+    if tool == "itch_status":
+        return itch_service.itch_status()
+    if tool == "godot_export_release":
+        return itch_service.godot_export_release_tool(**arguments)
+    if tool == "itch_push_preview":
+        return itch_service.itch_push_preview(**arguments)
+    if tool == "itch_push":
+        return itch_service.itch_push(**arguments)
+    if tool == "itch_latest_version":
+        return itch_service.itch_latest_version(**arguments)
+    if tool == "ship_to_itch":
+        return itch_service.ship_to_itch(**arguments)
+    if tool == "fleet_exchange_status":
+        from godot_mcp.fleet.service import fleet_exchange_status
+
+        return fleet_exchange_status()
+    if tool == "fleet_import_from_exchange":
+        from godot_mcp.fleet.service import fleet_import_from_exchange
+
+        return fleet_import_from_exchange(**arguments)
+    if tool == "fleet_worldlabs_get_world":
+        from godot_mcp.fleet.service import fleet_worldlabs_get_world
+
+        return fleet_worldlabs_get_world(**arguments)
+    if tool == "fleet_worldlabs_stage_mesh":
+        from godot_mcp.fleet.service import fleet_worldlabs_stage_mesh
+
+        return fleet_worldlabs_stage_mesh(**arguments)
+    if tool == "fleet_worldlabs_stage_splat":
+        from godot_mcp.fleet.service import fleet_worldlabs_stage_splat
+
+        return fleet_worldlabs_stage_splat(**arguments)
+    if tool == "fleet_worldlabs_import_mesh":
+        from godot_mcp.fleet.service import fleet_worldlabs_import_mesh
+
+        return fleet_worldlabs_import_mesh(**arguments)
+    if tool == "workflow_list":
+        from godot_mcp.workflows.tools import workflow_list
+
+        return await workflow_list()
+    if tool == "workflow_run":
+        from godot_mcp.workflows.tools import workflow_run
+
+        return await workflow_run(**arguments)
+    raise HTTPException(400, f"Unknown tool: {tool}")
+
+
+PYTHON_TOOLS = {
+    "itch_status",
+    "godot_export_release",
+    "itch_push_preview",
+    "itch_push",
+    "itch_latest_version",
+    "ship_to_itch",
+    "fleet_exchange_status",
+    "fleet_import_from_exchange",
+    "fleet_worldlabs_get_world",
+    "fleet_worldlabs_stage_mesh",
+    "fleet_worldlabs_stage_splat",
+    "fleet_worldlabs_import_mesh",
+    "workflow_list",
+    "workflow_run",
+}
 
 
 @app.post("/api/v1/control/tool")
@@ -208,6 +285,22 @@ async def execute_tool(req: ToolRequest):
         "godot_set_config": (None, "set_config"),
         "godot_headless_verify": (None, "headless_verify"),
     }
+    if req.tool in PYTHON_TOOLS:
+        try:
+            result = await _run_python_tool(req.tool, req.arguments)
+            return {
+                "success": result.get("success", False),
+                "message": "Tool executed",
+                "tool": req.tool,
+                "data": result.get("data", result),
+                "error": result.get("error"),
+                "arguments": req.arguments,
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            return {"success": False, "message": str(e), "tool": req.tool, "arguments": req.arguments}
+
     if req.tool not in action_map:
         raise HTTPException(400, f"Unknown tool: {req.tool}")
     try:

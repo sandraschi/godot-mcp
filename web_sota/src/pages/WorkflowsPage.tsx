@@ -41,6 +41,20 @@ const workflows: WorkflowDef[] = [
 			{ name: "csv_path", type: "string", description: "Path to velocity CSV" },
 		],
 	},
+	{
+		name: "ship_web_itch",
+		description: "Export HTML5 build, preview Butler diff, push to itch.io.",
+		steps: [
+			{ step: 1, tool: "godot_export_release", input: { target: "web", game: "{game}" } },
+			{ step: 2, tool: "itch_push_preview", input: { upload_dir: "{upload_dir}" } },
+			{ step: 3, tool: "itch_push", input: { upload_dir: "{upload_dir}" } },
+		],
+		parameters: [
+			{ name: "game", type: "string", description: "Sample game (default dodge)" },
+			{ name: "itch_target", type: "string", description: "user/game slug" },
+			{ name: "channel", type: "string", description: "Butler channel (default html)" },
+		],
+	},
 ];
 
 export default function WorkflowsPage() {
@@ -54,13 +68,18 @@ export default function WorkflowsPage() {
 		setResult(null);
 		setResultLoading(true);
 		try {
+			const args: Record<string, string> = { workflow_name: w.name };
+			for (const [k, v] of Object.entries(params)) {
+				if (v.trim()) args[k] = v.trim();
+			}
 			const j = await apiFetch("/api/v1/control/tool", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					tool: "workflow_run",
-					args: { workflow: w.name, parameters: params },
+					arguments: args,
 				}),
+				timeoutMs: 900000,
 			});
 			setResult(JSON.stringify(j, null, 2));
 		} catch (e) {

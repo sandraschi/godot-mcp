@@ -31,6 +31,10 @@ install-godot version="4.4":
     Remove-Item $tmp -Force; \
     Write-Host "Godot {{version}} installed to $dest" -ForegroundColor Green
 
+# Download Godot export templates (required for little-game-export)
+install-export-templates version="4.4":
+    pwsh -NoProfile -ExecutionPolicy Bypass -File '{{justfile_directory()}}\scripts\install-godot-export-templates.ps1' -Version '{{version}}'
+
 # Synchronise all dependencies and dev extras (auto-installs Godot)
 bootstrap: install-godot
     uv sync --all-extras
@@ -166,6 +170,7 @@ demo-list:
     Write-Host "  pong        Classic Pong" -ForegroundColor White; \
     Write-Host "  procedural  GDQuest procedural generation demos" -ForegroundColor White; \
     Write-Host "  skelerealms Open-world RPG framework (3D)" -ForegroundColor White; \
+    Write-Host "  vibecode    VibeCode Runner — jump IDEs, dodge agent loops (2D)" -ForegroundColor Magenta; \
     Write-Host "  demos       Open godot-demo-projects folder (50+ mini-demos)" -ForegroundColor Gray
 
 # Import sample assets once (required before first run if .godot/ is missing)
@@ -178,6 +183,7 @@ demo-import game="heart":
         'pong' { Join-Path $root 'samples\godot-demo-projects\2d\pong' } \
         'procedural' { Join-Path $root 'samples\godot-4-procedural-generation' } \
         'skelerealms' { Join-Path $root 'samples\skelerealms' } \
+        'vibecode' { Join-Path $root 'samples\vibecode-runner' } \
         'demos' { Join-Path $root 'samples\godot-demo-projects' } \
         default { Write-Host "Unknown demo: {{game}}. Run: just demo-list" -ForegroundColor Red; exit 1 } \
     }; \
@@ -197,6 +203,7 @@ demo-run game="heart":
         'pong' { Join-Path $root 'samples\godot-demo-projects\2d\pong' } \
         'procedural' { Join-Path $root 'samples\godot-4-procedural-generation' } \
         'skelerealms' { Join-Path $root 'samples\skelerealms' } \
+        'vibecode' { Join-Path $root 'samples\vibecode-runner' } \
         'demos' { Join-Path $root 'samples\godot-demo-projects' } \
         default { Write-Host "Unknown demo: {{game}}. Run: just demo-list" -ForegroundColor Red; exit 1 } \
     }; \
@@ -204,6 +211,52 @@ demo-run game="heart":
     if (-not (Test-Path (Join-Path $proj '.godot\imported'))) { Write-Host "First run: importing assets for {{game}}..." -ForegroundColor Yellow; & (Get-Command godot.exe).Source --path $proj --import; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }; \
     Write-Host "Launching {{game}} -> $proj" -ForegroundColor Cyan; \
     Start-Process -FilePath (Get-Command godot.exe).Source -ArgumentList '--path', $proj
+
+# ── Little game export (itch.io / desktop) ───────────────────────────────────
+
+# Export sample game: web (HTML5) or windows (.exe). Usage: just little-game-export web dodge
+little-game-export target game="dodge" output="" pack="false":
+    $packSwitch = if ('{{pack}}' -eq 'true') { '-Pack' } else { '' }; \
+    $outArg = if ('{{output}}') { "-Output '{{output}}'" } else { '' }; \
+    pwsh -NoProfile -ExecutionPolicy Bypass -File '{{justfile_directory()}}\scripts\little-game-export.ps1' -Target '{{target}}' -Game '{{game}}' $outArg $packSwitch
+
+# Zip last export for itch.io upload (runs export with -Pack)
+little-game-pack target game="dodge" output="":
+    $outArg = if ('{{output}}') { "-Output '{{output}}'" } else { '' }; \
+    pwsh -NoProfile -ExecutionPolicy Bypass -File '{{justfile_directory()}}\scripts\little-game-export.ps1' -Target '{{target}}' -Game '{{game}}' $outArg -Pack
+
+# Butler / itch.io status (requires server running for REST, or uses uv inline)
+itch-status:
+    try { \
+        $r = Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/itch/status" -UseBasicParsing -TimeoutSec 10; \
+        ($r.Content | ConvertFrom-Json) | ConvertTo-Json -Depth 5; \
+    } catch { \
+        uv run python -c "from godot_mcp.itch.service import itch_status; import json; print(json.dumps(itch_status(), indent=2))"; \
+    }
+
+# Preview Butler push diff
+itch-push-preview upload_dir itch_target="" channel="html":
+    $body = @{upload_dir="{{upload_dir}}"}; \
+    if ('{{itch_target}}') { $body.itch_target = '{{itch_target}}' }; \
+    if ('{{channel}}') { $body.channel = '{{channel}}' }; \
+    $json = $body | ConvertTo-Json -Compress; \
+    try { Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/itch/push-preview" -Method POST -Body $json -ContentType "application/json" -UseBasicParsing -TimeoutSec 300 | ForEach-Object { ($_.Content | ConvertFrom-Json) | ConvertTo-Json -Depth 5 } } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
+
+# Push build directory to itch.io
+itch-push upload_dir itch_target="" channel="html" hidden="false":
+    $body = @{upload_dir="{{upload_dir}}"; hidden=('{{hidden}}' -eq 'true')}; \
+    if ('{{itch_target}}') { $body.itch_target = '{{itch_target}}' }; \
+    if ('{{channel}}') { $body.channel = '{{channel}}' }; \
+    $json = $body | ConvertTo-Json -Compress; \
+    try { Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/itch/push" -Method POST -Body $json -ContentType "application/json" -UseBasicParsing -TimeoutSec 900 | ForEach-Object { ($_.Content | ConvertFrom-Json) | ConvertTo-Json -Depth 5 } } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
+
+# Export + preview + push in one step (set BUTLER_API_KEY and ITCH_TARGET first)
+ship target="web" game="dodge" itch_target="" channel="" preview="true" push="true":
+    $body = @{target='{{target}}'; game='{{game}}'; preview=('{{preview}}' -eq 'true'); push=('{{push}}' -eq 'true')}; \
+    if ('{{itch_target}}') { $body.itch_target = '{{itch_target}}' }; \
+    if ('{{channel}}') { $body.channel = '{{channel}}' }; \
+    $json = $body | ConvertTo-Json -Compress; \
+    try { Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/itch/ship" -Method POST -Body $json -ContentType "application/json" -UseBasicParsing -TimeoutSec 900 | ForEach-Object { ($_.Content | ConvertFrom-Json) | ConvertTo-Json -Depth 6 } } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
 
 # Export Godot scene to HTML5/WebAssembly via MCP tool
 godot-export path="user://export/web/index.html":
@@ -354,7 +407,7 @@ bridge-test:
 
 # List all registered MCP tools
 tools:
-    uv run python -c "from godot_mcp.tools import register_all; print('14 tools registered')"
+    uv run python -c "from godot_mcp.tools import register_all; from fastmcp import FastMCP; m=FastMCP('x'); register_all(m); print('37+ tools (14 Godot bridge + 6 itch ship + workflows/artifacts/…)')"
 
 # Import a GLB/STL/OBJ from the fleet exchange depot into Godot (usage: just depot-import path/to/model.glb)
 depot-import file name="DepotImport":
@@ -374,6 +427,34 @@ depot-export output="D:/Dev/repos/_exchange/models/godot_export":
 depot-ls:
     Set-Location '{{justfile_directory()}}'
     @Get-ChildItem "D:\Dev\repos\_exchange" -Recurse -File | Where-Object { $_.Extension -match '\.(stl|glb|gltf|obj|csv)$' } | Format-Table Name, Length, LastWriteTime -AutoSize
+
+# Fleet exchange status (MCP REST)
+fleet-status:
+    Set-Location '{{justfile_directory()}}'
+    try { Invoke-RestMethod -Uri "http://localhost:{{PORT}}/api/v1/fleet/status" -TimeoutSec 15 | ConvertTo-Json -Depth 6 } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
+
+# Import GLB/OBJ/STL from fleet exchange via godot bridge
+fleet-import path name="FleetImport":
+    Set-Location '{{justfile_directory()}}'
+    $body = @{path="{{path}}"; name="{{name}}"} | ConvertTo-Json -Compress
+    try { Invoke-RestMethod -Uri "http://localhost:{{PORT}}/api/v1/fleet/exchange/import" -Method POST -Body $body -ContentType "application/json" -TimeoutSec 120 | ConvertTo-Json -Depth 6 } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
+
+# Fetch World Labs asset URLs (requires worldlabs bridge on 10865)
+fleet-worldlabs-info world_id:
+    Set-Location '{{justfile_directory()}}'
+    try { Invoke-RestMethod -Uri "http://localhost:{{PORT}}/api/v1/fleet/worldlabs/{{world_id}}" -TimeoutSec 60 | ConvertTo-Json -Depth 6 } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
+
+# Download World Labs collider GLB to _exchange (no Godot import)
+fleet-worldlabs-stage-mesh world_id:
+    Set-Location '{{justfile_directory()}}'
+    $body = @{world_id="{{world_id}}"} | ConvertTo-Json -Compress
+    try { Invoke-RestMethod -Uri "http://localhost:{{PORT}}/api/v1/fleet/worldlabs/stage-mesh" -Method POST -Body $body -ContentType "application/json" -TimeoutSec 180 | ConvertTo-Json -Depth 6 } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
+
+# Download World Labs collider GLB and import into Godot (requires godot-bridge)
+fleet-worldlabs-import world_id name="":
+    Set-Location '{{justfile_directory()}}'
+    $body = @{world_id="{{world_id}}"; node_name="{{name}}"} | ConvertTo-Json -Compress
+    try { Invoke-RestMethod -Uri "http://localhost:{{PORT}}/api/v1/fleet/worldlabs/import-mesh" -Method POST -Body $body -ContentType "application/json" -TimeoutSec 180 | ConvertTo-Json -Depth 6 } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
 
 # Show pending changes summary
 git-status:

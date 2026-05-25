@@ -1,11 +1,19 @@
-import { Cpu, Network, Settings } from "lucide-react";
+import { Cpu, KeyRound, Network, Rocket, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
+import { apiFetch } from "../lib/api";
+
+interface ItchStatus {
+	butler: { found: boolean; path: string; version: string | null };
+	auth: { api_key_set: boolean; hint: string };
+	defaults: { game: string; itch_target: string; channel_web: string; channel_windows: string };
+}
 
 export default function SettingsPage() {
 	const [godotPath, setGodotPath] = useState("");
 	const [wsPort, setWsPort] = useState(9080);
 	const [wsHost, setWsHost] = useState("127.0.0.1");
 	const [status, setStatus] = useState("");
+	const [itch, setItch] = useState<ItchStatus | null>(null);
 
 	useEffect(() => {
 		fetch("/api/v1/status")
@@ -14,6 +22,7 @@ export default function SettingsPage() {
 				if (j.godot?.path) setGodotPath(j.godot.path);
 				if (j.godot?.ws_port) setWsPort(j.godot.ws_port);
 				if (j.godot?.host) setWsHost(j.godot.host);
+				if (j.itch) setItch(j.itch);
 			})
 			.catch(() => {});
 	}, []);
@@ -33,6 +42,15 @@ export default function SettingsPage() {
 			setStatus("Saved.");
 		} catch {
 			setStatus("Error saving.");
+		}
+	};
+
+	const refreshItch = async () => {
+		try {
+			const j = await apiFetch<ItchStatus>("/api/v1/itch/status");
+			setItch(j);
+		} catch {
+			setStatus("Could not refresh itch status.");
 		}
 	};
 
@@ -93,6 +111,34 @@ export default function SettingsPage() {
 				</div>
 				<p className="text-sm text-slate-400">
 					The Godot MCP addon listens on this WebSocket port. The MCP server connects as a client to relay tool commands.
+				</p>
+			</div>
+
+			<div className="bg-[#1e1e26] border border-white/10 rounded-2xl p-6 space-y-4">
+				<div className="flex items-center justify-between mb-2">
+					<div className="flex items-center gap-2">
+						<Rocket size={16} className="text-pink-400" />
+						<h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">itch.io / Butler</h3>
+					</div>
+					<button type="button" onClick={refreshItch} className="text-xs text-pink-400 hover:underline">
+						Refresh
+					</button>
+				</div>
+				<div className="space-y-2 text-sm text-slate-400">
+					<p className="flex items-center gap-2">
+						<KeyRound size={14} />
+						{itch?.auth?.api_key_set ? "BUTLER_API_KEY is set" : "BUTLER_API_KEY not set"}
+					</p>
+					<p>
+						Butler: {itch?.butler?.found ? itch.butler.path : "not found"}
+						{itch?.butler?.version ? ` (${itch.butler.version})` : ""}
+					</p>
+					<p>Default game: {itch?.defaults?.game ?? "dodge"}</p>
+					<p>ITCH_TARGET: {itch?.defaults?.itch_target || "(not set)"}</p>
+				</div>
+				<p className="text-xs text-slate-500">
+					Secrets are read from environment only: BUTLER_API_KEY, ITCH_TARGET, BUTLER_PATH, ITCH_CHANNEL_WEB, ITCH_CHANNEL_WIN, GODOT_EXPORT_GAME.
+					Use the <a href="/ship" className="text-pink-400 hover:underline">Ship page</a> to export and push.
 				</p>
 			</div>
 

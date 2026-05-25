@@ -7,6 +7,7 @@ Each is a full Godot project you can open and run.
 
 | Game | Source | Genre | Godot | Description |
 |------|--------|-------|-------|-------------|
+| vibecode-runner | godot-mcp (original) | 2D Endless runner | 4.4 | Vibecoding-themed: jump VS Code/Windsurf/Cursor, dodge PowerShell & agent loops |
 | godot-demo-projects | godotengine/demo-projects | Mixed (50+) | 4.x | Official 50+ demos covering 2D, 3D, audio, XR, networking, GUI |
 | procedural-generation | gdquest-demos | PCG | 4.x | Procedural generation demos: dungeons, worlds, weapons |
 | heart-platformer | uheartbeast | 2D Platformer | 4.x | Platformer movement template with juice and polish |
@@ -22,6 +23,7 @@ just demo-run dodge            # Dodge the Creeps
 just demo-run pong
 just demo-run procedural
 just demo-run skelerealms
+just demo-run vibecode         # VibeCode Runner (original)
 ```
 
 Or open a project directly:
@@ -41,6 +43,10 @@ pwsh -File scripts/patch-platformer-godot44.ps1
 ```
 
 Or install Godot 4.6: `just install-godot version="4.6"`. **Heart Platformer** is native 4.0 and needs no patch.
+
+## Learning path
+
+For a “little game” with AI help — which repos to study and how to ship on Windows/iOS — see [docs/little-game-guide.md](../docs/little-game-guide.md).
 
 ## MCPB Bundles
 

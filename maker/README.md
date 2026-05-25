@@ -37,10 +37,13 @@ Blender 3D modeling via MCP.
 Same pattern — bridge calls blender-mcp to generate geometry, then godot-mcp to import and render.
 
 ### worldlabs-mcp (port 10864/10865)
-World generation and landscape design via MCP.
+World generation via Marble API — **Gaussian splats** (SPZ/RAD) + **Chisel collision mesh** (GLB).
 
-**Bridge Example:**
-Bridge to worldlabs-mcp for terrain generation, then godot-mcp to visualize.
+**Bridge Example:** See [worldlabs-bridge-example.md](worldlabs-bridge-example.md).
+
+**Godot today:** import **GLB mesh** with `godot_import_glb`; **splats** not in-engine yet — see [docs/fleet-game-pipeline.md](../docs/fleet-game-pipeline.md).
+
+Handoffs to Blender / Unity / Resonite exist in worldlabs-mcp; Godot uses `_exchange` + GLB path.
 
 ### Resonite (XR)
 Resonite integration for VR/AR visualization of Godot scenes.

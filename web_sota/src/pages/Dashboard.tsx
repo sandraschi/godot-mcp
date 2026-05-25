@@ -1,4 +1,4 @@
-import { AlertTriangle, Box, Camera, CircuitBoard, Cpu, FileText, Lightbulb, Play, RefreshCw, Settings } from "lucide-react";
+import { AlertTriangle, Box, Camera, CircuitBoard, Cpu, FileText, Play, RefreshCw, Rocket, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { apiFetch } from "../lib/api";
 
@@ -10,11 +10,19 @@ interface GodotStatus {
 	ws_connected: boolean;
 }
 
+interface ItchStatus {
+	butler: { found: boolean; path: string };
+	auth: { api_key_set: boolean };
+	defaults: { itch_target: string };
+	last_ship: { page_url?: string };
+}
+
 interface StatusData {
 	ok: boolean;
 	service: string;
 	version: string;
 	godot: GodotStatus;
+	itch?: ItchStatus;
 }
 
 export default function Dashboard() {
@@ -28,6 +36,7 @@ export default function Dashboard() {
 	}, []);
 
 	const g = status?.godot;
+	const itch = status?.itch;
 
 	return (
 		<div className="space-y-6">
@@ -50,7 +59,7 @@ export default function Dashboard() {
 					</button>
 				</div>
 			)}
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+			<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
 				<div className="bg-[#1e1e26] border border-white/10 rounded-2xl p-5 space-y-3">
 					<div className="flex items-center gap-2 text-blue-400">
 						<Cpu size={18} /> Godot Engine
@@ -74,6 +83,20 @@ export default function Dashboard() {
 					</p>
 				</div>
 				<div className="bg-[#1e1e26] border border-white/10 rounded-2xl p-5 space-y-3">
+					<div className="flex items-center gap-2 text-pink-400">
+						<Rocket size={18} /> itch.io / Butler
+					</div>
+					<p className="text-sm text-slate-300">
+						{!status ? "..." : itch?.butler?.found ? "Butler ready" : "Butler not found"}
+					</p>
+					<p className="text-sm text-slate-400">
+						{!status ? "..." : itch?.auth?.api_key_set ? "API key configured" : "Set BUTLER_API_KEY"}
+					</p>
+					<a href="/ship" className="block text-sm text-pink-400 hover:underline">
+						Open Ship page
+					</a>
+				</div>
+				<div className="bg-[#1e1e26] border border-white/10 rounded-2xl p-5 space-y-3">
 					<div className="flex items-center gap-2 text-indigo-400">
 						<Play size={18} /> Quick Actions
 					</div>
@@ -90,10 +113,10 @@ export default function Dashboard() {
 			</div>
 			<div className="grid grid-cols-2 md:grid-cols-5 gap-3">
 				{[
+					{ href: "/ship", icon: Rocket, label: "Ship", desc: "Export to itch.io" },
 					{ href: "/models", icon: Box, label: "Models", desc: "Import STL/OBJ" },
 					{ href: "/models", icon: FileText, label: "Velocity", desc: "FluidX3D fields" },
 					{ href: "/models", icon: Camera, label: "Cameras", desc: "Scene cameras" },
-					{ href: "/models", icon: Lightbulb, label: "Lights", desc: "Dynamic lighting" },
 					{ href: "/settings", icon: Settings, label: "Settings", desc: "Godot config" },
 				].map((item) => (
 					<a

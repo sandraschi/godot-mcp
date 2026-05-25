@@ -428,3 +428,24 @@ All tools follow the standard fleet return format:
 ```
 
 The `data` field contains structured data suitable for follow-up tool calls by AI agents. The `success` boolean allows quick success/failure branching.
+
+---
+
+## itch.io / Butler Tools (6) — v0.2.1
+
+Registered from `godot_mcp.itch.tools`. These run in **Python** (Godot headless + Butler subprocess) — **no TCP bridge required**.
+
+| Tool | Access | Description |
+|------|--------|-------------|
+| `itch_status` | READ_ONLY | Butler path, `BUTLER_API_KEY` set, defaults, last ship |
+| `godot_export_release` | MUTATING | Export sample/custom project (`web` or `windows`) |
+| `itch_push_preview` | READ_ONLY | Butler `push-preview` before upload |
+| `itch_push` | MUTATING | Butler `push` to `user/game:channel` |
+| `itch_latest_version` | READ_ONLY | Wharf API latest build query |
+| `ship_to_itch` | MUTATING | Export → preview → push in one call |
+
+**Workflow:** `ship_web_itch` in `godot_mcp.workflows.engine` chains export → preview → push.
+
+**REST:** `/api/v1/itch/*` and `POST /api/v1/control/tool` with the tool names above.
+
+Full reference: [ship-to-itch.md](./ship-to-itch.md).
