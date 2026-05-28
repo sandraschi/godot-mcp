@@ -161,6 +161,57 @@ async def godot_import_obj(
     )
 
 
+async def godot_play_animation(
+    root_name: Annotated[
+        str,
+        Field(
+            description="Imported GLB root node name to search (empty = entire scene).",
+            default="",
+        ),
+    ] = "",
+    animation: Annotated[
+        str,
+        Field(
+            description="Animation clip name to play. Empty lists available clips.",
+            default="",
+        ),
+    ] = "",
+    loop: Annotated[bool, Field(description="Loop the animation.", default=True)] = True,
+    speed_scale: Annotated[
+        float, Field(description="Playback speed multiplier.", default=1.0, ge=0.01, le=10.0)
+    ] = 1.0,
+    ctx: Context = None,
+) -> dict:
+    """Play or list animations on an imported GLB character via AnimationPlayer.
+
+    Use after godot_import_glb with a GLB that includes baked animation tracks
+    (typical path: blender-mcp VMD bake -> GLB export -> godot_import_glb).
+
+    ## Return Format
+    Playing: {"success": bool, "data": {"playing": true, "animation": str, "available_animations": list}}
+    Listing: {"success": bool, "data": {"listed": true, "animations": list}}
+
+    ## Examples
+    await godot_play_animation(root_name="Dancer", animation="")
+    await godot_play_animation(root_name="Dancer", animation="dance_01", loop=True)
+    """
+    bridge = get_bridge()
+    if not bridge.connected:
+        result = bridge.connect()
+        if not result["success"]:
+            return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
+
+    return bridge.send(
+        "play_animation",
+        {
+            "root_name": root_name,
+            "animation": animation,
+            "loop": loop,
+            "speed_scale": speed_scale,
+        },
+    )
+
+
 async def godot_load_velocity_field(
     csv_path: Annotated[str, Field(description="Absolute path to CSV velocity field file (x,y,z,vx,vy,vz columns).")],
     name: Annotated[
@@ -546,6 +597,7 @@ def register(mcp):
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_import_stl)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_import_glb)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_import_obj)
+    mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_play_animation)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_load_velocity_field)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_spawn_particles)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_animate_streamlines)

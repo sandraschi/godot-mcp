@@ -30,4 +30,6 @@ def test_register_accepts_mcp():
     assert "godot_read_scene_tree" in names
     assert "godot_set_config" in names
     assert "godot_headless_verify" in names
-    assert len(mcp.registered) == 12
+    assert "godot_import_glb" in names
+    assert "godot_play_animation" in names
+    assert len(mcp.registered) == 15

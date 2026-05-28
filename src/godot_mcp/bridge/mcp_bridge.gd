@@ -112,6 +112,8 @@ func _handle_message(raw: String):
 			_cmd_remove_node(request_id, params)
 		"save_scene":
 			_cmd_save_scene(request_id, params)
+		"play_animation":
+			_cmd_play_animation(request_id, params)
 		_:
 			_send_error("Unknown action: %s" % action, request_id)
 
@@ -608,6 +610,66 @@ func _cmd_save_scene(request_id: String, params: Dictionary):
 	var err := ResourceSaver.save(scene, path)
 	_send_response(request_id, {"saved": err == OK, "path": path, "error": err})
 
+func _cmd_play_animation(request_id: String, params: Dictionary):
+	var root_name: String = params.get("root_name", "")
+	var animation_name: String = params.get("animation", "")
+	var loop: bool = params.get("loop", true)
+	var speed_scale: float = float(params.get("speed_scale", 1.0))
+
+	var search_root: Node = get_tree().get_root()
+	if not root_name.is_empty():
+		var named := _find_node_by_name(root_name)
+		if not named:
+			_send_error("Root node not found: %s" % root_name, request_id)
+			return
+		search_root = named
+
+	var player := _find_animation_player_recursive(search_root)
+	if not player:
+		_send_error("No AnimationPlayer found under %s" % search_root.name, request_id)
+		return
+
+	var library := player.get_animation_library("")
+	if library == null and player.get_animation_library_list().size() > 0:
+		library = player.get_animation_library(player.get_animation_library_list()[0])
+
+	var available: Array = []
+	if library:
+		for anim_name in library.get_animation_list():
+			available.append(anim_name)
+
+	if animation_name.is_empty():
+		_send_response(request_id, {
+			"listed": true,
+			"root_name": search_root.name,
+			"animation_player": player.get_path(),
+			"animations": available,
+		})
+		return
+
+	if library == null or not library.has_animation(animation_name):
+		_send_error(
+			"Animation not found: %s (available: %s)" % [animation_name, str(available)],
+			request_id,
+		)
+		return
+
+	player.speed_scale = speed_scale
+	var anim := library.get_animation(animation_name)
+	if anim:
+		anim.loop_mode = Animation.LOOP_LINEAR if loop else Animation.LOOP_NONE
+	player.play(animation_name)
+
+	_send_response(request_id, {
+		"playing": true,
+		"root_name": search_root.name,
+		"animation": animation_name,
+		"loop": loop,
+		"speed_scale": speed_scale,
+		"animation_player": str(player.get_path()),
+		"available_animations": available,
+	})
+
 # ─── Helpers ──────────────────────────────────────────────────────────
 
 func _load_stl_mesh(path: String) -> ArrayMesh:
@@ -672,6 +734,15 @@ func _find_recursive(node: Node, name: String) -> Node:
 		return node
 	for child in node.get_children():
 		var found := _find_recursive(child, name)
+		if found:
+			return found
+	return null
+
+func _find_animation_player_recursive(node: Node) -> AnimationPlayer:
+	if node is AnimationPlayer:
+		return node as AnimationPlayer
+	for child in node.get_children():
+		var found := _find_animation_player_recursive(child)
 		if found:
 			return found
 	return null

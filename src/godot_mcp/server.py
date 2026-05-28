@@ -17,7 +17,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastmcp import FastMCP
@@ -33,6 +33,9 @@ from godot_mcp.artifacts.routes import router as artifacts_router
 from godot_mcp.fleet.routes import router as fleet_router
 from godot_mcp.itch.routes import router as itch_router
 from godot_mcp.services.godot_bridge import GODOT_HOST, GODOT_PATH, GODOT_PORT, GodotBridge
+from godot_mcp.services.mobile_command import MobileCommand, MobileResponse, get_dispatcher
+from godot_mcp.services.mobile_help import generate_help_dict, get_endpoint_summary
+from godot_mcp.services.ws_gateway import mobile_ws_handler, start_background_tasks, stop_background_tasks
 from godot_mcp.tools import register_all
 
 logger = logging.getLogger("godot-mcp")
@@ -93,8 +96,13 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("Godot bridge not available at startup: %s", result.get("error", "unknown"))
 
+    # Start iOS mobile gateway background tasks (log push, status push)
+    start_background_tasks()
+    logger.info(get_endpoint_summary())
+
     yield
 
+    stop_background_tasks()
     _bridge.disconnect()
     logger.info("Godot MCP shutdown — bridge disconnected")
 
@@ -281,6 +289,9 @@ async def execute_tool(req: ToolRequest):
         "godot_add_light": (None, "add_light"),
         "godot_set_material": (None, "set_material"),
         "godot_export_web": (None, "export_web"),
+        "godot_import_glb": (None, "import_glb"),
+        "godot_import_obj": (None, "import_obj"),
+        "godot_play_animation": (None, "play_animation"),
         "godot_read_scene_tree": (None, "read_scene_tree"),
         "godot_set_config": (None, "set_config"),
         "godot_headless_verify": (None, "headless_verify"),
@@ -351,6 +362,38 @@ async def stream_logs():
             await asyncio.sleep(0.1)
 
     return StreamingResponse(gen(), media_type="text/event-stream")
+
+
+# ── iOS Mobile Gateway ────────────────────────────────────────────────────────
+
+
+@app.websocket("/mobile/v1")
+async def mobile_websocket(websocket: WebSocket):
+    """WebSocket gateway for iOS mobile clients (Spatial Vibe / State Surveiller / Pocket Architect).
+
+    Protocol:
+      Handshake: send JSON {"app": "spatial-vibe" | "state-surveiller" | "pocket-architect"}
+      Messages:  {"type": "command" | "intent" | "subscribe" | "unsubscribe", "payload": {...}}
+    """
+    await mobile_ws_handler(websocket)
+
+
+@app.get("/mobile/v1/help")
+async def mobile_help():
+    """Full protocol reference for iOS mobile clients — machine-readable JSON."""
+    return generate_help_dict()
+
+
+@app.post("/mobile/v1/command")
+async def mobile_command_fallback(cmd: MobileCommand):
+    """REST fallback for iOS mobile commands (stateless, no subscriptions)."""
+    dispatcher = get_dispatcher()
+    result = await dispatcher.dispatch(cmd)
+    return MobileResponse(
+        type="result" if result.success else "error",
+        correlation_id=cmd.id,
+        payload=result.model_dump(),
+    ).model_dump()
 
 
 # ── Entry point ──────────────────────────────────────────────────────────────
