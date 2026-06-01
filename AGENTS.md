@@ -42,3 +42,5 @@ All tools register via `src/godot_mcp/tools/__init__.py` → `register_all(mcp)`
 - Types: Pydantic v2 (`model_dump`, `model_validate`), no legacy `dict()`/`parse_obj()`
 - Linting: Ruff (Python), Biome (web)
 - Ports: 10993 backend, 10992 frontend, 9080 Godot bridge
+
+Install docs: follow mcp-central-docs/standards/AGENT_INSTALL_REFERENCE.md
