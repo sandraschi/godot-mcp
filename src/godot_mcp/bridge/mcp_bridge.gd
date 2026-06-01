@@ -581,6 +581,10 @@ func _cmd_add_node(request_id: String, params: Dictionary):
 
 	var node: Node
 	match node_type:
+		"Node2D": node = Node2D.new()
+		"Control": node = Control.new()
+		"CanvasLayer": node = CanvasLayer.new()
+		"CharacterBody2D": node = CharacterBody2D.new()
 		"Node3D": node = Node3D.new()
 		"MeshInstance3D": node = MeshInstance3D.new()
 		"Camera3D": node = Camera3D.new()

@@ -1,8 +1,8 @@
 # SPEC: Game Builder Pipeline (v0.2.0)
 
 **Repo**: godot-mcp  
-**Status**: Draft  
-**Last Updated**: 2026-05-22
+**Status**: Draft → **Phase 1 implemented** (2026-05-25)  
+**Last Updated**: 2026-05-25
 
 ## Overview
 
@@ -41,7 +41,18 @@ All individual tools already work. This spec defines the orchestration layer.
 
 ## What's Missing
 
-### New Module: `src/godot_mcp/game_builder/`
+### Remaining work (post Phase 1)
+
+| Item | Status |
+|------|--------|
+| Wire `generate_game_worlds` → `fleet_worldlabs_stage_mesh` | ✅ |
+| Map Marble `world_id` into `compose_game_scene` | ✅ |
+| Write generated scripts to project disk | ✅ |
+| `templates/game-template/` bootstrap project | ✅ |
+| Unit tests under `tests/game_builder/` | ✅ partial |
+| REST `/api/v1/game-builder/*` + dashboard UI | ❌ Phase 2 |
+
+### Module: `src/godot_mcp/game_builder/` (Phase 1 — done)
 
 | File | Purpose |
 |------|---------|

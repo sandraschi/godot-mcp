@@ -25,6 +25,7 @@ AI-driven Godot 4.0 engine control via MCP tools. Import STL/GLB/OBJ geometry, l
 - [Little Game Guide](docs/little-game-guide.md) — study repos, AI workflow, Windows/iOS distribution
 - [AI and Indie Games](docs/ai-and-indie-games.md) — is AI the death of indie? (scope, hobby vs career)
 - [Ship to itch.io](docs/ship-to-itch.md) — Butler tools, `/ship` dashboard, env vars
+- [Ship to Steam](docs/ship-to-steam.md) — steam-mcp bridge, `/ship-steam`, partner setup (see [STEAM_PUBLISHING.md](../mcp-central-docs/docs/gamedev/STEAM_PUBLISHING.md))
 - [Fleet game pipeline](docs/fleet-game-pipeline.md) — blender/worldlabs → Godot; splats vs GLB
 - [Fleet assessment](docs/FLEET_ASSESSMENT.md) — implementation status and gaps
 - [Community](docs/community.md)
@@ -49,9 +50,12 @@ Or `.\start.ps1` for backend + webapp only (start bridge separately).
 
 **Export & ship a sample:** `just little-game-export web dodge` then open **`/ship`** in the dashboard, or `just ship web dodge` (requires `BUTLER_API_KEY` + `ITCH_TARGET`).
 
+**Steam (partner publishing):** requires **$100 Steam Direct** + your own App ID — **no free playground** like itch. See [Ship to Steam](docs/ship-to-steam.md) and [STEAM_PUBLISHING.md](../mcp-central-docs/docs/gamedev/STEAM_PUBLISHING.md). Quick path: start steam-mcp on 11020, set `STEAM_APP_ID` / `STEAM_DEPOT_ID` / `STEAM_USERNAME` / `STEAMCMD_PATH`, then `just steam-ship-beta game=dodge dry_run=true` or **`/ship-steam`**.
+
 ## Key Features
 
 - **Game Builder** — 6 new MCP tools: `design_game`, `generate_game_worlds`, `compose_game_scene`, `generate_game_logic`, `export_and_ship`, `build_game`. Natural language → GamePlan → Marble worlds → Godot scene → GDScript → HTML5. See [SPEC](docs/SPEC_GAME_BUILDER.md).
+- **7 Steam ship tools** — `steam_status`, `steam_checklist`, `steam_stage_build`, `ship_to_steam_prerelease`, `ship_to_steam_release`, `ship_to_steam` (+ monetization guide). Export Windows → `_exchange` → steam-mcp VDF/steamcmd. **`dry_run=true` by default.**
 - **6 itch ship tools** — `itch_status`, `godot_export_release`, `itch_push_preview`, `itch_push`, `itch_latest_version`, `ship_to_itch`
 - **Godot 4 engine control** — scene graph via TCP bridge (port 9080)
 - **Multi-format import** — STL (binary), GLB/GLTF (via GLTFDocument), OBJ (via ResourceLoader)
@@ -59,6 +63,7 @@ Or `.\start.ps1` for backend + webapp only (start bridge separately).
 - **PBR materials** — assign physically-based materials to any mesh surface
 - **HTML5 export** — build WebAssembly/WebGL with `godot --headless --export-release` fallback
 - **itch.io shipping** — Butler push from CLI, MCP, REST, or dashboard `/ship` (export → preview → push)
+- **Steam partner shipping** — Windows export → fleet exchange → steam-mcp SteamPipe upload; dashboard `/ship-steam`; beta branch testing on **your** App ID (not Spacewar/480)
 - **REST API** — FastAPI gateway on port 10993 alongside MCP SSE
 - **Tauri native wrapper** — `native/` directory for desktop distribution (~5 MB)
 

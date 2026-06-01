@@ -17,6 +17,13 @@ PYTHON_TOOLS = {
     "itch_push",
     "itch_latest_version",
     "ship_to_itch",
+    "steam_status",
+    "steam_checklist",
+    "steam_monetization_guide",
+    "steam_stage_build",
+    "ship_to_steam_prerelease",
+    "ship_to_steam_release",
+    "ship_to_steam",
 }
 
 
@@ -34,7 +41,7 @@ async def workflow_list(ctx: Context = None) -> dict:
 
 
 async def workflow_run(
-    workflow_name: Annotated[str, Field(description="Workflow name: scene_setup, particle_cfd, ship_web_itch.")],
+    workflow_name: Annotated[str, Field(description="Workflow name: scene_setup, particle_cfd, ship_web_itch, ship_windows_steam_beta, ship_windows_steam_release.")],
     csv_path: Annotated[str | None, Field(description="CSV path (required for particle_cfd).", default=None)] = None,
     game: Annotated[str | None, Field(description="Sample game for ship_web_itch.", default="dodge")] = None,
     itch_target: Annotated[str | None, Field(description="user/game slug for ship_web_itch.", default=None)] = None,
@@ -68,6 +75,7 @@ async def workflow_run(
 
     async def exec_tool(tool: str, params: dict) -> dict:
         from godot_mcp.itch import service as itch_service
+        from godot_mcp.steam import service as steam_service
 
         if tool in PYTHON_TOOLS:
             try:
@@ -78,6 +86,13 @@ async def workflow_run(
                     "itch_push": lambda: itch_service.itch_push(**params),
                     "itch_latest_version": lambda: itch_service.itch_latest_version(**params),
                     "ship_to_itch": lambda: itch_service.ship_to_itch(**params),
+                    "steam_status": lambda: steam_service.steam_status(),
+                    "steam_checklist": lambda: steam_service.steam_checklist(**params),
+                    "steam_monetization_guide": lambda: steam_service.steam_monetization_guide(),
+                    "steam_stage_build": lambda: steam_service.stage_windows_build(**params),
+                    "ship_to_steam_prerelease": lambda: steam_service.steam_upload_prerelease(**params),
+                    "ship_to_steam_release": lambda: steam_service.steam_upload_release(**params),
+                    "ship_to_steam": lambda: steam_service.ship_to_steam(**params),
                 }
                 return handlers[tool]()
             except Exception as e:

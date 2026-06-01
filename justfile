@@ -258,6 +258,34 @@ ship target="web" game="dodge" itch_target="" channel="" preview="true" push="tr
     $json = $body | ConvertTo-Json -Compress; \
     try { Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/itch/ship" -Method POST -Body $json -ContentType "application/json" -UseBasicParsing -TimeoutSec 900 | ForEach-Object { ($_.Content | ConvertFrom-Json) | ConvertTo-Json -Depth 6 } } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
 
+# Steam / steam-mcp status (requires steam-mcp on :11020 for full publish block)
+steam-status:
+    try { \
+        $r = Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/steam/status" -UseBasicParsing -TimeoutSec 15; \
+        ($r.Content | ConvertFrom-Json) | ConvertTo-Json -Depth 6; \
+    } catch { \
+        uv run python -c "from godot_mcp.steam.service import steam_status; import json; print(json.dumps(steam_status(), indent=2))"; \
+    }
+
+# Export Windows + stage to _exchange/steam-builds/<app_id>/content
+steam-stage game="dodge" app_id="":
+    $body = @{game='{{game}}'}; \
+    if ('{{app_id}}') { $body.app_id = [int]'{{app_id}}' }; \
+    $json = $body | ConvertTo-Json -Compress; \
+    try { Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/steam/stage" -Method POST -Body $json -ContentType "application/json" -UseBasicParsing -TimeoutSec 900 | ForEach-Object { ($_.Content | ConvertFrom-Json) | ConvertTo-Json -Depth 6 } } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
+
+# Full pipeline: export + stage + beta upload (dry_run default true)
+steam-ship-beta game="dodge" dry_run="true":
+    $body = @{game='{{game}}'; phase='prerelease'; dry_run=('{{dry_run}}' -eq 'true')}; \
+    $json = $body | ConvertTo-Json -Compress; \
+    try { Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/steam/ship" -Method POST -Body $json -ContentType "application/json" -UseBasicParsing -TimeoutSec 900 | ForEach-Object { ($_.Content | ConvertFrom-Json) | ConvertTo-Json -Depth 6 } } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
+
+# Full pipeline: export + stage + default branch upload (dry_run default true)
+steam-ship-release game="dodge" dry_run="true":
+    $body = @{game='{{game}}'; phase='release'; dry_run=('{{dry_run}}' -eq 'true')}; \
+    $json = $body | ConvertTo-Json -Compress; \
+    try { Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/steam/ship" -Method POST -Body $json -ContentType "application/json" -UseBasicParsing -TimeoutSec 900 | ForEach-Object { ($_.Content | ConvertFrom-Json) | ConvertTo-Json -Depth 6 } } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
+
 # Export Godot scene to HTML5/WebAssembly via MCP tool
 godot-export path="user://export/web/index.html":
     $body = @{tool="godot_export_web"; arguments=@{output_path="{{path}}"}} | ConvertTo-Json -Compress; \

@@ -41,7 +41,8 @@ const navGroups = [
 		label: "Marketplace",
 		items: [
 			{ path: "/marketplace", label: "Marketplace", icon: Package },
-			{ path: "/ship", label: "Ship", icon: Rocket },
+			{ path: "/ship", label: "Ship itch", icon: Rocket },
+			{ path: "/ship-steam", label: "Ship Steam", icon: Rocket },
 			{ path: "/projects", label: "Projects", icon: Gamepad2 },
 			{ path: "/depot", label: "Depot", icon: Database },
 		],
@@ -49,6 +50,7 @@ const navGroups = [
 	{
 		label: "Agentic",
 		items: [
+			{ path: "/game-builder", label: "Game Builder", icon: Sparkles },
 			{ path: "/workflows", label: "Workflows", icon: Play },
 			{ path: "/prefabs", label: "Prefabs", icon: Box },
 			{ path: "/prompts", label: "Prompts", icon: Sparkles },

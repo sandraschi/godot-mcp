@@ -9,7 +9,6 @@ WebSocket. Godot must have the MCP plugin/addon loaded to accept commands.
 """
 
 import asyncio
-import collections
 import logging
 import os
 import shutil
@@ -31,8 +30,12 @@ except ImportError:
 
 from godot_mcp.artifacts.routes import router as artifacts_router
 from godot_mcp.fleet.routes import router as fleet_router
+from godot_mcp.game_builder.routes import router as game_builder_router
 from godot_mcp.itch.routes import router as itch_router
+from godot_mcp.routes.logs import router as logs_router
+from godot_mcp.steam.routes import router as steam_router
 from godot_mcp.services.godot_bridge import GODOT_HOST, GODOT_PATH, GODOT_PORT, GodotBridge
+from godot_mcp.services.activity_log import install_log_handler, log_activity, query_logs
 from godot_mcp.services.mobile_command import MobileCommand, MobileResponse, get_dispatcher
 from godot_mcp.services.mobile_help import generate_help_dict, get_endpoint_summary
 from godot_mcp.services.ws_gateway import mobile_ws_handler, start_background_tasks, stop_background_tasks
@@ -97,6 +100,8 @@ async def lifespan(app: FastAPI):
         logger.warning("Godot bridge not available at startup: %s", result.get("error", "unknown"))
 
     # Start iOS mobile gateway background tasks (log push, status push)
+    install_log_handler()
+    log_activity("server", "Godot MCP started", level="INFO", meta={"version": "0.3.0"})
     start_background_tasks()
     logger.info(get_endpoint_summary())
 
@@ -115,7 +120,10 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 # Register artifact marketplace routes
 app.include_router(artifacts_router)
 app.include_router(fleet_router)
+app.include_router(game_builder_router)
 app.include_router(itch_router)
+app.include_router(steam_router)
+app.include_router(logs_router)
 
 mcp = FastMCP.from_fastapi(app, name="Godot MCP")
 
@@ -181,13 +189,15 @@ async def api_status():
     """Server status including Godot engine and WebSocket bridge info."""
     from godot_mcp.fleet.service import fleet_exchange_status
     from godot_mcp.itch.service import itch_status
+    from godot_mcp.steam.service import steam_status
 
     itch = itch_status()
     fleet = fleet_exchange_status()
+    steam = steam_status()
     return {
         "ok": True,
         "service": "godot-mcp",
-        "version": "0.2.1",
+        "version": "0.3.0",
         "godot": {
             "available": _state.get("godot_available", False),
             "path": _state.get("godot_path", ""),
@@ -196,6 +206,7 @@ async def api_status():
             "ws_connected": _state.get("ws_connected", False),
         },
         "itch": itch,
+        "steam": steam,
         "fleet": fleet,
     }
 
@@ -204,7 +215,7 @@ async def api_status():
 
 
 class ToolRequest(BaseModel):
-    tool: str = Field(description="Tool name (godot_* or itch_* / ship_to_itch)")
+    tool: str = Field(description="Tool name (godot_* or itch_* / steam_* / ship_to_*)")
     arguments: dict = Field(default_factory=dict, description="Tool arguments as a dict")
 
 
@@ -223,6 +234,27 @@ async def _run_python_tool(tool: str, arguments: dict) -> dict:
         return itch_service.itch_latest_version(**arguments)
     if tool == "ship_to_itch":
         return itch_service.ship_to_itch(**arguments)
+    if tool in {
+        "steam_status",
+        "steam_checklist",
+        "steam_monetization_guide",
+        "steam_stage_build",
+        "ship_to_steam_prerelease",
+        "ship_to_steam_release",
+        "ship_to_steam",
+    }:
+        from godot_mcp.steam import service as steam_service
+
+        handlers = {
+            "steam_status": steam_service.steam_status,
+            "steam_checklist": steam_service.steam_checklist,
+            "steam_monetization_guide": steam_service.steam_monetization_guide,
+            "steam_stage_build": steam_service.stage_windows_build,
+            "ship_to_steam_prerelease": steam_service.steam_upload_prerelease,
+            "ship_to_steam_release": steam_service.steam_upload_release,
+            "ship_to_steam": steam_service.ship_to_steam,
+        }
+        return handlers[tool](**arguments)
     if tool == "fleet_exchange_status":
         from godot_mcp.fleet.service import fleet_exchange_status
 
@@ -255,6 +287,50 @@ async def _run_python_tool(tool: str, arguments: dict) -> dict:
         from godot_mcp.workflows.tools import workflow_run
 
         return await workflow_run(**arguments)
+    if tool == "design_game":
+        from godot_mcp.game_builder import service as gb_service
+
+        return await gb_service.service_design_game(arguments.get("game_concept", ""))
+    if tool == "generate_game_worlds":
+        from godot_mcp.game_builder import service as gb_service
+
+        return await gb_service.service_generate_worlds(
+            arguments.get("game_plan_json", ""),
+            arguments.get("worldlabs_url", "http://127.0.0.1:10865"),
+        )
+    if tool == "compose_game_scene":
+        from godot_mcp.game_builder import service as gb_service
+
+        return await gb_service.service_compose_scene(
+            arguments.get("game_plan_json", ""),
+            arguments.get("worlds_result_json", ""),
+        )
+    if tool == "generate_game_logic":
+        from godot_mcp.game_builder import service as gb_service
+
+        return await gb_service.service_generate_logic(
+            arguments.get("game_plan_json", ""),
+            arguments.get("game_project_path", ""),
+        )
+    if tool == "export_and_ship":
+        from godot_mcp.game_builder import service as gb_service
+
+        return await gb_service.service_export_and_ship(
+            arguments.get("game_plan_json", ""),
+            arguments.get("game_project_path", ""),
+            arguments.get("itch_target", ""),
+            arguments.get("channel", "html"),
+        )
+    if tool == "build_game":
+        from godot_mcp.game_builder import service as gb_service
+
+        return await gb_service.service_build_game(
+            arguments.get("game_concept", ""),
+            arguments.get("worldlabs_url", "http://127.0.0.1:10865"),
+            arguments.get("game_project_path", ""),
+            arguments.get("ship", False),
+            arguments.get("itch_target", ""),
+        )
     raise HTTPException(400, f"Unknown tool: {tool}")
 
 
@@ -265,6 +341,13 @@ PYTHON_TOOLS = {
     "itch_push",
     "itch_latest_version",
     "ship_to_itch",
+    "steam_status",
+    "steam_checklist",
+    "steam_monetization_guide",
+    "steam_stage_build",
+    "ship_to_steam_prerelease",
+    "ship_to_steam_release",
+    "ship_to_steam",
     "fleet_exchange_status",
     "fleet_import_from_exchange",
     "fleet_worldlabs_get_world",
@@ -273,6 +356,12 @@ PYTHON_TOOLS = {
     "fleet_worldlabs_import_mesh",
     "workflow_list",
     "workflow_run",
+    "design_game",
+    "generate_game_worlds",
+    "compose_game_scene",
+    "generate_game_logic",
+    "export_and_ship",
+    "build_game",
 }
 
 
@@ -299,8 +388,15 @@ async def execute_tool(req: ToolRequest):
     if req.tool in PYTHON_TOOLS:
         try:
             result = await _run_python_tool(req.tool, req.arguments)
+            success = result.get("success", False)
+            log_activity(
+                "tool_call",
+                f"{req.tool} ({'ok' if success else 'fail'})",
+                level="INFO" if success else "ERROR",
+                meta={"tool": req.tool, "arguments": req.arguments},
+            )
             return {
-                "success": result.get("success", False),
+                "success": success,
                 "message": "Tool executed",
                 "tool": req.tool,
                 "data": result.get("data", result),
@@ -310,6 +406,7 @@ async def execute_tool(req: ToolRequest):
         except HTTPException:
             raise
         except Exception as e:
+            log_activity("tool_call", f"{req.tool} (error: {e})", level="ERROR", meta={"tool": req.tool})
             return {"success": False, "message": str(e), "tool": req.tool, "arguments": req.arguments}
 
     if req.tool not in action_map:
@@ -321,8 +418,15 @@ async def execute_tool(req: ToolRequest):
                 return {"success": False, "message": conn_result.get("error", "Bridge not connected"), "tool": req.tool}
 
         result = _bridge.send(action_map[req.tool][1], req.arguments)
+        success = result.get("success", False)
+        log_activity(
+            "tool_call",
+            f"{req.tool} ({'ok' if success else 'fail'})",
+            level="INFO" if success else "ERROR",
+            meta={"tool": req.tool},
+        )
         return {
-            "success": result.get("success", False),
+            "success": success,
             "message": "Tool executed",
             "tool": req.tool,
             "data": result.get("data", {}),
@@ -331,35 +435,28 @@ async def execute_tool(req: ToolRequest):
     except HTTPException:
         raise
     except Exception as e:
+        log_activity("tool_call", f"{req.tool} (error: {e})", level="ERROR", meta={"tool": req.tool})
         return {"success": False, "message": str(e), "tool": req.tool, "arguments": req.arguments}
 
 
-# ── Log Ring Buffer ──────────────────────────────────────────────────────────
-
-LOG_RING = collections.deque(maxlen=2000)
-
-
-class LogHandler(logging.Handler):
-    def emit(self, record):
-        LOG_RING.append(self.format(record))
-
-
-_log_handler = LogHandler()
-_log_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
-logger.addHandler(_log_handler)
+# ── Legacy SSE log stream (feeds from activity log) ──────────────────────────
 
 
 @app.get("/api/v1/logs/stream")
 async def stream_logs():
     async def gen():
-        for line in list(LOG_RING):
+        snapshot = query_logs(limit=200, offset=0, sort="desc")
+        for entry in reversed(snapshot["entries"]):
+            line = f"{entry['timestamp']} [{entry['level']}] {entry['kind']}: {entry['detail']}"
             yield f"data: {line}\n\n"
-        idx = len(LOG_RING)
+        last_id = snapshot["entries"][0]["id"] if snapshot["entries"] else "0"
         while True:
-            if idx < len(LOG_RING):
-                yield f"data: {LOG_RING[idx]}\n\n"
-                idx += 1
-            await asyncio.sleep(0.1)
+            tail = query_logs(limit=50, after_id=last_id, sort="asc")
+            for entry in tail["entries"]:
+                line = f"{entry['timestamp']} [{entry['level']}] {entry['kind']}: {entry['detail']}"
+                yield f"data: {line}\n\n"
+                last_id = entry["id"]
+            await asyncio.sleep(1)
 
     return StreamingResponse(gen(), media_type="text/event-stream")
 

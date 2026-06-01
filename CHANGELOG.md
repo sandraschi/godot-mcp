@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Steam publishing** (`godot_mcp/steam/`) — 7 MCP tools bridging to steam-mcp: export Windows, stage to `_exchange/steam-builds/`, VDF + SteamPipe upload (dry_run default). REST `/api/v1/steam/*`, dashboard **`/ship-steam`**, workflows `ship_windows_steam_beta` / `ship_windows_steam_release`. Just: `steam-status`, `steam-stage`, `steam-ship-beta`, `steam-ship-release`. Docs: `docs/ship-to-steam.md`.
+- **Fleet-standard logs** — `services/activity_log.py`, `/api/logs` (query, stats, export, clear), rewritten `/logs` page; tool calls logged as `kind: tool_call`.
+- **Game Builder REST + UI** — `/api/v1/game-builder/*`, `/game-builder` dashboard; game_builder tools in `PYTHON_TOOLS`.
+- **Scene materialization** — `materialize_scenes_from_plan`, `sync_project_from_plan`; updates `run/main_scene`.
+- **Game Builder ↔ fleet wiring** — `generate_game_worlds` stages collider GLBs via `fleet_worldlabs_stage_mesh`; `compose_game_scene` accepts `worlds_result_json` with Marble ids; `build_game` copies meshes + writes scripts; `templates/game-template/` bootstrap project.
 - **Game Builder pipeline** (`godot_mcp/game_builder/`) — AI-native game creation from natural language. 6 MCP tools:
   - `design_game` — LLM decomposes concept into GamePlan (worlds, scenes, scripts, controls, scoring, export)
   - `generate_game_worlds` — calls worldlabs-mcp via bridge for each world, polls until completion
@@ -21,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Spec document** (`docs/SPEC_GAME_BUILDER.md`)
 
 ### Changed
-- **Tool count**: 43 → 49 MCP tools (added 6 game_builder tools)
+- **Tool count**: 43 → 56 MCP tools (added 6 game_builder + 7 steam tools)
 
 ## [0.2.1] - 2026-05-22
 

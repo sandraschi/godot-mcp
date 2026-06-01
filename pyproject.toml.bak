@@ -1,0 +1,53 @@
+[project]
+name = "godot-mcp"
+version = "0.2.0"
+description = "Godot MCP server — Godot 4.0 engine control via WebSocket bridge, STL/GLB/OBJ import, GPU particles, animation, HTML5 export through MCP tools and REST API"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastmcp>=3.2.0",
+    "fastapi>=0.104",
+    "uvicorn[standard]>=0.23",
+    "httpx>=0.27",
+    "pydantic>=2.0",
+    "websockets>=12.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.9",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/godot_mcp"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "S", "UP", "RUF"]
+ignore = ["S101"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/**/*.py" = ["E501"]
+"src/godot_mcp/server.py" = ["E501", "S110", "S603"]
+"tests/**/*.py" = ["E501", "S101"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+]

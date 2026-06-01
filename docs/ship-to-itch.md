@@ -114,3 +114,4 @@ Zip for manual upload: `just little-game-pack web dodge` → `build/little-game/
 - [MCD itch.io platform](https://github.com/sandraschi/mcp-central-docs/blob/main/docs/gamedev/ITCH_IO_PLATFORM.md) — web vs app vs Butler vs API
 - [MCD itch.io games guide](https://github.com/sandraschi/mcp-central-docs/blob/main/docs/gamedev/ITCH_IO_GUIDE.md) — manual upload
 - [Little game guide](./little-game-guide.md) — study repos + distribution overview
+- [Marble Adventure (worldlabs-mcp)](https://github.com/sandraschi/mcp-central-docs/blob/main/docs/games/MARBLE_ADVENTURE.md) — separate ship script (`worldlabs-mcp/competition/ship-itch.ps1`); `upload_dir` under `godot-mcp/build/` does not apply

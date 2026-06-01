@@ -113,7 +113,8 @@ export default function Dashboard() {
 			</div>
 			<div className="grid grid-cols-2 md:grid-cols-5 gap-3">
 				{[
-					{ href: "/ship", icon: Rocket, label: "Ship", desc: "Export to itch.io" },
+					{ href: "/ship", icon: Rocket, label: "Ship itch", desc: "Export to itch.io" },
+					{ href: "/ship-steam", icon: Rocket, label: "Ship Steam", desc: "SteamPipe upload" },
 					{ href: "/models", icon: Box, label: "Models", desc: "Import STL/OBJ" },
 					{ href: "/models", icon: FileText, label: "Velocity", desc: "FluidX3D fields" },
 					{ href: "/models", icon: Camera, label: "Cameras", desc: "Scene cameras" },

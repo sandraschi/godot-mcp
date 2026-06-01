@@ -1,10 +1,10 @@
 # Status — godot-mcp
 
-**Status**: v0.3.0 — 14 Godot bridge tools + 6 itch ship tools + 6 fleet pipeline tools + **6 game_builder tools**; TCP bridge verified; World Labs GLB import wired; AI game-from-prompt pipeline.
+**Status**: v0.3.0 — 14 Godot bridge tools + 6 itch ship tools + **7 steam ship tools** + 6 fleet pipeline tools + **6 game_builder tools**; TCP bridge verified; World Labs GLB import wired; AI game-from-prompt pipeline; Steam publishing via steam-mcp.
 
 **Repo**: `D:\Dev\repos\godot-mcp`  
-**Ports**: Backend 10993, Frontend 10992, Bridge 9080, World Labs 10864/10865  
-**Updated**: 2026-05-25
+**Ports**: Backend 10993, Frontend 10992, Bridge 9080, World Labs 10864/10865, steam-mcp 11020  
+**Updated**: 2026-05-22
 
 ## Runtime (two processes)
 
@@ -21,7 +21,7 @@ Startup log warning `Connection refused at 127.0.0.1:9080` is expected until the
 
 Godot 4 engine → TCP bridge (`mcp_bridge.gd` in `main_bridge.tscn`) → Python MCP → REST/SSE + webapp.
 
-See `docs/architecture.md`, `docs/PRD.md`, `docs/ship-to-itch.md`.
+See `docs/architecture.md`, `docs/PRD.md`, `docs/ship-to-itch.md`, `docs/ship-to-steam.md`.
 
 ## MCP tools
 
@@ -57,6 +57,20 @@ See `docs/architecture.md`, `docs/PRD.md`, `docs/ship-to-itch.md`.
 
 Workflow: `ship_web_itch` (export → preview → push).
 
+### Steam / steam-mcp (7)
+
+| Tool | Status |
+|------|--------|
+| `steam_status` | Implemented (HTTP → steam-mcp) |
+| `steam_checklist` | Implemented |
+| `steam_monetization_guide` | Implemented |
+| `steam_stage_build` | Implemented (Windows export → exchange) |
+| `ship_to_steam_prerelease` | Implemented (beta branch; dry_run default) |
+| `ship_to_steam_release` | Implemented (default branch; dry_run default) |
+| `ship_to_steam` | Implemented (full pipeline) |
+
+Workflows: `ship_windows_steam_beta`, `ship_windows_steam_release`. Env: `STEAM_MCP_URL`, `STEAM_APP_ID`, `STEAM_DEPOT_ID`, `STEAM_USERNAME`, `STEAMCMD_PATH`.
+
 ### Fleet maker pipeline (6)
 
 | Tool | Status |
@@ -71,6 +85,10 @@ Workflow: `ship_web_itch` (export → preview → push).
 REST: `/api/v1/fleet/*`. Assessment: `docs/FLEET_ASSESSMENT.md`. Just: `fleet-status`, `fleet-import`, `fleet-worldlabs-*`.
 
 **Splat gap:** Gaussian splats (SPZ/RAD) are not rendered in Godot via godot-mcp yet — use Spark viewer URL or Unity handoff; GLB collision mesh works today.
+
+**Game Builder gap:** REST + UI + scene/script sync done. Live E2E still manual.
+
+**Logs:** Fleet-standard `/api/logs` + `/logs` page (tail, pagination, filters, export, clear).
 
 ### Game Builder (6)
 
@@ -89,8 +107,11 @@ Pipeline: `prompt → design → worlds → compose → logic → export`. Spec:
 
 | Route | Purpose |
 |-------|---------|
+| `/logs` | Fleet activity log — tail, filters, export |
+| `/game-builder` | AI game pipeline steps + full build |
 | `/ship` | Export, Butler preview/push, env status |
-| `/workflows` | Includes `ship_web_itch` preset |
+| `/ship-steam` | Export Windows, stage depot, Steam upload (dry_run) |
+| `/workflows` | Includes `ship_web_itch`, `ship_windows_steam_*` |
 | `/settings` | itch env hints (read-only) |
 
 ## Sample games & export
@@ -103,6 +124,7 @@ Pipeline: `prompt → design → worlds → compose → logic → export`. Spec:
 | `just demo-list` | All aliases |
 | `just little-game-export web dodge` | HTML5 → `build/little-game/dodge/web/` |
 | `just ship web dodge` | Export + Butler push (needs env) |
+| `just steam-ship-beta dodge` | Export + stage + Steam beta upload (dry_run) |
 
 ## Tauri native app (v0.2.1)
 
@@ -135,7 +157,7 @@ Sidecar only: `just tauri-sidecar`. Dev shell: `just tauri-dev` (expects `web_so
 
 ## Next steps
 
-1. End-to-end game_builder test: prompt → worlds → Godot → HTML5
-2. Optional: `/fleet` + `/game-builder` dashboard pages (REST already exists)
+1. Live E2E test: `build_game` with worldlabs + bridge + sampling client
+2. Optional: `/fleet` dashboard page
 3. R&D: `godot_import_splat` bridge action (SPZ in-engine)
-4. Game template project (`templates/game-template/`) for build_game target
+4. Multi-node Godot scene hierarchy from GamePlan

@@ -48,7 +48,11 @@ worldlabs-mcp bridge (10865)
 ```
 
 Just: `just fleet-status`, `just fleet-worldlabs-import <world_id>`.  
-Assessment: [FLEET_ASSESSMENT.md](FLEET_ASSESSMENT.md).
+Assessment: [FLEET_ASSESSMENT.md](FLEET_ASSESSMENT.md) (reassessed 2026-05-25).
+
+### 0b. Game Builder (Phase 1 — orchestration gaps)
+
+Module `godot_mcp/game_builder/` — REST at `/api/v1/game-builder/*`, dashboard **`/game-builder`**, fleet GLB staging wired. Spec: [SPEC_GAME_BUILDER.md](SPEC_GAME_BUILDER.md).
 
 ### 1. Blender → Godot (recommended for game assets)
 

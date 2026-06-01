@@ -53,6 +53,10 @@ class Workflow:
                 data = result.get("data") or {}
                 if data.get("upload_dir"):
                     self.context["upload_dir"] = data["upload_dir"]
+            if result.get("success") and step.tool == "steam_stage_build":
+                stage = result.get("stage") or {}
+                if stage.get("content_root"):
+                    self.context["content_root"] = stage["content_root"]
             if not result.get("success", False):
                 self.status = "failed"
                 self.completed_at = datetime.now(UTC).isoformat()
@@ -107,8 +111,44 @@ SHIP_WEB_WORKFLOW = (
     )
 )
 
+SHIP_STEAM_BETA_WORKFLOW = (
+    Workflow(
+        "Ship Windows to Steam (beta)",
+        "Export Windows build, stage to exchange, upload to Steam beta branch.",
+    )
+    .add_step(
+        "Stage Windows Build",
+        "steam_stage_build",
+        {"game": "{context.game}"},
+    )
+    .add_step(
+        "Upload Prerelease",
+        "ship_to_steam_prerelease",
+        {"content_root": "{context.content_root}", "dry_run": True},
+    )
+)
+
+SHIP_STEAM_RELEASE_WORKFLOW = (
+    Workflow(
+        "Ship Windows to Steam (release)",
+        "Export Windows build, stage to exchange, upload to Steam default branch.",
+    )
+    .add_step(
+        "Stage Windows Build",
+        "steam_stage_build",
+        {"game": "{context.game}"},
+    )
+    .add_step(
+        "Upload Release",
+        "ship_to_steam_release",
+        {"content_root": "{context.content_root}", "dry_run": True},
+    )
+)
+
 BUILTIN_WORKFLOWS = {
     "scene_setup": SCENE_SETUP_WORKFLOW,
     "particle_cfd": PARTICLE_CFD_WORKFLOW,
     "ship_web_itch": SHIP_WEB_WORKFLOW,
+    "ship_windows_steam_beta": SHIP_STEAM_BETA_WORKFLOW,
+    "ship_windows_steam_release": SHIP_STEAM_RELEASE_WORKFLOW,
 }

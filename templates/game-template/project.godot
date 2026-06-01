@@ -1,0 +1,20 @@
+; Minimal Godot 4.4 project for game_builder export
+
+config_version=5
+
+[application]
+
+config/name="Game Builder Template"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.4")
+config/icon="res://icon.svg"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
