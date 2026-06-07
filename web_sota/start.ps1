@@ -1,3 +1,8 @@
+﻿
+# Fast port helpers (scripts/PortHelpers.ps1)
+$__RepoRootForPorts = Split-Path -Parent $PSScriptRoot
+$__PortHelpers = Join-Path $__RepoRootForPorts 'scripts\PortHelpers.ps1'
+if (Test-Path -LiteralPath $__PortHelpers) { . $__PortHelpers }
 # start.ps1 - Godot MCP web_sota frontend
 $WebPort = 10992
 
@@ -14,3 +19,4 @@ Start-Sleep -Seconds 5
 Write-Host "Godot MCP Webapp: http://localhost:$WebPort" -ForegroundColor Green
 Write-Host "Opening in default browser..." -ForegroundColor Cyan
 Start-Process "http://localhost:$WebPort"
+
