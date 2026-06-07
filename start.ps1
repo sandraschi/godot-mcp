@@ -1,4 +1,4 @@
-# start.ps1 — Godot MCP + Webapp
+# start.ps1 - Godot MCP + Webapp
 $WebPort = 10992
 $ApiPort = 10993
 

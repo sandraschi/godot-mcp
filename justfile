@@ -1,4 +1,4 @@
-set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+﻿set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
 
 export NAME := "Godot MCP"
 export DESC := "Godot 4.0 engine control via WebSocket + MCP tools"
@@ -10,7 +10,7 @@ export HOST := "0.0.0.0"
 
 # Open the interactive recipe dashboard in the browser
 default:
-    @pwsh.exe -NoProfile -ExecutionPolicy Bypass -File ../mcp-central-docs/scripts/just-dashboard.ps1 -Path .
+    @just --list
 
 # ── Lifecycle ─────────────────────────────────────────────────────────────────
 
@@ -495,3 +495,4 @@ git-diff:
 # Show recent commits
 git-log count="10":
     git log --oneline -{{count}}
+

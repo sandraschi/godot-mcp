@@ -1,4 +1,4 @@
-# start.ps1 — Godot MCP web_sota frontend
+# start.ps1 - Godot MCP web_sota frontend
 $WebPort = 10992
 
 # Kill any existing processes on this port
