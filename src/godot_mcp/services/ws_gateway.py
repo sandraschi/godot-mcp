@@ -193,9 +193,7 @@ async def _dispatch_command(client: WSClient, msg: dict) -> dict:
         action = tool_name.replace("godot_", "")
         result = bridge.send(action, arguments)
         return _make_response(msg.get("id"), "result", {
-            "success": result.get("success", False),
-            "data": result.get("data", {}),
-            "error": result.get("error"),
+            **result,
             "tool": tool_name,
         })
 
@@ -204,9 +202,7 @@ async def _dispatch_command(client: WSClient, msg: dict) -> dict:
         from godot_mcp.server import _run_python_tool
         result = await _run_python_tool(tool_name, arguments)
         return _make_response(msg.get("id"), "result", {
-            "success": result.get("success", False),
-            "data": result.get("data", result),
-            "error": result.get("error"),
+            **result,
             "tool": tool_name,
         })
     except Exception as e:
@@ -263,8 +259,7 @@ async def _handle_spatial_intent(client: WSClient, msg: dict) -> dict:
                 "roughness": material.get("roughness", 0.5),
             })
         return _make_response(msg.get("id"), "result", {
-            "success": result.get("success", False),
-            "data": result.get("data", {}),
+            **result,
             "intent_type": intent_type,
         })
 
@@ -278,16 +273,14 @@ async def _handle_spatial_intent(client: WSClient, msg: dict) -> dict:
             "position": pos,
         })
         return _make_response(msg.get("id"), "result", {
-            "success": result.get("success", False),
-            "data": result.get("data", {}),
+            **result,
             "intent_type": intent_type,
         })
 
     if intent_type == "query_space":
         result = bridge.send("read_scene_tree")
         return _make_response(msg.get("id"), "result", {
-            "success": result.get("success", False),
-            "data": result.get("data", {}),
+            **result,
             "intent_type": intent_type,
         })
 
@@ -315,19 +308,13 @@ async def _handle_intervention_intent(client: WSClient, msg: dict) -> dict:
             result = bridge.send("modify-node", {
                 "node": node, "property": prop, "value": value,
             })
-            return _make_response(msg.get("id"), "result", {
-                "success": result.get("success", False),
-                "data": result.get("data", {}),
-            })
+            return _make_response(msg.get("id"), "result", {**result})
     if intervention_type == "force_restart":
         from godot_mcp.workflows.engine import BUILTIN_WORKFLOWS
         if "test_agent_restart" in BUILTIN_WORKFLOWS:
             workflow = BUILTIN_WORKFLOWS["test_agent_restart"]
             result = await workflow.run(lambda t, p: bridge.send(t.replace("godot_", ""), p))
-            return _make_response(msg.get("id"), "result", {
-                "success": result.get("success", False),
-                "data": result.get("data", {}),
-            })
+            return _make_response(msg.get("id"), "result", {**result})
 
     return _make_response(msg.get("id"), "error", {
         "error_code": "INVALID_INTENT",
