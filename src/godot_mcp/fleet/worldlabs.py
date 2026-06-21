@@ -6,8 +6,8 @@ import os
 import re
 from pathlib import Path
 from typing import Any
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+
+import httpx
 
 WORLD_ID_RE = re.compile(r"^[a-zA-Z0-9_-]{6,}$")
 
@@ -28,16 +28,14 @@ def validate_world_id(world_id: str) -> str:
 
 
 def _http_json(url: str, timeout: int = 60) -> dict[str, Any]:
-    req = Request(url, headers={"Accept": "application/json"})
     try:
-        with urlopen(req, timeout=timeout) as resp:
-            import json
-
-            return json.loads(resp.read().decode("utf-8"))
-    except HTTPError as exc:
-        raise RuntimeError(f"HTTP {exc.code} from {url}: {exc.reason}") from exc
-    except URLError as exc:
-        raise RuntimeError(f"Cannot reach World Labs bridge at {bridge_base_url()}: {exc.reason}") from exc
+        resp = httpx.get(url, headers={"Accept": "application/json"}, timeout=timeout)
+        resp.raise_for_status()
+        return resp.json()
+    except httpx.HTTPStatusError as exc:
+        raise RuntimeError(f"HTTP {exc.response.status_code} from {url}: {exc.response.text}") from exc
+    except httpx.RequestError as exc:
+        raise RuntimeError(f"Cannot reach World Labs bridge at {bridge_base_url()}: {exc}") from exc
 
 
 def extract_assets(world_payload: dict[str, Any]) -> dict[str, str | None]:
@@ -76,7 +74,6 @@ def spark_viewer_url(assets: dict[str, str | None]) -> str | None:
     full = assets.get("splat_full") or assets.get("splat_500k") or assets.get("splat_100k")
     if not full:
         return None
-    from urllib.parse import urlencode
 
     params = {}
     if assets.get("splat_full"):
@@ -85,18 +82,20 @@ def spark_viewer_url(assets: dict[str, str | None]) -> str | None:
         params["splat_500k"] = assets["splat_500k"]
     if assets.get("splat_100k"):
         params["splat_100k"] = assets["splat_100k"]
-    query = urlencode(params)
+    import urllib.parse
+    query = urllib.parse.urlencode(params)
     return f"{web_base_url()}/spark?{query}"
 
 
 def download_url(url: str, dest_path: str | Path, timeout: int = 180) -> Path:
     dest = Path(dest_path)
     dest.parent.mkdir(parents=True, exist_ok=True)
-    req = Request(url, headers={"User-Agent": "godot-mcp-fleet/0.2.1"})
     try:
-        with urlopen(req, timeout=timeout) as resp:
-            dest.write_bytes(resp.read())
-    except (HTTPError, URLError) as exc:
+        with httpx.Client(timeout=timeout) as client:
+            resp = client.get(url, headers={"User-Agent": "godot-mcp-fleet/0.2.1"}, follow_redirects=True)
+            resp.raise_for_status()
+            dest.write_bytes(resp.content)
+    except httpx.HTTPError as exc:
         raise RuntimeError(f"Download failed: {exc}") from exc
     if dest.stat().st_size == 0:
         raise RuntimeError(f"Downloaded empty file: {dest}")

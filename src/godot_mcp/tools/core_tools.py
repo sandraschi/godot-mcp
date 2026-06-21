@@ -493,7 +493,7 @@ async def godot_export_web(
     ]
 
     try:
-        proc = subprocess.run(
+        proc = subprocess.run(  # noqa: S603 — godot path validated above
             cmd,
             capture_output=True,
             text=True,

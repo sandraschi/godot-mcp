@@ -1,4 +1,5 @@
-﻿set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+import 'scripts/just/fleet.just'
 
 export NAME := "Godot MCP"
 export DESC := "Godot 4.0 engine control via WebSocket + MCP tools"
@@ -394,6 +395,10 @@ tauri-dev:
 tauri-build:
     pwsh -NoProfile -File '{{justfile_directory()}}\native\build.ps1'
 
+# Run CUA smoke test against installed NSIS app
+cua-nsis-test:
+    C:\Windows\py.exe scripts/cua-smoke.py
+
 # PyInstaller backend only (for Tauri sidecar)
 tauri-sidecar:
     pwsh -NoProfile -File '{{justfile_directory()}}\native\build-sidecar.ps1'
@@ -407,6 +412,22 @@ docker-build:
 # Run Docker container
 docker-run port=PORT:
     docker run -p {{port}}:{{port}} -e GODOT_HOST=host.docker.internal godot-mcp:{{VER}}
+
+# ── MCPB Pack ──────────────────────────────────────────────────────────────────
+
+# Pack the MCPB bundle for Claude Desktop distribution
+pack-mcpb:
+    Set-Location '{{justfile_directory()}}\mcpb'
+    $files = @(
+        'manifest.json', 'pyproject.toml', 'README.md', 'run_server.py',
+        'assets\icon.png',
+        'assets\prompts\examples.json', 'assets\prompts\system.md', 'assets\prompts\user.md',
+        'src\__init__.py', 'src\server.py'
+    )
+    $out = '{{justfile_directory()}}\dist\godot-mcp-v{{VER}}.mcpb'
+    New-Item -ItemType Directory -Force -Path (Split-Path $out) | Out-Null
+    tar -czf $out @files
+    Write-Host "MCPB built: $out" -ForegroundColor Green
 
 # ── Diagnostics ───────────────────────────────────────────────────────────────
 
@@ -495,4 +516,3 @@ git-diff:
 # Show recent commits
 git-log count="10":
     git log --oneline -{{count}}
-

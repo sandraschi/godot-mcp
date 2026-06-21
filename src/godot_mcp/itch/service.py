@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import os
-import urllib.error
-import urllib.parse
-import urllib.request
 from typing import Any
+
+import httpx
 
 from godot_mcp.itch import butler, export
 from godot_mcp.itch.config import (
@@ -140,13 +139,14 @@ def itch_latest_version(itch_target: str | None = None, channel: str | None = No
         if not target_slug:
             raise ValueError("itch_target required")
         ch = validate_channel(channel or channel_for_target("web"))
+        import urllib.parse
         query = urllib.parse.urlencode({"target": target_slug, "channel_name": ch})
         url = f"https://api.itch.io/wharf/latest?{query}"
-        with urllib.request.urlopen(url, timeout=30) as resp:
-            body = resp.read().decode("utf-8")
-        return {"success": True, "data": {"url": url, "raw": body}}
-    except urllib.error.HTTPError as exc:
-        return {"success": False, "error": f"HTTP {exc.code}: {exc.reason}"}
+        resp = httpx.get(url, timeout=30)
+        resp.raise_for_status()
+        return {"success": True, "data": {"url": url, "raw": resp.text}}
+    except httpx.HTTPStatusError as exc:
+        return {"success": False, "error": f"HTTP {exc.response.status_code}: {exc.response.text}"}
     except Exception as exc:
         return {"success": False, "error": str(exc)}
 

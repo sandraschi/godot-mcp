@@ -1,0 +1,15 @@
+{
+  "product_name": "Godot MCP Operator",
+  "install_dir": "%LOCALAPPDATA%\\Godot MCP",
+  "operator_exe": "godot-mcp-native.exe",
+  "backend_process_names": ["godot-mcp-operator", "godot-mcp-backend"],
+  "backend_port": 10993,
+  "health_path": "/api/v1/health",
+  "diagnostics_path": "/api/v1/diagnostics",
+  "feature_smoke_path": "/api/v1/status",
+  "window_title_re": "Godot MCP",
+  "nsis_glob": "native/target/release/bundle/nsis/Godot MCP_*_x64-setup.exe",
+  "bridge_ok_text": "REST bridge reachable",
+  "uninstall_registry_filter": "*Godot MCP*"
+}
+

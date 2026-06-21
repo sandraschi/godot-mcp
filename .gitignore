@@ -16,6 +16,7 @@ native/icons/android/
 native/icons/ios/
 build/godot-mcp-backend/
 dist/godot-mcp-backend.exe
+native/resources/*.exe
 
 # Godot exports
 *.wasm
@@ -30,3 +31,7 @@ htmlcov/
 Thumbs.db
 .DS_Store
 _dashboard/
+
+# Backup files
+*.bak
+*.bak.*

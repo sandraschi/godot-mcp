@@ -73,7 +73,7 @@ def run_butler(args: list[str], *, cwd: Path | None = None, timeout: int = 900) 
         )
     env = os.environ.copy()
     cmd = [str(exe), *args]
-    proc = subprocess.run(
+    proc = subprocess.run(  # noqa: S603 — butler exe resolved by find_butler()
         cmd,
         cwd=str(cwd) if cwd else None,
         env=env,

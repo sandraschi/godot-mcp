@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from godot_mcp.fleet import exchange, pipeline as fleet_pipeline
+from godot_mcp.fleet import exchange
+from godot_mcp.fleet import pipeline as fleet_pipeline
 
 
 def unwrap_bridge_response(resp: dict[str, Any]) -> dict[str, Any]:

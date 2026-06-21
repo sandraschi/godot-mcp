@@ -8,15 +8,14 @@ import time
 from pathlib import Path
 from typing import Any
 
+from godot_mcp.game_builder import worlds as world_helpers
 from godot_mcp.game_builder.plan import GamePlan
 from godot_mcp.game_builder.project import (
     copy_world_meshes_to_project,
     ensure_project_path,
     sync_project_from_plan,
-    write_scripts_to_project,
 )
 from godot_mcp.game_builder.prompts import GAME_DESIGNER_SYSTEM_PROMPT, GDScript_SPEC_PROMPT
-from godot_mcp.game_builder import worlds as world_helpers
 from godot_mcp.mcp_bridge import get_or_create_bridge
 from godot_mcp.sampling.service import sample_text
 

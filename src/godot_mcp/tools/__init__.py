@@ -11,12 +11,12 @@ def register_all(mcp):
     from godot_mcp.fleet.tools import register as reg_fleet
     from godot_mcp.game_builder.tools import register as reg_game_builder
     from godot_mcp.itch.tools import register as reg_itch
-    from godot_mcp.steam.tools import register as reg_steam
     from godot_mcp.mcp_bridge.tools import register as reg_bridge
     from godot_mcp.mcpb.tools import register as reg_mcpb
     from godot_mcp.prefabs.tools import register as reg_prefabs
     from godot_mcp.prompts.tools import register as reg_prompts
     from godot_mcp.sampling.tools import register as reg_sampling
+    from godot_mcp.steam.tools import register as reg_steam
     from godot_mcp.tools.core_tools import register as reg_core
     from godot_mcp.workflows.tools import register as reg_workflows
 

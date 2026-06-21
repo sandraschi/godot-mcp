@@ -48,7 +48,7 @@ def ensure_export_presets(project: Path) -> bool:
 def ensure_imported(project: Path, godot: Path) -> None:
     if (project / ".godot" / "imported").is_dir():
         return
-    subprocess.run(
+    subprocess.run(  # noqa: S603 — godot path validated by _find_godot()
         [str(godot), "--path", str(project), "--import"],
         capture_output=True,
         text=True,
@@ -78,7 +78,7 @@ def export_release(
     out_file, upload_dir = build_output_paths(game, target, output_path)
     preset = "Web" if target == "web" else "Windows Desktop"
 
-    proc = subprocess.run(
+    proc = subprocess.run(  # noqa: S603 — godot path validated by _find_godot()
         [str(godot), "--headless", "--path", str(project), "--export-release", preset, str(out_file)],
         capture_output=True,
         text=True,

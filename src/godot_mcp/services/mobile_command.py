@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
@@ -22,7 +22,7 @@ logger = logging.getLogger("godot-mcp.mobile-command")
 # ── Enums ─────────────────────────────────────────────────────────────────────
 
 
-class AppType(str, Enum):
+class AppType(StrEnum):
     """Which iOS app is sending this message.
 
     Each app has its own intent types and dispatch handlers.
@@ -35,7 +35,7 @@ class AppType(str, Enum):
     pocket_architect = "pocket-architect"
 
 
-class MessageType(str, Enum):
+class MessageType(StrEnum):
     """Category of message an iOS client can send over the gateway.
 
     - command: Direct invocation of a godot-mcp tool by name
@@ -49,7 +49,7 @@ class MessageType(str, Enum):
     unsubscribe = "unsubscribe"
 
 
-class IntentType(str, Enum):
+class IntentType(StrEnum):
     """All semantic intents across all three iOS apps.
 
     Namespaced by app:
@@ -80,7 +80,7 @@ class IntentType(str, Enum):
     tweak = "tweak"
 
 
-class ChannelName(str, Enum):
+class ChannelName(StrEnum):
     """Available subscription channels for server-push events.
 
     Supports wildcard suffix matching: subscribing to 'agent:*' matches 'agent:bot_01'.

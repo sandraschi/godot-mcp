@@ -1,3 +1,26 @@
+
+## [Unreleased] — 2026-06-14
+
+### Fixed
+- Tauri build: resolved Rust crate conflict (brotli/alloc-no-stdlib)
+- Tauri build: fixed PyInstaller path mismatch (hyphen to underscore in src dirs)
+- Tauri build: fixed TypeScript errors (unused imports, useRef arg, import.meta.env)
+- Tauri CORS: allow_origins includes tauri://localhost for WebView access
+
+### Added
+- CUA-NSIS: just cua-nsis-test recipe, smoke script, config
+- CUA-NSIS: build.ps1 now copies NSIS installer to dist/
+- CUA-NSIS: 11-phase smoke test (install, launch, WebView OCR, diagnostics, uninstall)
+
+## [Unreleased] — 2026-06-14
+
+### Added
+- Tauri CORS: 	auri://localhost, http://tauri.localhost, https://tauri.localhost in CORS origins
+- Tauri CORS: _TAURI env var toggle with llow_origin_regex for secure WebView access
+- build.ps1: auto-copy NSIS installer to dist/ on build
+
+### Changed
+- CORS: llow_origins=["*"] → explicit origins list for Tauri webview compatibility
 # Changelog
 
 All notable changes to **godot-mcp** will be documented in this file.
@@ -76,3 +99,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Artifact depot (`~/.godot-mcp/depot/`), MCPB bundles, prefab catalog, workflow engine, prompt templates.
 - MCP bridge federation (`MCP_BRIDGE_URLS`) for cross-server tool calling.
 - Tauri 2.0 native wrapper scaffold.
+
+

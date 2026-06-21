@@ -6,12 +6,13 @@ for pkg in ("fastmcp", "fastapi", "uvicorn", "pydantic", "starlette", "httpx"):
     datas += copy_metadata(pkg)
 
 a = Analysis(
-    ["run_server.py"],
+    ['run_server.py'],
     pathex=["src"],
     binaries=[],
+    
     datas=datas,
     hiddenimports=[
-    "_strptime",
+
     "_datetime",
         "uvicorn.logging",
         "uvicorn.loops",
@@ -26,12 +27,14 @@ a = Analysis(
         "godot_mcp.tools.core_tools",
         "godot_mcp.services.godot_bridge",
         "godot_mcp.artifacts.routes",
-    ],
+    "_strptime",
+],
     hookspath=[],
+    
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
-    noarchive=False,
+    noarchive=True,
     optimize=0,
 )
 pyz = PYZ(a.pure)
@@ -42,6 +45,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
+    
     name="godot-mcp-backend",
     debug=False,
     bootloader_ignore_signals=False,
@@ -56,3 +60,8 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
 )
+
+
+
+
+

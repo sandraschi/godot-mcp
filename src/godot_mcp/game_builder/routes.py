@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
-
 from fastapi import APIRouter
+from pydantic import BaseModel
 
 from godot_mcp.game_builder import service
 

@@ -12,6 +12,7 @@
     "windows": [
       {
         "title": "Godot MCP",
+        "label": "main",
         "width": 1200,
         "height": 800,
         "minWidth": 800,
@@ -31,8 +32,8 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": [
-      "binaries/godot-mcp-backend"
+    "resources": [
+      "resources/godot-mcp-backend.exe"
     ],
     "targets": [
       "nsis"
@@ -42,7 +43,10 @@
         "type": "skip"
       },
       "nsis": {
-        "installerHooks": "./windows/hooks.nsh"
+        "install_mode": "currentUser",
+        "create_desktop_shortcut": true,
+        "create_start_menu_shortcut": true,
+        "installer_hooks": "./windows/hooks.nsh"
       }
     }
   },
