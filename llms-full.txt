@@ -1,0 +1,128 @@
+# godot-mcp — Full Reference
+
+## Architecture
+
+Godot MCP is a FastMCP 3.2 server on FastAPI with dual transport: stdio for MCP clients and HTTP SSE on port 10993. It communicates with a running Godot 4.0 editor/headless build via WebSocket bridge (port 9080). The server also hosts REST APIs for itch.io, Steam, fleet exchange, game builder, and artifact depot.
+
+### Pipeline
+
+```
+blender-mcp → GLB/OBJ → godot_import_glb → Godot scene
+qcad-mcp → freecad-mcp → FluidX3D → CSV velocity → godot_load_velocity_field → godot_spawn_particles
+design_game → generate_game_worlds (worldlabs) → compose_game_scene → generate_game_logic → export_and_ship
+```
+
+## Tools — Full Reference
+
+### Engine Control
+
+| Tool | Description |
+|------|-------------|
+| `godot_status` | Engine version, node count, FPS, bridge state |
+| `godot_read_scene_tree` | Dump full scene hierarchy as JSON |
+| `godot_headless_verify` | Check headless mode + CLI command |
+| `godot_set_config` | Write to project.godot INI-style config |
+
+### 3D Import
+
+| Tool | Description |
+|------|-------------|
+| `godot_import_stl` | Binary STL → MeshInstance3D with ArrayMesh |
+| `godot_import_glb` | GLB/GLTF → nodes/meshes via GLTFDocument |
+| `godot_import_obj` | Wavefront OBJ → imported mesh via ResourceLoader |
+
+### Scene Editing
+
+| Tool | Description |
+|------|-------------|
+| `godot_create_camera` | Camera3D with orbit controls (GDScript) |
+| `godot_add_light` | Directional/ambient/omni light |
+| `godot_set_material` | StandardMaterial3D PBR (albedo, roughness) |
+| `godot_spawn_particles` | GPUParticles3D system with configurable emission box |
+| `godot_load_velocity_field` | Load CSV velocity data (x,y,z,vx,vy,vz) as node metadata |
+| `godot_animate_streamlines` | Animate GPU particles along velocity field vectors |
+| `godot_export_web` | HTML5/WebAssembly export via headless or in-editor |
+| `godot_play_animation` | List/play GLB animation clips via AnimationPlayer |
+
+### Itch.io Publishing
+
+| Tool | Description |
+|------|-------------|
+| `itch_status` | Butler install, API key, default slug |
+| `godot_export_release` | Export sample/custom project (web/windows) |
+| `itch_push_preview` | Diff NEW/MODIFIED/DELETED before push |
+| `itch_push` | Upload build via Butler |
+| `itch_latest_version` | Query api.itch.io/wharf for newest build |
+| `ship_to_itch` | Full pipeline: export → preview → push |
+
+### Steam Publishing
+
+| Tool | Description |
+|------|-------------|
+| `steam_status` | SteamPipe/steamcmd readiness, app/depot IDs |
+| `steam_checklist` | Steam Direct release checklist |
+| `steam_monetization_guide` | Pricing and revenue guidance |
+| `steam_stage_build` | Export Windows → fleet exchange for SteamPipe |
+| `ship_to_steam_prerelease` | Upload to beta branch (dry_run=true default) |
+| `ship_to_steam_release` | Upload to live branch (dry_run=true default) |
+| `ship_to_steam` | End-to-end Steam ship pipeline |
+
+### Game Builder Pipeline
+
+| Tool | Description |
+|------|-------------|
+| `design_game` | Natural language → GamePlan (worlds, scenes, scripts) |
+| `generate_game_worlds` | Marble world generation + collider GLB staging |
+| `compose_game_scene` | Assemble Godot scene from GamePlan + worlds |
+| `generate_game_logic` | Generate GDScript files from GamePlan |
+| `export_and_ship` | Export + itch.io push in one call |
+| `build_game` | End-to-end: design → worlds → compose → logic → ship |
+
+### Fleet Integration
+
+| Tool | Description |
+|------|-------------|
+| `fleet_exchange_status` | Depot assets and pipeline readiness |
+| `fleet_import_from_exchange` | Import GLB/OBJ/STL from fleet exchange |
+| `fleet_worldlabs_get_world` | Fetch Marble world asset URLs |
+| `fleet_worldlabs_stage_mesh` | Download Chisel collision GLB to exchange |
+| `fleet_worldlabs_stage_splat` | Download SPZ splat to exchange |
+| `fleet_worldlabs_import_mesh` | Download + import Marble GLB into Godot |
+
+### Sampling / Agentic
+
+| Tool | Description |
+|------|-------------|
+| `ai_describe_artifact` | AI description for scene/mesh/material |
+| `ai_generate_gdscript` | GDScript generation from natural language |
+| `cad_sampling` | Multi-step CAD reasoning via LLM |
+
+## Config
+
+### Env Vars
+- `GODOT_PATH` — Path to godot.exe (auto-detect if omitted)
+- `GODOT_HOST` / `GODOT_PORT` — TCP bridge (default 127.0.0.1:9080)
+- `BUTLER_API_KEY` — itch.io Butler API key
+- `ITCH_TARGET` — Default user/game slug
+- `STEAM_APP_ID` / `STEAM_DEPOT_ID` — Steam app configuration
+- `STEAM_USERNAME` / `STEAMCMD_PATH` — Steam Pipe credentials
+- `MCP_BRIDGE_URLS` — Comma-separated peer MCP servers
+
+### Ports
+- 10993 — Backend (REST + MCP SSE)
+- 10992 — Frontend (Vite dev, React dashboard)
+- 9080 — Godot TCP bridge
+- 11020 — steam-mcp (fleet standard)
+
+## Error Handling
+
+All tools return `{"success": bool, "data": {...}}`. Bridge connection failures return "Cannot connect to Godot" + instructions. Sampling tools gracefully degrade when ctx.sample() unavailable.
+
+## Cross-repo Integration
+
+- **freecad-mcp** — CAD/BIM geometry → STL import
+- **qcad-mcp** — DXF floor plan → STL extrusion → import
+- **fluidx3d (via freecad-mcp)** — GPU CFD velocity fields → visualization
+- **blender-mcp** — GLB/VRM export → godot_import_glb
+- **worldlabs-mcp** — Marble 3D worlds → game builder pipeline
+- **steam-mcp** — SteamPipe upload bridge

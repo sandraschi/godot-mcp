@@ -1,0 +1,37 @@
+# godot-mcp — Godot 4.0 Engine Control
+
+MCP server for AI-driven Godot 4.0 engine control: scene graph, 3D import (STL/GLB/OBJ), CFD velocity fields, GPU particles, PBR materials, cameras, animations, HTML5 export, and publishing to itch.io/Steam. Backend port 10993, dashboard 10992.
+
+## Tools
+
+**Engine Control:** `godot_status`, `godot_read_scene_tree`, `godot_headless_verify`, `godot_set_config`
+**Import:** `godot_import_stl`, `godot_import_glb`, `godot_import_obj`
+**Scene:** `godot_create_camera`, `godot_add_light`, `godot_set_material`, `godot_spawn_particles`, `godot_load_velocity_field`, `godot_animate_streamlines`, `godot_export_web`, `godot_play_animation`
+**itch.io:** `itch_status`, `godot_export_release`, `itch_push_preview`, `itch_push`, `itch_latest_version`, `ship_to_itch`
+**Steam:** `steam_status`, `steam_checklist`, `steam_monetization_guide`, `steam_stage_build`, `ship_to_steam_prerelease`, `ship_to_steam_release`, `ship_to_steam`
+**Game Builder:** `design_game`, `generate_game_worlds`, `compose_game_scene`, `generate_game_logic`, `export_and_ship`, `build_game`
+**Fleet:** `fleet_exchange_status`, `fleet_import_from_exchange`, `fleet_worldlabs_get_world`, `fleet_worldlabs_stage_mesh`, `fleet_worldlabs_stage_splat`, `fleet_worldlabs_import_mesh`
+**Artifacts:** `artifact_list`, `artifact_search`, `artifact_get`, `artifact_register`, `artifact_delete`
+**Bridge:** `bridge_connect`, `bridge_call_tool`
+**MCPB:** `mcpb_build`, `mcpb_inspect`
+**Prefabs:** `prefab_list`, `prefab_apply`
+**Prompts:** `prompt_list`, `prompt_execute`
+**Sampling:** `ai_describe_artifact`, `ai_generate_gdscript`, `cad_sampling`
+**Workflows:** `workflow_list`, `workflow_run`
+
+## Prompts — game_builder flow
+
+- `design_game` prompt — Plan game from natural language concept
+- `game_worlds` prompt — Generate Marble worlds for game plan
+
+## Resources
+
+- `skill://{name}/SKILL.md` — Claude skills for game dev
+
+## Config
+
+- Port: 10993 (backend), 10992 (frontend), 9080 (Godot TCP bridge)
+- Env: GODOT_PATH, BUTLER_API_KEY, ITCH_TARGET, STEAM_APP_ID
+- Mode: stdio (MCP clients) or http (--mode http/--mode dual)
+
+See [llms-full.txt](llms-full.txt) for full tool reference and pipeline architecture.
