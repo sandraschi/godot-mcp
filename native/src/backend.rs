@@ -95,8 +95,8 @@ pub fn spawn_backend(app: AppHandle, state: &BackendProcess) -> Result<String, S
         .env(ENV_PORT, BACKEND_PORT.to_string())
         .env(ENV_HOST, "127.0.0.1")
         .env(ENV_TAURI, "1")
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
 
     #[cfg(windows)]
     {
@@ -105,22 +105,31 @@ pub fn spawn_backend(app: AppHandle, state: &BackendProcess) -> Result<String, S
         command.creation_flags(CREATE_NO_WINDOW);
     }
 
-    let mut child = command
+    let child = command
         .spawn()
         .map_err(|e| format!("Failed to spawn {}: {e}", backend_path.display()))?;
 
-    let stdout = child.stdout.take();
-    let stderr = child.stderr.take();
     state.0.lock().unwrap().replace(child);
 
-    if let Some(out) = stdout {
-        let handle = app.clone();
-        thread::spawn(move || watch_backend_stream(out, handle));
-    }
-    if let Some(err) = stderr {
-        let handle = app.clone();
-        thread::spawn(move || watch_backend_stream(err, handle));
-    }
+    let addr = SocketAddr::from_str(&format!("127.0.0.1:{BACKEND_PORT}")).unwrap();
+    let app_health = app.clone();
+    thread::spawn(move || {
+        for attempt in 0..30 {
+            thread::sleep(Duration::from_secs(2));
+            match TcpStream::connect_timeout(&addr, Duration::from_secs(2)) {
+                Ok(_) => {
+                    log_line(&app_health, &format!("Backend health check PASSED on port {BACKEND_PORT} (attempt {})", attempt + 1));
+                    let _ = app_health.emit("backend-status", "ready");
+                    return;
+                }
+                Err(e) => {
+                    log_line(&app_health, &format!("Backend health check: {e} (attempt {})", attempt + 1));
+                }
+            }
+        }
+        log_line(&app_health, &format!("Backend health check FAILED — not listening on port {BACKEND_PORT} after 30 attempts"));
+        let _ = app_health.emit("backend-status", "error: backend not reachable");
+    });
 
     Ok(format!("Backend starting on port {BACKEND_PORT}"))
 }

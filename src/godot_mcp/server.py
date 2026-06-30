@@ -118,10 +118,10 @@ app = FastAPI(lifespan=lifespan)
 _tauri_desktop = os.environ.get("GODOT_TAURI", "").lower() in ("1", "true", "yes")
 app.add_middleware(
     CORSMiddleware,
-        allow_origins=[
-            "http://127.0.0.1:10993",
-            "http://localhost:10993",
-            "http://goliath:10993",
+    allow_origins=[
+        "http://127.0.0.1:10993",
+        "http://localhost:10993",
+        "http://goliath:10993",
         "http://tauri.localhost",
         "https://tauri.localhost",
         "tauri://localhost",
@@ -195,6 +195,33 @@ for url in bridge_urls.split(","):
 
 register_all(mcp)
 
+# ── Skills REST endpoints ─────────────────────────────────────────────────────
+
+
+@app.get("/api/v1/skills")
+async def list_skills_api():
+    """List all available skills."""
+    try:
+        from godot_mcp.skills import list_skills
+
+        return {"success": True, "skills": list_skills()}
+    except Exception as e:
+        return {"success": False, "skills": [], "error": str(e)}
+
+
+@app.get("/api/v1/skills/{skill_name}")
+async def get_skill_api(skill_name: str):
+    """Get the content of a specific skill."""
+    try:
+        from godot_mcp.skills import get_skill_markdown
+
+        content = get_skill_markdown(skill_name)
+        if content is None:
+            return {"success": False, "error": f"Skill not found: {skill_name}"}
+        return {"success": True, "name": skill_name, "content": content}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 
 # ── REST API ──────────────────────────────────────────────────────────────────
 
@@ -224,6 +251,41 @@ async def api_status():
         "steam": steam,
         "fleet": fleet,
     }
+
+
+# ── Files listing ─────────────────────────────────────────────────────────────
+
+
+_FILES_DIR = Path(__file__).parent.parent.parent / "uploads"
+_OUTPUTS_DIR = Path(__file__).parent.parent.parent / "outputs"
+
+
+@app.get("/api/v1/files")
+async def list_files():
+    """List uploaded files and output files."""
+    uploads = []
+    outputs = []
+    if _FILES_DIR.is_dir():
+        for f in sorted(_FILES_DIR.iterdir()):
+            if f.is_file():
+                uploads.append({"name": f.name, "size_kb": round(f.stat().st_size / 1024, 1)})
+    if _OUTPUTS_DIR.is_dir():
+        for f in sorted(_OUTPUTS_DIR.iterdir()):
+            if f.is_file():
+                outputs.append({"name": f.name, "size_kb": round(f.stat().st_size / 1024, 1)})
+    return {"uploads": uploads, "outputs": outputs}
+
+
+@app.get("/api/v1/download/{file_name}")
+async def download_file(file_name: str):
+    """Download a file from uploads or outputs."""
+    for base in [_FILES_DIR, _OUTPUTS_DIR]:
+        target = base / file_name
+        if target.is_file():
+            from fastapi.responses import FileResponse
+
+            return FileResponse(str(target))
+    raise HTTPException(404, "File not found")
 
 
 # ── REST API — Tool Bridge ────────────────────────────────────────────────────
@@ -346,6 +408,32 @@ async def _run_python_tool(tool: str, arguments: dict) -> dict:
             arguments.get("ship", False),
             arguments.get("itch_target", ""),
         )
+    if tool == "prompt_execute":
+        from godot_mcp.prompts.tools import execute_prompt
+
+        return await execute_prompt(
+            arguments.get("prompt_id", ""),
+            arguments.get("params", {}),
+        )
+    if tool == "prefab_apply":
+        from godot_mcp.prefabs.tools import apply_prefab
+
+        return await apply_prefab(
+            arguments.get("prefab", ""),
+            arguments.get("params", {}),
+        )
+    if tool == "mcpb_build":
+        from godot_mcp.mcpb.tools import build_mcpb
+
+        return await build_mcpb(
+            arguments.get("name", ""),
+            arguments.get("description", ""),
+            arguments.get("tool_sequence", []),
+        )
+    if tool == "mcpb_inspect":
+        from godot_mcp.mcpb.tools import inspect_mcpb
+
+        return inspect_mcpb(arguments.get("path", ""))
     raise HTTPException(400, f"Unknown tool: {tool}")
 
 
@@ -377,6 +465,10 @@ PYTHON_TOOLS = {
     "generate_game_logic",
     "export_and_ship",
     "build_game",
+    "prompt_execute",
+    "prefab_apply",
+    "mcpb_build",
+    "mcpb_inspect",
 }
 
 
@@ -506,6 +598,93 @@ async def mobile_command_fallback(cmd: MobileCommand):
         correlation_id=cmd.id,
         payload=result.model_dump(),
     ).model_dump()
+
+
+# ── Addon Install ─────────────────────────────────────────────────────────────
+
+
+class AddonInstallRequest(BaseModel):
+    project_path: str = Field(description="Absolute path to the Godot project root (contains project.godot)")
+
+
+BRIDGE_GD_PATH = Path(__file__).parent / "bridge" / "mcp_bridge.gd"
+PLUGIN_CFG_CONTENT = """[plugin]
+name=MCP Bridge
+description=TCP server for MCP commands
+author=godot-mcp
+version=0.1.0
+script=mcp_bridge.gd
+"""
+
+
+@app.post("/api/v1/addon/install")
+async def install_addon(req: AddonInstallRequest):
+    """Install the Godot MCP bridge addon into a target project."""
+    project = Path(req.project_path).resolve()
+    addon_dir = project / "addons" / "mcp_bridge"
+
+    if not (project / "project.godot").is_file():
+        raise HTTPException(400, f"Not a Godot project: no project.godot found at {project}")
+
+    if not BRIDGE_GD_PATH.is_file():
+        raise HTTPException(500, f"Bridge GDScript not found at {BRIDGE_GD_PATH}")
+
+    addon_dir.mkdir(parents=True, exist_ok=True)
+
+    import shutil
+
+    shutil.copy2(str(BRIDGE_GD_PATH), str(addon_dir / "mcp_bridge.gd"))
+    (addon_dir / "plugin.cfg").write_text(PLUGIN_CFG_CONTENT, encoding="utf-8")
+
+    log_activity("addon_install", f"Addon installed to {addon_dir}", level="INFO")
+    return {
+        "success": True,
+        "addon_path": str(addon_dir),
+        "message": f"MCP Bridge addon installed to {addon_dir}. Add it as an Autoload in Project > Project Settings > Autoload.",
+    }
+
+
+# ── Settings (persist) ────────────────────────────────────────────────────────
+
+
+class SettingsUpdate(BaseModel):
+    godot_path: str = ""
+    godot_host: str = "127.0.0.1"
+    godot_ws_port: int = 9080
+
+
+STATE_PATH = Path.home() / ".godot-mcp" / "settings.json"
+
+
+def _load_settings() -> dict:
+    if STATE_PATH.is_file():
+        try:
+            import json
+
+            return json.loads(STATE_PATH.read_text())
+        except Exception:
+            return {}
+    return {}
+
+
+def _save_settings(data: dict):
+    STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    import json
+
+    STATE_PATH.write_text(json.dumps(data, indent=2))
+
+
+@app.get("/api/v1/settings")
+async def get_settings():
+    return _load_settings()
+
+
+@app.put("/api/v1/settings")
+async def save_settings(req: SettingsUpdate):
+    data = req.model_dump()
+    _save_settings(data)
+    log_activity("settings", "Settings saved", level="INFO", meta=data)
+    return {"success": True, "message": "Settings saved"}
 
 
 # ── Entry point ──────────────────────────────────────────────────────────────

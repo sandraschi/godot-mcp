@@ -140,6 +140,11 @@ stop:
 # Restart everything
 restart: stop start
 
+# Install the MCP bridge addon into a Godot project (copies mcp_bridge.gd + plugin.cfg)
+install-addon project_path:
+    $body = @{project_path="{{project_path}}"} | ConvertTo-Json -Compress; \
+    try { $r = Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/addon/install" -Method POST -Body $body -ContentType "application/json" -UseBasicParsing -TimeoutSec 15; ($r.Content | ConvertFrom-Json) | ConvertTo-Json } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
+
 # ── Godot Bridge ──────────────────────────────────────────────────────────────
 
 # Launch Godot editor with bridge project

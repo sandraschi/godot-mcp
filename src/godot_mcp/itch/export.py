@@ -38,7 +38,9 @@ def ensure_export_presets(project: Path) -> bool:
     needs_copy = not dest.is_file()
     if dest.is_file():
         existing = dest.read_text(encoding="utf-8", errors="replace")
-        if any(x in existing for x in ("variant/thread_support", "ensure_cross_origin_isolation_headers", "export_d3d12")):
+        if any(
+            x in existing for x in ("variant/thread_support", "ensure_cross_origin_isolation_headers", "export_d3d12")
+        ):
             needs_copy = True
     if needs_copy:
         shutil.copyfile(template, dest)
@@ -87,9 +89,7 @@ def export_release(
     )
     if not out_file.is_file():
         hint = (proc.stderr or proc.stdout or "export output missing").strip()
-        raise RuntimeError(
-            f"Export failed for {preset}. Run install-export-templates. {hint[:500]}"
-        )
+        raise RuntimeError(f"Export failed for {preset}. Run install-export-templates. {hint[:500]}")
 
     return {
         "target": target,

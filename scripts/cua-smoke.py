@@ -31,8 +31,8 @@ import os
 import subprocess
 import sys
 import time
-import urllib.request
 import urllib.error
+import urllib.request
 
 # ── Config ────────────────────────────────────────────────────────────
 
@@ -121,7 +121,7 @@ def _init_cua_client():
     try:
         r = urllib.request.urlopen("http://127.0.0.1:10789/api/v1/health", timeout=2)
         if r.status == 200:
-            log(f"pywinauto-mcp HTTP API reachable at :10789")
+            log("pywinauto-mcp HTTP API reachable at :10789")
             _CUA_CLIENT_OK = True
             return "http"
     except Exception:
@@ -617,9 +617,9 @@ def main():
     if failed:
         print(f"  {failed} phase(s) FAILED")
     if fatal_failed:
-        print(f"  FATAL phase failure — see above")
+        print("  FATAL phase failure — see above")
         sys.exit(1)
-    print(f"  ALL PHASES PASSED")
+    print("  ALL PHASES PASSED")
     print(f"{'='*50}\n")
 
 

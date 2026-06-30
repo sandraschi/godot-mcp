@@ -46,9 +46,7 @@ async def fleet_worldlabs_stage_mesh(
 
 async def fleet_worldlabs_stage_splat(
     world_id: Annotated[str, Field(description="Marble world id.")],
-    resolution: Annotated[
-        str, Field(description="100k, 500k, or full", default="500k")
-    ] = "500k",
+    resolution: Annotated[str, Field(description="100k, 500k, or full", default="500k")] = "500k",
     ctx: Context = None,
 ) -> dict:
     """Download SPZ splat to exchange for Spark/Unity — not imported to Godot yet."""

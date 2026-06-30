@@ -30,6 +30,7 @@ class AppType(StrEnum):
     - state-surveiller: Multi-agent test monitoring + hot-fix dashboard
     - pocket-architect: Prompt-driven generative asset pipeline
     """
+
     spatial_vibe = "spatial-vibe"
     state_surveiller = "state-surveiller"
     pocket_architect = "pocket-architect"
@@ -43,6 +44,7 @@ class MessageType(StrEnum):
     - subscribe: Register for push notification channels
     - unsubscribe: Unregister from push notification channels
     """
+
     command = "command"
     intent = "intent"
     subscribe = "subscribe"
@@ -57,6 +59,7 @@ class IntentType(StrEnum):
       state-surveiller: reparent, set_param, force_restart, kill_agent, resume_loop
       pocket-architect: generate:environment, generate:asset, generate:ui_theme, generate:behavior, approve, reject, tweak
     """
+
     # Spatial Vibe-Director
     place_asset = "place_asset"
     anchor_light = "anchor_light"
@@ -85,6 +88,7 @@ class ChannelName(StrEnum):
 
     Supports wildcard suffix matching: subscribing to 'agent:*' matches 'agent:bot_01'.
     """
+
     agent_all = "agent:*"
     agent_specific = "agent:{id}"
     logs = "logs"
@@ -102,6 +106,7 @@ class SpatialTransform(BaseModel):
     Rotation uses quaternion representation (x, y, z, w). All vectors
     use dict format for easy JSON serialization: {"x": 0.0, "y": 0.0, "z": 0.0}
     """
+
     position: dict[str, float] = Field(default_factory=lambda: {"x": 0.0, "y": 0.0, "z": 0.0})
     rotation: dict[str, float] = Field(default_factory=lambda: {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0})
     scale: dict[str, float] = Field(default_factory=lambda: {"x": 1.0, "y": 1.0, "z": 1.0})
@@ -109,6 +114,7 @@ class SpatialTransform(BaseModel):
 
 class PhysicalSpace(BaseModel):
     """Physical room description from ARKit environment scanning."""
+
     room_shape: str = "open"
     floor_level: float = 0.0
     dimensions: dict[str, float] = Field(default_factory=lambda: {"width": 5.0, "length": 5.0, "height": 3.0})
@@ -120,6 +126,7 @@ class SpatialAnchor(BaseModel):
     The ``transform`` places the anchor relative to the ARKit world origin.
     ``tracking_state`` indicates whether ARKit currently has a lock on this anchor.
     """
+
     anchor_id: str = ""
     transform: SpatialTransform = Field(default_factory=SpatialTransform)
     physical_space: PhysicalSpace = Field(default_factory=PhysicalSpace)
@@ -132,6 +139,7 @@ class SpatialIntentPayload(BaseModel):
     Combines ARKit anchor data with natural language voice transcription
     and structured parameters for Godot scene manipulation.
     """
+
     intent_type: IntentType
     transcript: str = ""
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
@@ -146,6 +154,7 @@ class InterventionPayload(BaseModel):
     reparenting nodes, or restarting stuck agents without restarting
     the Godot engine.
     """
+
     intervention_type: IntentType
     target_agent: str = ""
     parameters: dict[str, Any] = Field(default_factory=dict)
@@ -158,6 +167,7 @@ class GenerationIntentPayload(BaseModel):
     decomposes this into tool chains (LLM sampling, asset import,
     scene composition, shader generation).
     """
+
     prompt: str
     mode: str = "environment"
     constraints: dict[str, Any] = Field(default_factory=dict)
@@ -166,6 +176,7 @@ class GenerationIntentPayload(BaseModel):
 
 class SubscriptionPayload(BaseModel):
     """Channel subscription request. Supports wildcard suffix matching."""
+
     channels: list[str]
 
 
@@ -175,6 +186,7 @@ class CommandPayload(BaseModel):
     The ``tool`` field matches godot-mcp tool names (e.g. ``godot_read_scene_tree``).
     Bridge tools are prefixed with ``godot_``; Python tools use their module name.
     """
+
     tool: str
     arguments: dict[str, Any] = Field(default_factory=dict)
     action_map: str | None = None
@@ -249,6 +261,7 @@ class MobileResponse(BaseModel):
     - ``event``: Server-pushed event for subscribed channels
     - ``frame``: Server-pushed base64-encoded image frame
     """
+
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     type: str = "ack"
     correlation_id: str | None = None
@@ -265,6 +278,7 @@ class MobileDispatchResult(BaseModel):
     the response envelope. ``error_code`` and ``recovery_hint`` enable
     the iOS client to show actionable error messages.
     """
+
     success: bool
     message: str = ""
     data: dict[str, Any] = Field(default_factory=dict)
@@ -302,6 +316,7 @@ class MobileDispatcher:
     def bridge(self):
         if self._bridge is None:
             from godot_mcp.services.godot_bridge import get_bridge
+
             self._bridge = get_bridge()
         return self._bridge
 
@@ -312,7 +327,8 @@ class MobileDispatcher:
         if cmd.type == MessageType.intent:
             return await self._handle_intent(cmd)
         return MobileDispatchResult(
-            success=False, error=f"Unsupported type: {cmd.type}",
+            success=False,
+            error=f"Unsupported type: {cmd.type}",
             error_code="INVALID_INTENT",
         )
 
@@ -326,7 +342,8 @@ class MobileDispatcher:
                 conn = self.bridge.connect()
                 if not conn["success"]:
                     return MobileDispatchResult(
-                        success=False, error=conn.get("error", "Bridge not connected"),
+                        success=False,
+                        error=conn.get("error", "Bridge not connected"),
                         error_code="BRIDGE_DISCONNECTED",
                         recovery_hint="Ensure Godot engine is running with MCP bridge addon",
                     )
@@ -341,6 +358,7 @@ class MobileDispatcher:
         # Python-side tool
         try:
             from godot_mcp.server import _run_python_tool
+
             if tool == "workflow_run":
                 result = await _run_python_tool(tool, payload.arguments)
             else:
@@ -352,7 +370,8 @@ class MobileDispatcher:
             )
         except Exception as e:
             return MobileDispatchResult(
-                success=False, error=str(e),
+                success=False,
+                error=str(e),
                 error_code="TOOL_FAILED",
             )
 
@@ -369,7 +388,8 @@ class MobileDispatcher:
             return await self._dispatch_generation(payload)
 
         return MobileDispatchResult(
-            success=False, error=f"Unknown app: {app}",
+            success=False,
+            error=f"Unknown app: {app}",
             error_code="INVALID_INTENT",
         )
 
@@ -381,17 +401,26 @@ class MobileDispatcher:
             asset = params.get("asset_ref", "")
             pos = params.get("position", {"x": 0, "y": 0, "z": 0})
             name = params.get("name", asset.split("/")[-1] if "/" in asset else "MobileAsset")
-            result = self.bridge.send("import_glb", {
-                "path": asset, "name": name, "position": pos,
-                "scale": params.get("scale", 1.0),
-            })
+            result = self.bridge.send(
+                "import_glb",
+                {
+                    "path": asset,
+                    "name": name,
+                    "position": pos,
+                    "scale": params.get("scale", 1.0),
+                },
+            )
             if result.get("success"):
                 mat = params.get("material")
                 if mat:
-                    self.bridge.send("set_material", {
-                        "node": name, "color": mat.get("color", "#ffffff"),
-                        "roughness": mat.get("roughness", 0.5),
-                    })
+                    self.bridge.send(
+                        "set_material",
+                        {
+                            "node": name,
+                            "color": mat.get("color", "#ffffff"),
+                            "roughness": mat.get("roughness", 0.5),
+                        },
+                    )
             return MobileDispatchResult(
                 success=result.get("success", False),
                 data=result.get("data", {}),
@@ -400,12 +429,15 @@ class MobileDispatcher:
 
         if intent.intent_type == IntentType.anchor_light:
             pos = params.get("position", {"x": 0, "y": 5, "z": 0})
-            result = self.bridge.send("add_light", {
-                "type": params.get("light_type", "omni"),
-                "name": params.get("name", "MobileLight"),
-                "intensity": params.get("intensity", 1.0),
-                "position": pos,
-            })
+            result = self.bridge.send(
+                "add_light",
+                {
+                    "type": params.get("light_type", "omni"),
+                    "name": params.get("name", "MobileLight"),
+                    "intensity": params.get("intensity", 1.0),
+                    "position": pos,
+                },
+            )
             return MobileDispatchResult(
                 success=result.get("success", False),
                 data=result.get("data", {}),
@@ -419,7 +451,8 @@ class MobileDispatcher:
             )
 
         return MobileDispatchResult(
-            success=False, error=f"Unknown spatial intent: {intent.intent_type}",
+            success=False,
+            error=f"Unknown spatial intent: {intent.intent_type}",
             error_code="INVALID_INTENT",
         )
 
@@ -432,9 +465,14 @@ class MobileDispatcher:
             prop = params.get("property", "")
             value = params.get("value")
             if node and prop and value is not None:
-                result = self.bridge.send("modify-node", {
-                    "node": node, "property": prop, "value": value,
-                })
+                result = self.bridge.send(
+                    "modify-node",
+                    {
+                        "node": node,
+                        "property": prop,
+                        "value": value,
+                    },
+                )
                 return MobileDispatchResult(
                     success=result.get("success", False),
                     data=result.get("data", {}),
@@ -459,6 +497,7 @@ class MobileDispatcher:
 
         if intent.mode == "gdscript":
             from godot_mcp.sampling.service import sample_text
+
             try:
                 code = await sample_text(
                     None,
@@ -471,11 +510,14 @@ class MobileDispatcher:
                 )
             except Exception as e:
                 return MobileDispatchResult(
-                    success=False, error=str(e), error_code="TOOL_FAILED",
+                    success=False,
+                    error=str(e),
+                    error_code="TOOL_FAILED",
                 )
 
         if intent.mode == "environment":
             from godot_mcp.game_builder import pipeline
+
             try:
                 plan = await pipeline.design_game(intent.prompt)
                 return MobileDispatchResult(
@@ -485,7 +527,9 @@ class MobileDispatcher:
                 )
             except Exception as e:
                 return MobileDispatchResult(
-                    success=False, error=str(e), error_code="TOOL_FAILED",
+                    success=False,
+                    error=str(e),
+                    error_code="TOOL_FAILED",
                 )
 
         return MobileDispatchResult(

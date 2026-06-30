@@ -141,7 +141,7 @@ export default function LogsPage() {
 		if (atBottomRef.current && !pauseTail && scrollRef.current) {
 			scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
 		}
-	}, [entries, pauseTail]);
+	}, [pauseTail]);
 
 	const onScroll = () => {
 		const el = scrollRef.current;
@@ -340,7 +340,7 @@ export default function LogsPage() {
 							>
 								<span className="text-slate-500 shrink-0">{entry.timestamp}</span>
 								<span
-									className={`shrink-0 px-1.5 py-0.5 rounded border text-[10px] font-semibold ${levelClass(entry.level)}`}
+									className={`shrink-0 px-1.5 py-0.5 rounded border text-[11px] font-semibold ${levelClass(entry.level)}`}
 								>
 									{entry.level}
 								</span>

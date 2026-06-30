@@ -41,7 +41,12 @@ async def workflow_list(ctx: Context = None) -> dict:
 
 
 async def workflow_run(
-    workflow_name: Annotated[str, Field(description="Workflow name: scene_setup, particle_cfd, ship_web_itch, ship_windows_steam_beta, ship_windows_steam_release.")],
+    workflow_name: Annotated[
+        str,
+        Field(
+            description="Workflow name: scene_setup, particle_cfd, ship_web_itch, ship_windows_steam_beta, ship_windows_steam_release."
+        ),
+    ],
     csv_path: Annotated[str | None, Field(description="CSV path (required for particle_cfd).", default=None)] = None,
     game: Annotated[str | None, Field(description="Sample game for ship_web_itch.", default="dodge")] = None,
     itch_target: Annotated[str | None, Field(description="user/game slug for ship_web_itch.", default=None)] = None,

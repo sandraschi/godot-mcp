@@ -49,8 +49,9 @@ export default function GameBuilderPage() {
 			</p>
 
 			<div className="rounded-xl border border-white/10 bg-[#1e1e26] p-4 space-y-3">
-				<label className="block text-sm text-slate-300">Game concept</label>
+				<label htmlFor="game-concept" className="block text-sm text-slate-300">Game concept</label>
 				<textarea
+					id="game-concept"
 					value={concept}
 					onChange={(e) => setConcept(e.target.value)}
 					rows={3}
@@ -58,8 +59,9 @@ export default function GameBuilderPage() {
 				/>
 				<div className="grid md:grid-cols-2 gap-3">
 					<div>
-						<label className="block text-xs text-slate-500 mb-1">Project path (optional)</label>
+						<label htmlFor="project-path" className="block text-xs text-slate-500 mb-1">Project path (optional)</label>
 						<input
+							id="project-path"
 							value={projectPath}
 							onChange={(e) => setProjectPath(e.target.value)}
 							placeholder="Empty → build/game-builder/&lt;slug&gt;"
@@ -67,8 +69,9 @@ export default function GameBuilderPage() {
 						/>
 					</div>
 					<div>
-						<label className="block text-xs text-slate-500 mb-1">World Labs bridge URL</label>
+						<label htmlFor="wl-url" className="block text-xs text-slate-500 mb-1">World Labs bridge URL</label>
 						<input
+							id="wl-url"
 							value={worldlabsUrl}
 							onChange={(e) => setWorldlabsUrl(e.target.value)}
 							className="w-full rounded-lg border border-white/10 bg-[#0a0a0c] px-3 py-2 text-sm text-slate-200"

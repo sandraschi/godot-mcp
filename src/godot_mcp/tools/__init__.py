@@ -17,10 +17,12 @@ def register_all(mcp):
     from godot_mcp.prompts.tools import register as reg_prompts
     from godot_mcp.sampling.tools import register as reg_sampling
     from godot_mcp.steam.tools import register as reg_steam
+    from godot_mcp.tools.addon_tools import register as reg_addon
     from godot_mcp.tools.core_tools import register as reg_core
     from godot_mcp.workflows.tools import register as reg_workflows
 
     reg_core(mcp)
+    reg_addon(mcp)
     reg_artifacts(mcp)
     reg_fleet(mcp)
     reg_game_builder(mcp)

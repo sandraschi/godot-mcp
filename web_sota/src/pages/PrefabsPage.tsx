@@ -76,7 +76,7 @@ export default function PrefabsPage() {
 	const openApply = (p: PrefabDef) => {
 		setApplying(p.name);
 		const initial: Record<string, string> = {};
-		p.params.forEach((pr) => (initial[pr.name] = String(pr.default ?? "")));
+		for (const pr of p.params) initial[pr.name] = String(pr.default ?? "");
 		setParamValues(initial);
 		setResult(null);
 	};
@@ -85,13 +85,13 @@ export default function PrefabsPage() {
 		setResultLoading(true);
 		try {
 			const args: Record<string, unknown> = { prefab: prefab.name };
-			prefab.params.forEach((p) => {
+			for (const p of prefab.params) {
 				args[p.name] = paramValues[p.name];
-			});
+			}
 			const j = await apiFetch("/api/v1/control/tool", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ tool: "prefab_apply", args }),
+				body: JSON.stringify({ tool: "prefab_apply", arguments: args }),
 			});
 			setResult(JSON.stringify(j, null, 2));
 		} catch (e) {
@@ -182,10 +182,11 @@ export default function PrefabsPage() {
 					<div className="space-y-3">
 						{selected.params.map((pr) => (
 							<div key={pr.name}>
-								<label className="text-xs text-slate-400 block mb-1">
+								<label htmlFor={`prefab-${pr.name}`} className="text-xs text-slate-400 block mb-1">
 									{pr.name} <span className="text-slate-600">({pr.type})</span>
 								</label>
 								<input
+									id={`prefab-${pr.name}`}
 									type={pr.type === "number" ? "number" : "text"}
 									placeholder={pr.description}
 									value={paramValues[pr.name] ?? ""}

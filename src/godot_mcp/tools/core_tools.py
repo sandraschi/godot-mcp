@@ -177,9 +177,7 @@ async def godot_play_animation(
         ),
     ] = "",
     loop: Annotated[bool, Field(description="Loop the animation.", default=True)] = True,
-    speed_scale: Annotated[
-        float, Field(description="Playback speed multiplier.", default=1.0, ge=0.01, le=10.0)
-    ] = 1.0,
+    speed_scale: Annotated[float, Field(description="Playback speed multiplier.", default=1.0, ge=0.01, le=10.0)] = 1.0,
     ctx: Context = None,
 ) -> dict:
     """Play or list animations on an imported GLB character via AnimationPlayer.
@@ -429,12 +427,8 @@ async def godot_export_web(
             description="Output path for the export (absolute or res:// path).", default="user://export/web/index.html"
         ),
     ] = "user://export/web/index.html",
-    resolution_x: Annotated[
-        int, Field(description="Viewport width in pixels.", default=1280, ge=64)
-    ] = 1280,
-    resolution_y: Annotated[
-        int, Field(description="Viewport height in pixels.", default=720, ge=64)
-    ] = 720,
+    resolution_x: Annotated[int, Field(description="Viewport width in pixels.", default=1280, ge=64)] = 1280,
+    resolution_y: Annotated[int, Field(description="Viewport height in pixels.", default=720, ge=64)] = 720,
 ) -> dict:
     """Export the current Godot scene to HTML5/WebAssembly.
 

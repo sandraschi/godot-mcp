@@ -62,7 +62,9 @@ async def ship_to_steam_release(
 async def ship_to_steam(
     game: Annotated[str, Field(default="dodge")] = "dodge",
     project_path: Annotated[str | None, Field(default=None)] = None,
-    phase: Annotated[str, Field(description="prerelease (beta) or release (default).", default="prerelease")] = "prerelease",
+    phase: Annotated[
+        str, Field(description="prerelease (beta) or release (default).", default="prerelease")
+    ] = "prerelease",
     dry_run: Annotated[bool, Field(default=True)] = True,
     ctx: Context = None,
 ) -> dict:

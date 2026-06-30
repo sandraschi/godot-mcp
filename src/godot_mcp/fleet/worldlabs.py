@@ -83,6 +83,7 @@ def spark_viewer_url(assets: dict[str, str | None]) -> str | None:
     if assets.get("splat_100k"):
         params["splat_100k"] = assets["splat_100k"]
     import urllib.parse
+
     query = urllib.parse.urlencode(params)
     return f"{web_base_url()}/spark?{query}"
 

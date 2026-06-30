@@ -174,10 +174,14 @@ async def _dispatch_command(client: WSClient, msg: dict) -> dict:
     arguments = cmd.get("arguments", {})
 
     if not tool_name:
-        return _make_response(msg.get("id"), "error", {
-            "error_code": "INVALID_INTENT",
-            "message": "No tool specified in command",
-        })
+        return _make_response(
+            msg.get("id"),
+            "error",
+            {
+                "error_code": "INVALID_INTENT",
+                "message": "No tool specified in command",
+            },
+        )
 
     # Route to Godot bridge tools (prefixed with godot_)
     if tool_name.startswith("godot_"):
@@ -185,31 +189,48 @@ async def _dispatch_command(client: WSClient, msg: dict) -> dict:
         if not bridge.connected:
             conn = bridge.connect()
             if not conn["success"]:
-                return _make_response(msg.get("id"), "error", {
-                    "error_code": "BRIDGE_DISCONNECTED",
-                    "message": conn.get("error", "Godot bridge not reachable"),
-                    "recovery_hint": "Ensure Godot engine is running with MCP bridge addon",
-                })
+                return _make_response(
+                    msg.get("id"),
+                    "error",
+                    {
+                        "error_code": "BRIDGE_DISCONNECTED",
+                        "message": conn.get("error", "Godot bridge not reachable"),
+                        "recovery_hint": "Ensure Godot engine is running with MCP bridge addon",
+                    },
+                )
         action = tool_name.replace("godot_", "")
         result = bridge.send(action, arguments)
-        return _make_response(msg.get("id"), "result", {
-            **result,
-            "tool": tool_name,
-        })
+        return _make_response(
+            msg.get("id"),
+            "result",
+            {
+                **result,
+                "tool": tool_name,
+            },
+        )
 
     # Route to Python-side tools
     try:
         from godot_mcp.server import _run_python_tool
+
         result = await _run_python_tool(tool_name, arguments)
-        return _make_response(msg.get("id"), "result", {
-            **result,
-            "tool": tool_name,
-        })
+        return _make_response(
+            msg.get("id"),
+            "result",
+            {
+                **result,
+                "tool": tool_name,
+            },
+        )
     except Exception as e:
-        return _make_response(msg.get("id"), "error", {
-            "error_code": "TOOL_FAILED",
-            "message": str(e),
-        })
+        return _make_response(
+            msg.get("id"),
+            "error",
+            {
+                "error_code": "TOOL_FAILED",
+                "message": str(e),
+            },
+        )
 
 
 async def _dispatch_intent(client: WSClient, msg: dict) -> dict:
@@ -228,10 +249,14 @@ async def _dispatch_intent(client: WSClient, msg: dict) -> dict:
     if app == "pocket-architect":
         return await _handle_generation_intent(client, msg)
 
-    return _make_response(msg.get("id"), "error", {
-        "error_code": "INVALID_INTENT",
-        "message": f"Unknown app or intent_type: {app}/{intent_type}",
-    })
+    return _make_response(
+        msg.get("id"),
+        "error",
+        {
+            "error_code": "INVALID_INTENT",
+            "message": f"Unknown app or intent_type: {app}/{intent_type}",
+        },
+    )
 
 
 async def _handle_spatial_intent(client: WSClient, msg: dict) -> dict:
@@ -248,46 +273,73 @@ async def _handle_spatial_intent(client: WSClient, msg: dict) -> dict:
         asset_ref = params.get("asset_ref", "")
         pos = params.get("position", {"x": 0, "y": 0, "z": 0})
         material = params.get("material")
-        result = bridge.send("import_glb", {
-            "path": asset_ref, "name": params.get("name", "MobileAsset"),
-            "position": pos, "scale": params.get("scale", 1.0),
-        })
+        result = bridge.send(
+            "import_glb",
+            {
+                "path": asset_ref,
+                "name": params.get("name", "MobileAsset"),
+                "position": pos,
+                "scale": params.get("scale", 1.0),
+            },
+        )
         if result.get("success") and material:
-            bridge.send("set_material", {
-                "node": params.get("name", "MobileAsset"),
-                "color": material.get("color", "#ffffff"),
-                "roughness": material.get("roughness", 0.5),
-            })
-        return _make_response(msg.get("id"), "result", {
-            **result,
-            "intent_type": intent_type,
-        })
+            bridge.send(
+                "set_material",
+                {
+                    "node": params.get("name", "MobileAsset"),
+                    "color": material.get("color", "#ffffff"),
+                    "roughness": material.get("roughness", 0.5),
+                },
+            )
+        return _make_response(
+            msg.get("id"),
+            "result",
+            {
+                **result,
+                "intent_type": intent_type,
+            },
+        )
 
     if intent_type == "anchor_light":
         light_type = params.get("light_type", "omni")
         pos = params.get("position", {"x": 0, "y": 5, "z": 0})
-        result = bridge.send("add_light", {
-            "type": light_type,
-            "name": params.get("name", "MobileLight"),
-            "intensity": params.get("intensity", 1.0),
-            "position": pos,
-        })
-        return _make_response(msg.get("id"), "result", {
-            **result,
-            "intent_type": intent_type,
-        })
+        result = bridge.send(
+            "add_light",
+            {
+                "type": light_type,
+                "name": params.get("name", "MobileLight"),
+                "intensity": params.get("intensity", 1.0),
+                "position": pos,
+            },
+        )
+        return _make_response(
+            msg.get("id"),
+            "result",
+            {
+                **result,
+                "intent_type": intent_type,
+            },
+        )
 
     if intent_type == "query_space":
         result = bridge.send("read_scene_tree")
-        return _make_response(msg.get("id"), "result", {
-            **result,
-            "intent_type": intent_type,
-        })
+        return _make_response(
+            msg.get("id"),
+            "result",
+            {
+                **result,
+                "intent_type": intent_type,
+            },
+        )
 
-    return _make_response(msg.get("id"), "error", {
-        "error_code": "INVALID_INTENT",
-        "message": f"Unknown spatial intent: {intent_type}",
-    })
+    return _make_response(
+        msg.get("id"),
+        "error",
+        {
+            "error_code": "INVALID_INTENT",
+            "message": f"Unknown spatial intent: {intent_type}",
+        },
+    )
 
 
 async def _handle_intervention_intent(client: WSClient, msg: dict) -> dict:
@@ -305,21 +357,31 @@ async def _handle_intervention_intent(client: WSClient, msg: dict) -> dict:
         prop = params.get("property", "")
         value = params.get("value")
         if node and prop and value is not None:
-            result = bridge.send("modify-node", {
-                "node": node, "property": prop, "value": value,
-            })
+            result = bridge.send(
+                "modify-node",
+                {
+                    "node": node,
+                    "property": prop,
+                    "value": value,
+                },
+            )
             return _make_response(msg.get("id"), "result", {**result})
     if intervention_type == "force_restart":
         from godot_mcp.workflows.engine import BUILTIN_WORKFLOWS
+
         if "test_agent_restart" in BUILTIN_WORKFLOWS:
             workflow = BUILTIN_WORKFLOWS["test_agent_restart"]
             result = await workflow.run(lambda t, p: bridge.send(t.replace("godot_", ""), p))
             return _make_response(msg.get("id"), "result", {**result})
 
-    return _make_response(msg.get("id"), "error", {
-        "error_code": "INVALID_INTENT",
-        "message": f"Unknown intervention: {intervention_type}",
-    })
+    return _make_response(
+        msg.get("id"),
+        "error",
+        {
+            "error_code": "INVALID_INTENT",
+            "message": f"Unknown intervention: {intervention_type}",
+        },
+    )
 
 
 async def _handle_generation_intent(client: WSClient, msg: dict) -> dict:
@@ -334,30 +396,49 @@ async def _handle_generation_intent(client: WSClient, msg: dict) -> dict:
 
     if mode == "gdscript":
         from godot_mcp.sampling.service import sample_text
+
         code = await sample_text(None, prompt=f"Write GDScript: {prompt}", max_tokens=1024)
-        return _make_response(msg.get("id"), "result", {
-            "success": True,
-            "data": {"code": code, "mode": "gdscript"},
-        })
+        return _make_response(
+            msg.get("id"),
+            "result",
+            {
+                "success": True,
+                "data": {"code": code, "mode": "gdscript"},
+            },
+        )
 
     if mode in ("environment", "environment"):
         from godot_mcp.game_builder import pipeline
+
         try:
             plan = await pipeline.design_game(prompt)
-            return _make_response(msg.get("id"), "result", {
-                "success": True,
-                "data": {"plan": json.loads(plan.to_json()), "mode": "environment"},
-            })
+            return _make_response(
+                msg.get("id"),
+                "result",
+                {
+                    "success": True,
+                    "data": {"plan": json.loads(plan.to_json()), "mode": "environment"},
+                },
+            )
         except Exception as e:
-            return _make_response(msg.get("id"), "error", {
-                "error_code": "TOOL_FAILED",
-                "message": f"Generation failed: {e}",
-            })
+            return _make_response(
+                msg.get("id"),
+                "error",
+                {
+                    "error_code": "TOOL_FAILED",
+                    "message": f"Generation failed: {e}",
+                },
+            )
 
-    return _make_response(msg.get("id"), "result", {
-        "success": True,
-        "data": {"message": f"Received {mode} intent: {prompt}", "mode": mode},
-    })
+    return _make_response(
+        msg.get("id"),
+        "result",
+        {
+            "success": True,
+            "data": {"message": f"Received {mode} intent: {prompt}", "mode": mode},
+        },
+    )
+
 
 # ── Background Tasks ─────────────────────────────────────────────────────────
 
@@ -369,6 +450,7 @@ async def _push_log_entries():
     Only newly appended entries since the last poll are broadcast.
     """
     from godot_mcp.server import LOG_RING
+
     last_idx = len(LOG_RING)
     while True:
         await asyncio.sleep(0.5)
@@ -377,9 +459,12 @@ async def _push_log_entries():
             last_idx = len(LOG_RING)
             for entry in entries:
                 await clients.broadcast(
-                    {"id": str(uuid.uuid4()), "type": "event",
-                     "correlation_id": None,
-                     "payload": {"channel": "logs", "data": entry}},
+                    {
+                        "id": str(uuid.uuid4()),
+                        "type": "event",
+                        "correlation_id": None,
+                        "payload": {"channel": "logs", "data": entry},
+                    },
                     channel="logs",
                 )
 
@@ -398,9 +483,12 @@ async def _push_godot_status():
                 result = bridge.send("status", timeout=2.0)
                 if result.get("success"):
                     await clients.broadcast(
-                        {"id": str(uuid.uuid4()), "type": "event",
-                         "correlation_id": None,
-                         "payload": {"channel": "godot:status", "data": result.get("data", {})}},
+                        {
+                            "id": str(uuid.uuid4()),
+                            "type": "event",
+                            "correlation_id": None,
+                            "payload": {"channel": "godot:status", "data": result.get("data", {})},
+                        },
                         channel="godot:*",
                     )
             except Exception:
@@ -422,28 +510,44 @@ async def _route_message(client: WSClient, msg: dict) -> dict | None:
         channels = msg.get("payload", {}).get("channels", [])
         client.subscriptions.update(channels)
         logger.info("Client %s subscribed to: %s", client.id, channels)
-        return _make_response(msg.get("id"), "ack", {
-            "subscribed": list(channels),
-            "message": f"Subscribed to {len(channels)} channel(s)",
-        })
+        return _make_response(
+            msg.get("id"),
+            "ack",
+            {
+                "subscribed": list(channels),
+                "message": f"Subscribed to {len(channels)} channel(s)",
+            },
+        )
     if msg_type == "unsubscribe":
         channels = msg.get("payload", {}).get("channels", [])
         for ch in channels:
             client.subscriptions.discard(ch)
-        return _make_response(msg.get("id"), "ack", {
-            "unsubscribed": list(channels),
-        })
+        return _make_response(
+            msg.get("id"),
+            "ack",
+            {
+                "unsubscribed": list(channels),
+            },
+        )
 
     if msg_type == "help":
         help_data = get_mobile_help().to_dict()
-        return _make_response(msg.get("id"), "result", {
-            "help": help_data,
-        })
+        return _make_response(
+            msg.get("id"),
+            "result",
+            {
+                "help": help_data,
+            },
+        )
 
-    return _make_response(msg.get("id"), "error", {
-        "error_code": "INVALID_INTENT",
-        "message": f"Unknown message type: {msg_type}. Valid: command, intent, subscribe, unsubscribe, help",
-    })
+    return _make_response(
+        msg.get("id"),
+        "error",
+        {
+            "error_code": "INVALID_INTENT",
+            "message": f"Unknown message type: {msg_type}. Valid: command, intent, subscribe, unsubscribe, help",
+        },
+    )
 
 
 async def mobile_ws_handler(websocket: WebSocket):
@@ -456,17 +560,29 @@ async def mobile_ws_handler(websocket: WebSocket):
     try:
         init = await asyncio.wait_for(websocket.receive_json(), timeout=5.0)
         client.app = init.get("app", init.get("payload", {}).get("app"))
-        await websocket.send_json(_make_response(None, "ack", {
-            "message": "Connected to godot-mcp mobile gateway v0.1.0",
-            "server_version": "0.1.0",
-            "client_id": client.id,
-            "godot_bridge": GODOT_HOST + ":" + str(GODOT_PORT),
-        }))
+        await websocket.send_json(
+            _make_response(
+                None,
+                "ack",
+                {
+                    "message": "Connected to godot-mcp mobile gateway v0.1.0",
+                    "server_version": "0.1.0",
+                    "client_id": client.id,
+                    "godot_bridge": GODOT_HOST + ":" + str(GODOT_PORT),
+                },
+            )
+        )
     except (TimeoutError, json.JSONDecodeError):
-        await websocket.send_json(_make_response(None, "error", {
-            "error_code": "HANDSHAKE_FAILED",
-            "message": "Send initial JSON handshake with {'app': 'spatial-vibe|state-surveiller|pocket-architect'} within 5s",
-        }))
+        await websocket.send_json(
+            _make_response(
+                None,
+                "error",
+                {
+                    "error_code": "HANDSHAKE_FAILED",
+                    "message": "Send initial JSON handshake with {'app': 'spatial-vibe|state-surveiller|pocket-architect'} within 5s",
+                },
+            )
+        )
         await websocket.close()
         return
 

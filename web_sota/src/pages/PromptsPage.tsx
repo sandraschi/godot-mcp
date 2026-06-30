@@ -42,7 +42,7 @@ export default function PromptsPage() {
 	const openExecute = (p: PromptDef) => {
 		setExecuting(p.name);
 		const initial: Record<string, string> = {};
-		p.parameters.forEach((pr) => (initial[pr.name] = ""));
+		for (const pr of p.parameters) initial[pr.name] = "";
 		setParamValues(initial);
 		setResponse(null);
 	};
@@ -126,8 +126,9 @@ export default function PromptsPage() {
 						<div className="space-y-2">
 							{selected.parameters.map((pr) => (
 								<div key={pr.name}>
-									<label className="text-xs text-slate-400 block mb-1">{pr.name}</label>
+									<label htmlFor={`prompt-${pr.name}`} className="text-xs text-slate-400 block mb-1">{pr.name}</label>
 									<input
+										id={`prompt-${pr.name}`}
 										type="text"
 										placeholder={pr.description}
 										value={paramValues[pr.name] || ""}

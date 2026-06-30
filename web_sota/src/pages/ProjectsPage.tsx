@@ -147,7 +147,7 @@ export default function ProjectsPage() {
 						>
 							<div className="flex items-start justify-between mb-3">
 								<Box className="text-blue-400 shrink-0" size={20} />
-								<span className="text-[10px] font-semibold uppercase tracking-widest text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full">
+								<span className="text-xs font-semibold uppercase tracking-widest text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full">
 									{s.genre}
 								</span>
 							</div>
@@ -156,7 +156,7 @@ export default function ProjectsPage() {
 								{s.description}
 							</p>
 							<div className="flex items-center justify-between">
-								<span className="text-[10px] text-slate-500 truncate max-w-[180px]">
+								<span className="text-xs text-slate-400 truncate max-w-[180px]">
 									{s.source}
 								</span>
 								<button
@@ -208,12 +208,12 @@ export default function ProjectsPage() {
 								<p className="text-slate-400 text-sm mb-2">{b.description}</p>
 								<div className="flex flex-wrap gap-1 mb-2">
 									{b.tags.map((t) => (
-										<span key={t} className="text-[10px] text-slate-500 bg-white/5 px-2 py-0.5 rounded-full">
+										<span key={t} className="text-xs text-slate-400 bg-white/5 px-2 py-0.5 rounded-full">
 											{t}
 										</span>
 									))}
 								</div>
-								<span className="text-[10px] text-slate-500">{b.source}</span>
+								<span className="text-xs text-slate-400">{b.source}</span>
 							</motion.div>
 						))}
 					</div>

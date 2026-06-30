@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import patch
-
-import pytest
 
 from godot_mcp.game_builder import project as project_helpers
 from godot_mcp.game_builder import worlds

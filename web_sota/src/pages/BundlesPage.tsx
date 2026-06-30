@@ -6,7 +6,7 @@ import { apiFetch } from "../lib/api";
 export default function BundlesPage() {
 	const [name, setName] = useState("");
 	const [description, setDescription] = useState("");
-	const [toolSequence, setToolSequence] = useState("[\n  {\n    \"tool\": \"godot_create_camera\",\n    \"args\": {}\n  }\n]");
+	const [toolSequence, setToolSequence] = useState("[\n  {\n    \"tool\": \"godot_create_camera\",\n    \"arguments\": {}\n  }\n]");
 	const [buildResult, setBuildResult] = useState<string | null>(null);
 	const [building, setBuilding] = useState(false);
 
@@ -18,7 +18,7 @@ export default function BundlesPage() {
 		setBuilding(true);
 		setBuildResult(null);
 		try {
-			let sequence;
+			let sequence: unknown;
 			try {
 				sequence = JSON.parse(toolSequence);
 			} catch {
@@ -28,9 +28,9 @@ export default function BundlesPage() {
 			const j = await apiFetch("/api/v1/control/tool", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
+					body: JSON.stringify({
 					tool: "mcpb_build",
-					args: { name, description, tool_sequence: sequence },
+					arguments: { name, description, tool_sequence: sequence },
 				}),
 			});
 			setBuildResult(JSON.stringify(j, null, 2));
@@ -50,7 +50,7 @@ export default function BundlesPage() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					tool: "mcpb_inspect",
-					args: { path: inspectPath },
+					arguments: { path: inspectPath },
 				}),
 			});
 			setInspectResult(JSON.stringify(j, null, 2));
@@ -90,8 +90,9 @@ export default function BundlesPage() {
 						className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-sm text-slate-200 placeholder-slate-600 outline-none"
 					/>
 					<div>
-						<label className="text-xs text-slate-500 block mb-1">Tool Sequence (JSON)</label>
+						<label htmlFor="tool-sequence" className="text-xs text-slate-500 block mb-1">Tool Sequence (JSON)</label>
 						<textarea
+							id="tool-sequence"
 							rows={8}
 							value={toolSequence}
 							onChange={(e) => setToolSequence(e.target.value)}

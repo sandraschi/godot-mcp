@@ -45,9 +45,7 @@ def ensure_project_path(title: str, game_project_path: str = "") -> Path:
         return dest
 
     if not DEFAULT_TEMPLATE.is_dir():
-        raise ValueError(
-            f"game_project_path required — template missing at {DEFAULT_TEMPLATE}"
-        )
+        raise ValueError(f"game_project_path required — template missing at {DEFAULT_TEMPLATE}")
 
     if dest.exists():
         shutil.rmtree(dest)

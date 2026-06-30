@@ -93,7 +93,7 @@ export default function WorkflowsPage() {
 	const openRunPanel = (w: WorkflowDef) => {
 		setRunning(w.name);
 		const initial: Record<string, string> = {};
-		w.parameters.forEach((p) => (initial[p.name] = ""));
+		for (const p of w.parameters) initial[p.name] = "";
 		setParams(initial);
 		setResult(null);
 	};
@@ -160,8 +160,9 @@ export default function WorkflowsPage() {
 							<p className="text-xs text-slate-500 uppercase tracking-wider font-bold">Parameters</p>
 							{selected.parameters.map((p) => (
 								<div key={p.name}>
-									<label className="text-xs text-slate-400 block mb-1">{p.name}</label>
+									<label htmlFor={`wf-${p.name}`} className="text-xs text-slate-400 block mb-1">{p.name}</label>
 									<input
+										id={`wf-${p.name}`}
 										type="text"
 										placeholder={p.description}
 										value={params[p.name] || ""}

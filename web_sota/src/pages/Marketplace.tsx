@@ -65,18 +65,18 @@ export default function Marketplace() {
 		>
 			<div className="flex items-center justify-between">
 				<h1 className="text-2xl font-bold text-white flex items-center gap-3">
-					<Package className="text-amber-500" size={24} /> Artifact Marketplace
+					<Package className="text-amber-500" size={24} /> Artifact Library
 				</h1>
 			</div>
 			<div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-				<div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/10 bg-[#1e1e26] max-w-sm w-full">
+				<div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/10 bg-fleet-900 max-w-sm w-full">
 					<Search size={14} className="text-slate-300 shrink-0" />
 					<input
 						type="text"
 						placeholder="Search artifacts..."
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
-						className="bg-transparent text-sm text-slate-200 placeholder-slate-600 outline-none w-full"
+						className="bg-transparent text-sm text-slate-200 placeholder-slate-500 outline-none w-full"
 					/>
 				</div>
 				<div className="flex items-center gap-1.5 flex-wrap">
@@ -118,14 +118,17 @@ export default function Marketplace() {
 				<div className="text-center py-16 text-slate-400">
 					<Package size={48} className="mx-auto mb-4 opacity-30" />
 					<p className="text-lg">No artifacts found.</p>
-					<p className="text-sm">Register one to get started.</p>
+					<p className="text-sm mb-2">This is a local artifact depot for storing Godot assets (scenes, meshes, materials, scripts) uploaded to this server.</p>
+					<p className="text-sm text-slate-500">
+						Go to <a href="/depot" className="text-amber-400 hover:underline">Artifact Depot</a> to register new items, or import via the MCP tools.
+					</p>
 				</div>
 			) : (
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 					{filtered.map((a) => (
 						<div
 							key={a.id}
-							className="bg-[#1e1e26] border border-white/10 rounded-2xl p-4 space-y-3 hover:border-amber-500/30 transition-all"
+							className="bg-fleet-900 border border-white/10 rounded-2xl p-4 space-y-3 hover:border-amber-500/30 transition-all"
 						>
 							<div className="flex items-start justify-between">
 								<h3 className="text-sm font-bold text-white">{a.name}</h3>

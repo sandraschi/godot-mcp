@@ -140,6 +140,7 @@ def itch_latest_version(itch_target: str | None = None, channel: str | None = No
             raise ValueError("itch_target required")
         ch = validate_channel(channel or channel_for_target("web"))
         import urllib.parse
+
         query = urllib.parse.urlencode({"target": target_slug, "channel_name": ch})
         url = f"https://api.itch.io/wharf/latest?{query}"
         resp = httpx.get(url, timeout=30)

@@ -33,12 +33,12 @@ from godot_mcp.fleet.routes import router as fleet_router
 from godot_mcp.game_builder.routes import router as game_builder_router
 from godot_mcp.itch.routes import router as itch_router
 from godot_mcp.routes.logs import router as logs_router
-from godot_mcp.steam.routes import router as steam_router
-from godot_mcp.services.godot_bridge import GODOT_HOST, GODOT_PATH, GODOT_PORT, GodotBridge
 from godot_mcp.services.activity_log import install_log_handler, log_activity, query_logs
+from godot_mcp.services.godot_bridge import GODOT_HOST, GODOT_PATH, GODOT_PORT, GodotBridge
 from godot_mcp.services.mobile_command import MobileCommand, MobileResponse, get_dispatcher
 from godot_mcp.services.mobile_help import generate_help_dict, get_endpoint_summary
 from godot_mcp.services.ws_gateway import mobile_ws_handler, start_background_tasks, stop_background_tasks
+from godot_mcp.steam.routes import router as steam_router
 from godot_mcp.tools import register_all
 
 logger = logging.getLogger("godot-mcp")

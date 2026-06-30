@@ -25,7 +25,7 @@ export default function ChatPage() {
 			</h1>
 			<div className="flex-1 overflow-y-auto space-y-3 pr-2 mb-4">
 				{messages.map((m, i) => (
-					<div key={i} className={`flex gap-3 ${m.role === "user" ? "justify-end" : ""}`}>
+					<div key={`${m.role}-${i}`} className={`flex gap-3 ${m.role === "user" ? "justify-end" : ""}`}>
 						<div
 							className={`flex gap-3 max-w-[80%] ${
 								m.role === "user" ? "flex-row-reverse" : ""

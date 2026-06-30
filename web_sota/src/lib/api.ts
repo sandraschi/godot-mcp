@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 /** Empty in Vite dev (proxy); absolute URL in Tauri production build. */
 export const API_BASE = import.meta.env.DEV ? "" : "http://127.0.0.1:10993";
 const DEFAULT_TIMEOUT = 5000;

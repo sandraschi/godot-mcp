@@ -1,7 +1,5 @@
 """Tests for itch.io / Butler integration."""
 
-from pathlib import Path
-
 import pytest
 
 from godot_mcp.itch import butler, config

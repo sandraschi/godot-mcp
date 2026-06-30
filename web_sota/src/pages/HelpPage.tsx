@@ -186,30 +186,50 @@ export default function HelpPage() {
 				{tab === "godot" && (
 					<>
 						<p>
-							<strong className="text-slate-200">Godot MCP Addon</strong> — a GDScript/C# plugin
-							must be loaded in the Godot project to accept WebSocket commands on port {">"}9080.
+							<strong className="text-slate-200">Godot MCP Addon</strong> — a GDScript plugin
+							must be loaded in the Godot project for MCP to accept commands.
+							The addon runs a <strong className="text-slate-200">TCP server</strong> on port 9080
+							inside the Godot engine.
 						</p>
-						<div className="bg-black/30 rounded-xl p-4 font-mono text-sm space-y-1 overflow-x-auto">
+						<h3 className="text-base font-bold text-white mt-4 mb-2">Auto-install (recommended)</h3>
+						<div className="bg-fleet-800 rounded-xl p-4 font-mono text-sm space-y-1 overflow-x-auto">
+							<div className="text-emerald-400"># Via CLI — installs addon into your Godot project</div>
+							<div className="text-slate-300">just install-addon /path/to/godot/project</div>
+							<div className="text-emerald-400">{"\n"}# Or via MCP tool</div>
+							<div className="text-slate-300">{'install_godot_addon(project_path="res://path/to/project")'}</div>
+						</div>
+						<h3 className="text-base font-bold text-white mt-4 mb-2">Manual install</h3>
+						<div className="space-y-2">
+							<div className="flex gap-3 bg-white/10 rounded-lg p-2.5">
+								<span className="text-amber-400 font-bold text-sm shrink-0 w-24">1. Copy file</span>
+								<span className="text-sm text-slate-300">
+									Copy <code className="text-blue-400">src/godot_mcp/bridge/mcp_bridge.gd</code> to
+									your Godot project at <code className="text-blue-400">res://addons/mcp_bridge/mcp_bridge.gd</code>
+								</span>
+							</div>
+							<div className="flex gap-3 bg-white/10 rounded-lg p-2.5">
+								<span className="text-amber-400 font-bold text-sm shrink-0 w-24">2. Plugin cfg</span>
+								<span className="text-sm text-slate-300">
+									Create <code className="text-blue-400">res://addons/mcp_bridge/plugin.cfg</code>:
+								</span>
+							</div>
+						</div>
+						<div className="bg-fleet-800 rounded-xl p-4 font-mono text-sm space-y-1 overflow-x-auto mt-2">
 							<div className="text-slate-400"># addons/mcp_bridge/plugin.cfg</div>
 							<div>[plugin]</div>
 							<div>name=MCP Bridge</div>
-							<div>description=WebSocket server for MCP commands</div>
+							<div>description=TCP server for MCP commands</div>
 							<div>author=godot-mcp</div>
 							<div>version=0.1.0</div>
 							<div>script=mcp_bridge.gd</div>
 							<div>{"\n"}</div>
-							<div className="text-slate-400"># Protocol: JSON-RPC over WebSocket</div>
-							<div>{'{"id": 1, "method": "import_stl", "params": {"path": "model.stl"}}'}</div>
-							<div>{'{"id": 1, "result": {"node": "/root/MeshInstance3D", "vertices": 15234}}'}</div>
+							<div className="text-slate-400"># Protocol: JSON-RPC over TCP</div>
+							<div>{'{"action": "import_stl", "params": {"path": "model.stl"}, "request_id": "1"}'}</div>
+							<div>{'{"action": "result", "data": {"node": "/root/MeshInstance3D", "vertices": 15234}, "request_id": "1"}'}</div>
 						</div>
-						<p>
-							The addon registers an autoload singleton that starts a WebSocket server on the
-							configured port. The MCP server connects as a client and sends JSON-RPC requests.
-						</p>
-						<p>
-							Planned addon modules: import_tool.gd (STL/OBJ), particle_tool.gd (GPU particles),
-							material_tool.gd (PBR assignment), camera_tool.gd (camera creation),
-							export_tool.gd (HTML5 export), velocity_field.gd (FluidX3D data loader).
+						<p className="text-sm text-slate-400 mt-2">
+							3. In Godot, go to Project {'>'} Project Settings {'>'} Autoload and add
+							<code className="text-blue-400"> addons/mcp_bridge/mcp_bridge.gd</code> as a singleton.
 						</p>
 					</>
 				)}

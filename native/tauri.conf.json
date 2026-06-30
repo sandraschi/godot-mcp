@@ -33,7 +33,8 @@
       "icons/icon.ico"
     ],
     "resources": [
-      "resources/godot-mcp-backend.exe"
+      "resources/godot-mcp-backend.exe",
+            "resources/.env"
     ],
     "targets": [
       "nsis"
@@ -62,3 +63,4 @@
     }
   }
 }
+
