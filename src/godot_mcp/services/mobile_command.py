@@ -9,6 +9,7 @@ Architecture:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import uuid
@@ -339,7 +340,7 @@ class MobileDispatcher:
 
         if tool.startswith("godot_"):
             if not self.bridge.connected:
-                conn = self.bridge.connect()
+                conn = await asyncio.to_thread(self.bridge.connect)
                 if not conn["success"]:
                     return MobileDispatchResult(
                         success=False,
@@ -348,7 +349,7 @@ class MobileDispatcher:
                         recovery_hint="Ensure Godot engine is running with MCP bridge addon",
                     )
             action = tool.replace("godot_", "")
-            result = self.bridge.send(action, payload.arguments)
+            result = await asyncio.to_thread(self.bridge.send, action, payload.arguments)
             return MobileDispatchResult(
                 success=result.get("success", False),
                 data=result.get("data", {}),
@@ -401,7 +402,8 @@ class MobileDispatcher:
             asset = params.get("asset_ref", "")
             pos = params.get("position", {"x": 0, "y": 0, "z": 0})
             name = params.get("name", asset.split("/")[-1] if "/" in asset else "MobileAsset")
-            result = self.bridge.send(
+            result = await asyncio.to_thread(
+                self.bridge.send,
                 "import_glb",
                 {
                     "path": asset,
@@ -413,7 +415,8 @@ class MobileDispatcher:
             if result.get("success"):
                 mat = params.get("material")
                 if mat:
-                    self.bridge.send(
+                    await asyncio.to_thread(
+                        self.bridge.send,
                         "set_material",
                         {
                             "node": name,
@@ -429,7 +432,8 @@ class MobileDispatcher:
 
         if intent.intent_type == IntentType.anchor_light:
             pos = params.get("position", {"x": 0, "y": 5, "z": 0})
-            result = self.bridge.send(
+            result = await asyncio.to_thread(
+                self.bridge.send,
                 "add_light",
                 {
                     "type": params.get("light_type", "omni"),
@@ -444,7 +448,7 @@ class MobileDispatcher:
             )
 
         if intent.intent_type == IntentType.query_space:
-            result = self.bridge.send("read_scene_tree")
+            result = await asyncio.to_thread(self.bridge.send, "read_scene_tree")
             return MobileDispatchResult(
                 success=result.get("success", False),
                 data=result.get("data", {}),
@@ -465,8 +469,9 @@ class MobileDispatcher:
             prop = params.get("property", "")
             value = params.get("value")
             if node and prop and value is not None:
-                result = self.bridge.send(
-                    "modify-node",
+                result = await asyncio.to_thread(
+                    self.bridge.send,
+                    "modify_node",
                     {
                         "node": node,
                         "property": prop,
@@ -479,7 +484,7 @@ class MobileDispatcher:
                 )
 
         if intent.intervention_type == IntentType.force_restart:
-            result = self.bridge.send("headless_verify")
+            result = await asyncio.to_thread(self.bridge.send, "headless_verify")
             return MobileDispatchResult(
                 success=True,
                 message="Restart signal sent",

@@ -385,7 +385,7 @@ server = [
 
 [[package]]
 name = "godot-mcp"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
@@ -393,40 +393,29 @@ dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
     { name = "uvicorn", extra = ["standard"] },
-    { name = "websockets" },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "ruff" },
 ]
 
 [package.dev-dependencies]
 dev = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
+    { name = "ruff" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.104" },
-    { name = "fastmcp", specifier = ">=3.4.2" },
+    { name = "fastmcp", specifier = ">=3.4.2,<4" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "pydantic", specifier = ">=2.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.9" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.23" },
-    { name = "websockets", specifier = ">=12.0" },
 ]
-provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "pytest", specifier = ">=8.0" },
     { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "ruff", specifier = ">=0.9" },
 ]
 
 [[package]]

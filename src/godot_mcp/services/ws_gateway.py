@@ -22,6 +22,16 @@ from godot_mcp.services.mobile_help import get_mobile_help
 
 logger = logging.getLogger("godot-mcp.ws-gateway")
 
+
+def _server_version() -> str:
+    try:
+        from importlib.metadata import version
+
+        return version("godot-mcp")
+    except Exception:
+        return "0.3.0"
+
+
 # ── Client Manager ────────────────────────────────────────────────────────────
 
 
@@ -187,7 +197,7 @@ async def _dispatch_command(client: WSClient, msg: dict) -> dict:
     if tool_name.startswith("godot_"):
         bridge = get_bridge()
         if not bridge.connected:
-            conn = bridge.connect()
+            conn = await asyncio.to_thread(bridge.connect)
             if not conn["success"]:
                 return _make_response(
                     msg.get("id"),
@@ -199,7 +209,7 @@ async def _dispatch_command(client: WSClient, msg: dict) -> dict:
                     },
                 )
         action = tool_name.replace("godot_", "")
-        result = bridge.send(action, arguments)
+        result = await asyncio.to_thread(bridge.send, action, arguments)
         return _make_response(
             msg.get("id"),
             "result",
@@ -267,13 +277,14 @@ async def _handle_spatial_intent(client: WSClient, msg: dict) -> dict:
 
     bridge = get_bridge()
     if not bridge.connected:
-        bridge.connect()
+        await asyncio.to_thread(bridge.connect)
 
     if intent_type == "place_asset":
         asset_ref = params.get("asset_ref", "")
         pos = params.get("position", {"x": 0, "y": 0, "z": 0})
         material = params.get("material")
-        result = bridge.send(
+        result = await asyncio.to_thread(
+            bridge.send,
             "import_glb",
             {
                 "path": asset_ref,
@@ -283,7 +294,8 @@ async def _handle_spatial_intent(client: WSClient, msg: dict) -> dict:
             },
         )
         if result.get("success") and material:
-            bridge.send(
+            await asyncio.to_thread(
+                bridge.send,
                 "set_material",
                 {
                     "node": params.get("name", "MobileAsset"),
@@ -303,7 +315,8 @@ async def _handle_spatial_intent(client: WSClient, msg: dict) -> dict:
     if intent_type == "anchor_light":
         light_type = params.get("light_type", "omni")
         pos = params.get("position", {"x": 0, "y": 5, "z": 0})
-        result = bridge.send(
+        result = await asyncio.to_thread(
+            bridge.send,
             "add_light",
             {
                 "type": light_type,
@@ -322,7 +335,7 @@ async def _handle_spatial_intent(client: WSClient, msg: dict) -> dict:
         )
 
     if intent_type == "query_space":
-        result = bridge.send("read_scene_tree")
+        result = await asyncio.to_thread(bridge.send, "read_scene_tree")
         return _make_response(
             msg.get("id"),
             "result",
@@ -350,15 +363,16 @@ async def _handle_intervention_intent(client: WSClient, msg: dict) -> dict:
 
     bridge = get_bridge()
     if not bridge.connected:
-        bridge.connect()
+        await asyncio.to_thread(bridge.connect)
 
     if intervention_type == "set_param":
         node = params.get("node_path", "")
         prop = params.get("property", "")
         value = params.get("value")
         if node and prop and value is not None:
-            result = bridge.send(
-                "modify-node",
+            result = await asyncio.to_thread(
+                bridge.send,
+                "modify_node",
                 {
                     "node": node,
                     "property": prop,
@@ -392,12 +406,19 @@ async def _handle_generation_intent(client: WSClient, msg: dict) -> dict:
 
     bridge = get_bridge()
     if not bridge.connected:
-        bridge.connect()
+        await asyncio.to_thread(bridge.connect)
 
     if mode == "gdscript":
-        from godot_mcp.sampling.service import sample_text
+        from godot_mcp.sampling.service import SamplingUnavailableError, sample_text
 
-        code = await sample_text(None, prompt=f"Write GDScript: {prompt}", max_tokens=1024)
+        try:
+            code = await sample_text(None, prompt=f"Write GDScript: {prompt}", max_tokens=1024)
+        except SamplingUnavailableError as e:
+            return _make_response(
+                msg.get("id"),
+                "error",
+                {"error_code": "TOOL_FAILED", "message": str(e)},
+            )
         return _make_response(
             msg.get("id"),
             "result",
@@ -407,7 +428,7 @@ async def _handle_generation_intent(client: WSClient, msg: dict) -> dict:
             },
         )
 
-    if mode in ("environment", "environment"):
+    if mode in ("environment", "world", "scene"):
         from godot_mcp.game_builder import pipeline
 
         try:
@@ -446,27 +467,29 @@ async def _handle_generation_intent(client: WSClient, msg: dict) -> dict:
 async def _push_log_entries():
     """Background task: push log entries to clients subscribed to the ``logs`` channel.
 
-    Reads from the 2000-entry ring buffer in :mod:`godot_mcp.server`, polling every 0.5s.
-    Only newly appended entries since the last poll are broadcast.
+    Polls the activity-log ring buffer (``services/activity_log.py``) every
+    0.5 s and broadcasts entries newer than the last seen id.
     """
-    from godot_mcp.server import LOG_RING
+    from godot_mcp.services.activity_log import query_logs
 
-    last_idx = len(LOG_RING)
+    snapshot = query_logs(limit=1, offset=0, sort="desc")
+    last_id = snapshot["entries"][0]["id"] if snapshot["entries"] else "0"
     while True:
         await asyncio.sleep(0.5)
-        if len(LOG_RING) > last_idx:
-            entries = list(LOG_RING)[last_idx:]
-            last_idx = len(LOG_RING)
-            for entry in entries:
-                await clients.broadcast(
-                    {
-                        "id": str(uuid.uuid4()),
-                        "type": "event",
-                        "correlation_id": None,
-                        "payload": {"channel": "logs", "data": entry},
-                    },
-                    channel="logs",
-                )
+        if clients.count == 0:
+            continue
+        tail = query_logs(limit=100, after_id=last_id, sort="asc")
+        for entry in tail["entries"]:
+            last_id = entry["id"]
+            await clients.broadcast(
+                {
+                    "id": str(uuid.uuid4()),
+                    "type": "event",
+                    "correlation_id": None,
+                    "payload": {"channel": "logs", "data": entry},
+                },
+                channel="logs",
+            )
 
 
 async def _push_godot_status():
@@ -477,10 +500,12 @@ async def _push_godot_status():
     """
     while True:
         await asyncio.sleep(2.0)
+        if clients.count == 0:
+            continue
         bridge = get_bridge()
         if bridge.connected:
             try:
-                result = bridge.send("status", timeout=2.0)
+                result = await asyncio.to_thread(bridge.send, "status", None, 2.0)
                 if result.get("success"):
                     await clients.broadcast(
                         {
@@ -565,8 +590,8 @@ async def mobile_ws_handler(websocket: WebSocket):
                 None,
                 "ack",
                 {
-                    "message": "Connected to godot-mcp mobile gateway v0.1.0",
-                    "server_version": "0.1.0",
+                    "message": "Connected to godot-mcp mobile gateway",
+                    "server_version": _server_version(),
                     "client_id": client.id,
                     "godot_bridge": GODOT_HOST + ":" + str(GODOT_PORT),
                 },

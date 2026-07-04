@@ -1,5 +1,6 @@
 """Godot MCP core tools — engine control, STL/velocity import, particles, animation, export."""
 
+import asyncio
 import logging
 from typing import Annotated
 
@@ -27,7 +28,7 @@ async def godot_status(ctx: Context = None) -> dict:
     """
     bridge = get_bridge()
     if not bridge.connected:
-        result = bridge.connect()
+        result = await asyncio.to_thread(bridge.connect)
         if not result["success"]:
             return {
                 "success": False,
@@ -35,7 +36,7 @@ async def godot_status(ctx: Context = None) -> dict:
                 "bridge_connected": False,
             }
 
-    result = bridge.send("status")
+    result = await asyncio.to_thread(bridge.send, "status")
     if result["success"]:
         result["data"]["bridge_connected"] = True
     return result
@@ -67,11 +68,12 @@ async def godot_import_stl(
     """
     bridge = get_bridge()
     if not bridge.connected:
-        result = bridge.connect()
+        result = await asyncio.to_thread(bridge.connect)
         if not result["success"]:
             return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
 
-    return bridge.send(
+    return await asyncio.to_thread(
+        bridge.send,
         "import_stl",
         {"path": path, "name": name, "scale": scale, "position": {"x": position_x, "y": position_y, "z": position_z}},
     )
@@ -105,11 +107,12 @@ async def godot_import_glb(
     """
     bridge = get_bridge()
     if not bridge.connected:
-        result = bridge.connect()
+        result = await asyncio.to_thread(bridge.connect)
         if not result["success"]:
             return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
 
-    return bridge.send(
+    return await asyncio.to_thread(
+        bridge.send,
         "import_glb",
         {
             "path": path,
@@ -146,11 +149,12 @@ async def godot_import_obj(
     """
     bridge = get_bridge()
     if not bridge.connected:
-        result = bridge.connect()
+        result = await asyncio.to_thread(bridge.connect)
         if not result["success"]:
             return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
 
-    return bridge.send(
+    return await asyncio.to_thread(
+        bridge.send,
         "import_obj",
         {
             "path": path,
@@ -195,11 +199,12 @@ async def godot_play_animation(
     """
     bridge = get_bridge()
     if not bridge.connected:
-        result = bridge.connect()
+        result = await asyncio.to_thread(bridge.connect)
         if not result["success"]:
             return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
 
-    return bridge.send(
+    return await asyncio.to_thread(
+        bridge.send,
         "play_animation",
         {
             "root_name": root_name,
@@ -230,11 +235,11 @@ async def godot_load_velocity_field(
     """
     bridge = get_bridge()
     if not bridge.connected:
-        result = bridge.connect()
+        result = await asyncio.to_thread(bridge.connect)
         if not result["success"]:
             return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
 
-    return bridge.send("load_velocity_field", {"csv_path": csv_path, "name": name})
+    return await asyncio.to_thread(bridge.send, "load_velocity_field", {"csv_path": csv_path, "name": name})
 
 
 async def godot_spawn_particles(
@@ -263,11 +268,12 @@ async def godot_spawn_particles(
     """
     bridge = get_bridge()
     if not bridge.connected:
-        result = bridge.connect()
+        result = await asyncio.to_thread(bridge.connect)
         if not result["success"]:
             return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
 
-    return bridge.send(
+    return await asyncio.to_thread(
+        bridge.send,
         "spawn_particles",
         {
             "count": count,
@@ -303,12 +309,14 @@ async def godot_animate_streamlines(
     """
     bridge = get_bridge()
     if not bridge.connected:
-        result = bridge.connect()
+        result = await asyncio.to_thread(bridge.connect)
         if not result["success"]:
             return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
 
-    return bridge.send(
-        "animate_streamlines", {"velocity_field": velocity_field, "particle_system": particle_system, "speed": speed}
+    return await asyncio.to_thread(
+        bridge.send,
+        "animate_streamlines",
+        {"velocity_field": velocity_field, "particle_system": particle_system, "speed": speed},
     )
 
 
@@ -336,11 +344,12 @@ async def godot_create_camera(
     """
     bridge = get_bridge()
     if not bridge.connected:
-        result = bridge.connect()
+        result = await asyncio.to_thread(bridge.connect)
         if not result["success"]:
             return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
 
-    return bridge.send(
+    return await asyncio.to_thread(
+        bridge.send,
         "create_camera",
         {
             "name": name,
@@ -377,7 +386,7 @@ async def godot_add_light(
     """
     bridge = get_bridge()
     if not bridge.connected:
-        result = bridge.connect()
+        result = await asyncio.to_thread(bridge.connect)
         if not result["success"]:
             return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
 
@@ -389,7 +398,7 @@ async def godot_add_light(
     if light_type in ("omni", "spot"):
         params["position"] = {"x": position_x, "y": position_y, "z": position_z}
 
-    return bridge.send("add_light", params)
+    return await asyncio.to_thread(bridge.send, "add_light", params)
 
 
 async def godot_set_material(
@@ -412,11 +421,11 @@ async def godot_set_material(
     """
     bridge = get_bridge()
     if not bridge.connected:
-        result = bridge.connect()
+        result = await asyncio.to_thread(bridge.connect)
         if not result["success"]:
             return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
 
-    return bridge.send("set_material", {"node": node, "color": color, "roughness": roughness})
+    return await asyncio.to_thread(bridge.send, "set_material", {"node": node, "color": color, "roughness": roughness})
 
 
 async def godot_export_web(
@@ -443,7 +452,7 @@ async def godot_export_web(
     """
     bridge = get_bridge()
     if bridge.connected:
-        result = bridge.send("export_web", {"output_path": output_path})
+        result = await asyncio.to_thread(bridge.send, "export_web", {"output_path": output_path}, 300.0)
         if result.get("success") and result.get("data", {}).get("exported"):
             return result
 
@@ -487,7 +496,8 @@ async def godot_export_web(
     ]
 
     try:
-        proc = subprocess.run(  # noqa: S603 — godot path validated above
+        proc = await asyncio.to_thread(
+            subprocess.run,
             cmd,
             capture_output=True,
             text=True,
@@ -527,11 +537,11 @@ async def godot_read_scene_tree(ctx: Context = None) -> dict:
     """
     bridge = get_bridge()
     if not bridge.connected:
-        result = bridge.connect()
+        result = await asyncio.to_thread(bridge.connect)
         if not result["success"]:
             return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
 
-    return bridge.send("read_scene_tree")
+    return await asyncio.to_thread(bridge.send, "read_scene_tree")
 
 
 async def godot_set_config(
@@ -553,11 +563,11 @@ async def godot_set_config(
     """
     bridge = get_bridge()
     if not bridge.connected:
-        result = bridge.connect()
+        result = await asyncio.to_thread(bridge.connect)
         if not result["success"]:
             return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
 
-    return bridge.send("set_config", {"section": section, "key": key, "value": value})
+    return await asyncio.to_thread(bridge.send, "set_config", {"section": section, "key": key, "value": value})
 
 
 async def godot_headless_verify(
@@ -579,11 +589,11 @@ async def godot_headless_verify(
     """
     bridge = get_bridge()
     if not bridge.connected:
-        result = bridge.connect()
+        result = await asyncio.to_thread(bridge.connect)
         if not result["success"]:
             return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
 
-    return bridge.send("headless_verify", {"script": script})
+    return await asyncio.to_thread(bridge.send, "headless_verify", {"script": script})
 
 
 def register(mcp):

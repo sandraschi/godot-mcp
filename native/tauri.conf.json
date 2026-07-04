@@ -1,6 +1,6 @@
 {
   "productName": "Godot MCP",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "identifier": "ai.fleet.godot-mcp",
   "build": {
     "frontendDist": "../web_sota/dist",
@@ -34,7 +34,7 @@
     ],
     "resources": [
       "resources/godot-mcp-backend.exe",
-            "resources/.env"
+      "resources/.env.example"
     ],
     "targets": [
       "nsis"
@@ -45,8 +45,6 @@
       },
       "nsis": {
         "install_mode": "currentUser",
-        "create_desktop_shortcut": true,
-        "create_start_menu_shortcut": true,
         "installer_hooks": "./windows/hooks.nsh"
       }
     }

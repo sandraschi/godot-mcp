@@ -30,12 +30,16 @@ export default function Dashboard() {
 	const [status, setStatus] = useState<StatusData | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [restarting, setRestarting] = useState(false);
+	const [toolCount, setToolCount] = useState<number | null>(null);
 	const { tauriAvailable } = useAppStore();
 
 	const refresh = useCallback(() => {
 		apiFetch<StatusData>("/api/v1/status")
 			.then(setStatus)
 			.catch((e) => setError(e instanceof Error ? e.message : "Failed to reach backend"));
+		apiFetch<{ tool_count: number }>("/api/v1/health")
+			.then((d) => setToolCount(d.tool_count))
+			.catch(() => {});
 	}, []);
 
 	useEffect(() => { refresh(); }, [refresh]);
@@ -55,9 +59,15 @@ export default function Dashboard() {
 	const itch = status?.itch;
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-6" data-testid="dashboard">
 			<div className="flex items-center justify-between">
-				<h1 className="text-2xl font-bold text-white" data-testid="dashboard-title">Dashboard</h1>
+				<div className="flex items-center gap-3">
+					<h1 className="text-2xl font-bold text-white" data-testid="dashboard-title">Dashboard</h1>
+					<div className="flex items-center gap-1.5 text-xs text-zinc-400">
+						<span id="backend-dot" data-testid="backend-dot" className={`w-2 h-2 rounded-full ${status ? "bg-green-500" : error ? "bg-red-500" : "bg-gray-500"} animate-pulse`} />
+						<span>{status ? "Connected" : error ? "Offline" : "Connecting..."}</span>
+					</div>
+				</div>
 				{tauriAvailable && status && !status.ok && (
 					<button
 						type="button"
@@ -84,7 +94,7 @@ export default function Dashboard() {
 					</button>
 				</div>
 			)}
-			<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+			<div className="grid grid-cols-1 md:grid-cols-5 gap-4">
 				<div className="bg-fleet-900 border border-white/10 rounded-2xl p-5 space-y-3" data-testid="kpi-godot">
 					<div className="flex items-center gap-2 text-amber-400">
 						<Cpu size={18} /> Godot Engine
@@ -121,6 +131,13 @@ export default function Dashboard() {
 						Open Ship page
 					</a>
 				</div>
+				<div className="bg-fleet-900 border border-white/10 rounded-2xl p-5 space-y-3" data-testid="kpi-tools">
+					<div className="flex items-center gap-2 text-indigo-400">
+						<CircuitBoard size={18} /> Tools
+					</div>
+					<p className="text-2xl font-bold text-white">{toolCount ?? "..."}</p>
+					<p className="text-sm text-slate-400">registered MCP tools</p>
+				</div>
 				<div className="bg-fleet-900 border border-white/10 rounded-2xl p-5 space-y-3">
 					<div className="flex items-center gap-2 text-indigo-400">
 						<Play size={18} /> Quick Actions
@@ -136,7 +153,7 @@ export default function Dashboard() {
 					</a>
 				</div>
 			</div>
-			<div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+			<div className="grid grid-cols-2 md:grid-cols-5 gap-3" data-testid="quick-actions">
 				{[
 					{ href: "/ship", icon: Rocket, label: "Ship itch", desc: "Export to itch.io" },
 					{ href: "/ship-steam", icon: Rocket, label: "Ship Steam", desc: "SteamPipe upload" },

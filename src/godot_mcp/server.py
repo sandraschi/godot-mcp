@@ -1,17 +1,19 @@
 """
-FastMCP 3.2 Unified Gateway for Godot 4.0 engine control via WebSocket bridge.
+FastMCP 3.x Unified Gateway for Godot 4.x engine control via TCP bridge.
 
 Architecture:
-  Godot 4.0 Engine → WebSocket bridge (port 9080) → MCP server → REST API + SSE.
+  Godot 4.x Engine → TCP bridge (newline-JSON, port 9080) → MCP server → REST API + SSE + MCP-over-HTTP.
 
-The server communicates with a running Godot editor or headless build via
-WebSocket. Godot must have the MCP plugin/addon loaded to accept commands.
+The server communicates with a running Godot editor or headless build over a
+plain TCP socket. Godot must have the MCP bridge addon loaded to accept commands.
 """
 
 import asyncio
 import logging
 import os
 import shutil
+import sys
+import time as _time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -34,7 +36,7 @@ from godot_mcp.game_builder.routes import router as game_builder_router
 from godot_mcp.itch.routes import router as itch_router
 from godot_mcp.routes.logs import router as logs_router
 from godot_mcp.services.activity_log import install_log_handler, log_activity, query_logs
-from godot_mcp.services.godot_bridge import GODOT_HOST, GODOT_PATH, GODOT_PORT, GodotBridge
+from godot_mcp.services.godot_bridge import GODOT_HOST, GODOT_PATH, GODOT_PORT, get_bridge
 from godot_mcp.services.mobile_command import MobileCommand, MobileResponse, get_dispatcher
 from godot_mcp.services.mobile_help import generate_help_dict, get_endpoint_summary
 from godot_mcp.services.ws_gateway import mobile_ws_handler, start_background_tasks, stop_background_tasks
@@ -43,7 +45,15 @@ from godot_mcp.tools import register_all
 
 logger = logging.getLogger("godot-mcp")
 
-_bridge = GodotBridge()
+try:
+    from importlib.metadata import version as _pkg_version
+
+    __version__ = _pkg_version("godot-mcp")
+except Exception:
+    __version__ = "0.3.0"
+
+# The ONE shared bridge instance (services.godot_bridge module singleton).
+_bridge = get_bridge()
 
 # ── Config ───────────────────────────────────────────────────────────────────
 
@@ -82,7 +92,6 @@ async def lifespan(app: FastAPI):
     _state["godot_available"] = godot_exe is not None
     _state["godot_host"] = GODOT_HOST
     _state["godot_port"] = GODOT_PORT
-    _state["ws_connected"] = False
 
     if godot_exe:
         logger.info("Godot MCP startup — engine found at %s", godot_exe)
@@ -91,25 +100,30 @@ async def lifespan(app: FastAPI):
 
     logger.info("Godot MCP TCP bridge: %s:%s", GODOT_HOST, GODOT_PORT)
 
-    # Attempt bridge connection at startup
-    result = _bridge.connect()
+    # Attempt bridge connection at startup (blocking socket — off the event loop)
+    result = await asyncio.to_thread(_bridge.connect)
     if result["success"]:
-        _state["ws_connected"] = True
         logger.info("Godot bridge connected: %s", result.get("data", {}))
     else:
         logger.warning("Godot bridge not available at startup: %s", result.get("error", "unknown"))
 
     # Start iOS mobile gateway background tasks (log push, status push)
     install_log_handler()
-    log_activity("server", "Godot MCP started", level="INFO", meta={"version": "0.3.0"})
+    log_activity("server", "Godot MCP started", level="INFO", meta={"version": __version__})
     start_background_tasks()
     logger.info(get_endpoint_summary())
 
-    yield
-
-    stop_background_tasks()
-    _bridge.disconnect()
-    logger.info("Godot MCP shutdown — bridge disconnected")
+    try:
+        if _mcp_http_app is not None:
+            # Run the FastMCP HTTP transport's lifespan (session manager/task group)
+            async with _mcp_http_app.lifespan(_mcp_http_app):
+                yield
+        else:
+            yield
+    finally:
+        stop_background_tasks()
+        _bridge.disconnect()
+        logger.info("Godot MCP shutdown — bridge disconnected")
 
 
 # ── FastAPI App ──────────────────────────────────────────────────────────────
@@ -179,9 +193,12 @@ for url in bridge_urls.split(","):
 
 # ── MCP Tools ────────────────────────────────────────────────────────────────
 
-# 12 tools registered via core_tools.register():
+# 15 engine-control tools registered via core_tools.register():
 #   godot_status            (READ_ONLY)  — engine version, node count, FPS
 #   godot_import_stl        (MUTATING)   — import STL mesh from uploads
+#   godot_import_glb        (MUTATING)   — import GLB/GLTF via GLTFDocument
+#   godot_import_obj        (MUTATING)   — import Wavefront OBJ
+#   godot_play_animation    (MUTATING)   — play/list GLB AnimationPlayer clips
 #   godot_load_velocity_field (MUTATING) — load CSV velocity data into scene
 #   godot_spawn_particles   (MUTATING)   — create GPU particle system
 #   godot_animate_streamlines (MUTATING) — animate particles along velocity field
@@ -194,6 +211,16 @@ for url in bridge_urls.split(","):
 #   godot_headless_verify   (READ_ONLY)  — check headless mode + CLI command
 
 register_all(mcp)
+
+# ── MCP-over-HTTP transport (mounted so --mode http/dual actually serves MCP) ─
+
+_mcp_http_app = None
+try:
+    _mcp_http_app = mcp.http_app(path="/")
+    app.mount("/mcp", _mcp_http_app)
+    logger.info("MCP HTTP transport mounted at /mcp")
+except Exception as e:
+    logger.warning("MCP HTTP transport not mounted: %s", e)
 
 # ── Skills REST endpoints ─────────────────────────────────────────────────────
 
@@ -223,29 +250,83 @@ async def get_skill_api(skill_name: str):
         return {"success": False, "error": str(e)}
 
 
+# ── Fleet-standard health / diagnostics ────────────────────────────────────────
+
+_server_start = _time.time()
+
+_TOOL_COUNT = 49
+_TOOL_NAMES = [
+    "godot_status", "godot_version", "godot_open_project", "godot_save_project",
+    "godot_import_glb", "godot_import_stl", "godot_import_obj", "godot_export_release",
+    "godot_export_html5", "godot_set_scene", "godot_run_scene", "godot_stop_scene",
+    "godot_add_node", "godot_modify_node", "godot_remove_node",
+    "itch_butler_status", "itch_push_build", "itch_preview_build", "itch_list_builds",
+    "itch_channel_history",
+    "steam_status", "steam_set_app_id", "steam_stage_build", "ship_to_steam_prerelease",
+    "ship_to_steam_release", "ship_to_steam",
+    "fleet_exchange_status", "fleet_import_from_exchange",
+    "fleet_worldlabs_get_world", "fleet_worldlabs_stage_mesh",
+    "fleet_worldlabs_stage_splat", "fleet_worldlabs_import_mesh",
+    "design_game", "generate_game_worlds", "compose_game_scene",
+    "generate_game_logic", "export_and_ship", "build_game",
+    "ship_windows_steam_beta", "ship_windows_steam_release",
+    "sample_text", "generate_image",
+    "mcp_bridge_call", "mcp_bridge_list_servers",
+    "run_workflow", "list_workflows", "get_workflow",
+]
+
+
+@app.get("/api/health")
+@app.get("/api/v1/health")
+async def fleet_health():
+    return {
+        "status": "ok",
+        "server": "godot-mcp",
+        "version": __version__,
+        "uptime_seconds": int(_time.time() - _server_start),
+        "tool_count": _TOOL_COUNT,
+    }
+
+
+@app.get("/api/v1/diagnostics")
+async def fleet_diagnostics():
+    return {
+        "status": "ok",
+        "server": "godot-mcp",
+        "version": __version__,
+        "uptime_seconds": int(_time.time() - _server_start),
+        "tool_count": _TOOL_COUNT,
+        "tools": [{"name": n} for n in _TOOL_NAMES],
+        "system": {"windows": sys.platform == "win32"},
+        "errors": [],
+    }
+
+
 # ── REST API ──────────────────────────────────────────────────────────────────
 
 
 @app.get("/api/v1/status")
 async def api_status():
-    """Server status including Godot engine and WebSocket bridge info."""
+    """Server status including Godot engine and TCP bridge info."""
     from godot_mcp.fleet.service import fleet_exchange_status
     from godot_mcp.itch.service import itch_status
     from godot_mcp.steam.service import steam_status
 
-    itch = itch_status()
-    fleet = fleet_exchange_status()
-    steam = steam_status()
+    itch = await asyncio.to_thread(itch_status)
+    fleet = await asyncio.to_thread(fleet_exchange_status)
+    steam = await asyncio.to_thread(steam_status)
     return {
         "ok": True,
         "service": "godot-mcp",
-        "version": "0.3.0",
+        "version": __version__,
         "godot": {
             "available": _state.get("godot_available", False),
             "path": _state.get("godot_path", ""),
-            "host": _state.get("godot_host", GODOT_HOST),
-            "port": _state.get("godot_port", GODOT_PORT),
-            "ws_connected": _state.get("ws_connected", False),
+            "host": _bridge.host,
+            "port": _bridge.port,
+            "bridge_connected": _bridge.connected,
+            # legacy key kept for webapp/mobile compatibility
+            "ws_connected": _bridge.connected,
         },
         "itch": itch,
         "steam": steam,
@@ -253,11 +334,38 @@ async def api_status():
     }
 
 
+@app.get("/api/capabilities")
+async def api_capabilities():
+    """Runtime feature gating for the webapp (fleet capability introspection standard)."""
+    from godot_mcp.itch import butler
+    from godot_mcp.sampling.service import sampling_capabilities
+
+    butler_exe = await asyncio.to_thread(butler.find_butler)
+    steam_url = os.getenv("STEAM_MCP_URL", "http://127.0.0.1:11020")
+    worldlabs_url = os.getenv("WORLDLABS_BRIDGE_URL", "http://127.0.0.1:10865")
+    return {
+        "service": "godot-mcp",
+        "version": __version__,
+        "capabilities": {
+            "godot_engine": _state.get("godot_available", False),
+            "godot_bridge_connected": _bridge.connected,
+            "itch_butler": butler_exe is not None,
+            "itch_api_key": bool(os.getenv("BUTLER_API_KEY", "").strip()),
+            "steam_mcp_url": steam_url,
+            "worldlabs_url": worldlabs_url,
+            "sampling": sampling_capabilities(),
+            "mcp_http": _mcp_http_app is not None,
+            "mobile_gateway": True,
+            "logs": True,
+        },
+    }
+
+
 # ── Files listing ─────────────────────────────────────────────────────────────
 
 
-_FILES_DIR = Path(__file__).parent.parent.parent / "uploads"
-_OUTPUTS_DIR = Path(__file__).parent.parent.parent / "outputs"
+_FILES_DIR = Path(os.getenv("GODOT_MCP_UPLOADS_DIR", str(Path(__file__).parent.parent.parent / "uploads")))
+_OUTPUTS_DIR = Path(os.getenv("GODOT_MCP_OUTPUTS_DIR", str(Path(__file__).parent.parent.parent / "outputs")))
 
 
 @app.get("/api/v1/files")
@@ -300,17 +408,17 @@ async def _run_python_tool(tool: str, arguments: dict) -> dict:
     from godot_mcp.itch import service as itch_service
 
     if tool == "itch_status":
-        return itch_service.itch_status()
+        return await asyncio.to_thread(itch_service.itch_status)
     if tool == "godot_export_release":
-        return itch_service.godot_export_release_tool(**arguments)
+        return await asyncio.to_thread(itch_service.godot_export_release_tool, **arguments)
     if tool == "itch_push_preview":
-        return itch_service.itch_push_preview(**arguments)
+        return await asyncio.to_thread(itch_service.itch_push_preview, **arguments)
     if tool == "itch_push":
-        return itch_service.itch_push(**arguments)
+        return await asyncio.to_thread(itch_service.itch_push, **arguments)
     if tool == "itch_latest_version":
-        return itch_service.itch_latest_version(**arguments)
+        return await asyncio.to_thread(itch_service.itch_latest_version, **arguments)
     if tool == "ship_to_itch":
-        return itch_service.ship_to_itch(**arguments)
+        return await asyncio.to_thread(itch_service.ship_to_itch, **arguments)
     if tool in {
         "steam_status",
         "steam_checklist",
@@ -331,31 +439,31 @@ async def _run_python_tool(tool: str, arguments: dict) -> dict:
             "ship_to_steam_release": steam_service.steam_upload_release,
             "ship_to_steam": steam_service.ship_to_steam,
         }
-        return handlers[tool](**arguments)
+        return await asyncio.to_thread(handlers[tool], **arguments)
     if tool == "fleet_exchange_status":
         from godot_mcp.fleet.service import fleet_exchange_status
 
-        return fleet_exchange_status()
+        return await asyncio.to_thread(fleet_exchange_status)
     if tool == "fleet_import_from_exchange":
         from godot_mcp.fleet.service import fleet_import_from_exchange
 
-        return fleet_import_from_exchange(**arguments)
+        return await asyncio.to_thread(fleet_import_from_exchange, **arguments)
     if tool == "fleet_worldlabs_get_world":
         from godot_mcp.fleet.service import fleet_worldlabs_get_world
 
-        return fleet_worldlabs_get_world(**arguments)
+        return await asyncio.to_thread(fleet_worldlabs_get_world, **arguments)
     if tool == "fleet_worldlabs_stage_mesh":
         from godot_mcp.fleet.service import fleet_worldlabs_stage_mesh
 
-        return fleet_worldlabs_stage_mesh(**arguments)
+        return await asyncio.to_thread(fleet_worldlabs_stage_mesh, **arguments)
     if tool == "fleet_worldlabs_stage_splat":
         from godot_mcp.fleet.service import fleet_worldlabs_stage_splat
 
-        return fleet_worldlabs_stage_splat(**arguments)
+        return await asyncio.to_thread(fleet_worldlabs_stage_splat, **arguments)
     if tool == "fleet_worldlabs_import_mesh":
         from godot_mcp.fleet.service import fleet_worldlabs_import_mesh
 
-        return fleet_worldlabs_import_mesh(**arguments)
+        return await asyncio.to_thread(fleet_worldlabs_import_mesh, **arguments)
     if tool == "workflow_list":
         from godot_mcp.workflows.tools import workflow_list
 
@@ -491,6 +599,10 @@ async def execute_tool(req: ToolRequest):
         "godot_read_scene_tree": (None, "read_scene_tree"),
         "godot_set_config": (None, "set_config"),
         "godot_headless_verify": (None, "headless_verify"),
+        "godot_add_node": (None, "add_node"),
+        "godot_remove_node": (None, "remove_node"),
+        "godot_modify_node": (None, "modify_node"),
+        "godot_save_scene": (None, "save_scene"),
     }
     if req.tool in PYTHON_TOOLS:
         try:
@@ -520,11 +632,13 @@ async def execute_tool(req: ToolRequest):
         raise HTTPException(400, f"Unknown tool: {req.tool}")
     try:
         if not _bridge.connected:
-            conn_result = _bridge.connect()
+            conn_result = await asyncio.to_thread(_bridge.connect)
             if not conn_result["success"]:
                 return {"success": False, "message": conn_result.get("error", "Bridge not connected"), "tool": req.tool}
 
-        result = _bridge.send(action_map[req.tool][1], req.arguments)
+        action = action_map[req.tool][1]
+        timeout = 300.0 if action == "export_web" else 10.0
+        result = await asyncio.to_thread(_bridge.send, action, req.arguments, timeout)
         success = result.get("success", False)
         log_activity(
             "tool_call",
@@ -612,7 +726,7 @@ PLUGIN_CFG_CONTENT = """[plugin]
 name=MCP Bridge
 description=TCP server for MCP commands
 author=godot-mcp
-version=0.1.0
+version=0.3.0
 script=mcp_bridge.gd
 """
 
@@ -683,8 +797,11 @@ async def get_settings():
 async def save_settings(req: SettingsUpdate):
     data = req.model_dump()
     _save_settings(data)
-    log_activity("settings", "Settings saved", level="INFO", meta=data)
-    return {"success": True, "message": "Settings saved"}
+    # Drop the current bridge connection so the next connect() picks up the
+    # new host/port/path from ~/.godot-mcp/settings.json (env still wins).
+    _bridge.disconnect()
+    log_activity("settings", "Settings saved (bridge will reconnect with new config)", level="INFO", meta=data)
+    return {"success": True, "message": "Settings saved. Bridge reconnects with the new config on next use."}
 
 
 # ── Entry point ──────────────────────────────────────────────────────────────

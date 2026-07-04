@@ -111,7 +111,7 @@ export default function ApiDocsPage() {
 						<span className={`font-bold ${methodColor[ep.method] || "text-slate-400"}`}>
 							{ep.method}
 						</span>
-						<span className="text-slate-300 font-mono text-[11px]">{ep.path}</span>
+						<span className="text-slate-300 font-mono text-xs">{ep.path}</span>
 					</div>
 				))}
 			</div>

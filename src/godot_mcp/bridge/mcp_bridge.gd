@@ -110,6 +110,8 @@ func _handle_message(raw: String):
 			_cmd_add_node(request_id, params)
 		"remove_node":
 			_cmd_remove_node(request_id, params)
+		"modify_node":
+			_cmd_modify_node(request_id, params)
 		"save_scene":
 			_cmd_save_scene(request_id, params)
 		"play_animation":
@@ -605,6 +607,39 @@ func _cmd_remove_node(request_id: String, params: Dictionary):
 		return
 	node.queue_free()
 	_send_response(request_id, {"removed": true, "path": node_path})
+
+func _cmd_modify_node(request_id: String, params: Dictionary):
+	# Set a (possibly nested) property on an existing node.
+	# params: node (absolute path or plain name), property (e.g. "position:x"), value
+	var node_ref: String = params.get("node", "")
+	var prop: String = params.get("property", "")
+	if node_ref.is_empty() or prop.is_empty():
+		_send_error("modify_node requires 'node' and 'property' params", request_id)
+		return
+	if not params.has("value"):
+		_send_error("modify_node requires a 'value' param", request_id)
+		return
+
+	var node: Node = get_tree().get_root().get_node_or_null(NodePath(node_ref))
+	if not node:
+		node = _find_node_by_name(node_ref)
+	if not node:
+		_send_error("Node '%s' not found (tried path and name lookup)" % node_ref, request_id)
+		return
+
+	var value = params.get("value")
+	var prop_path := NodePath(prop)
+	var previous = node.get_indexed(prop_path)
+	node.set_indexed(prop_path, value)
+	var applied = node.get_indexed(prop_path)
+
+	_send_response(request_id, {
+		"modified": true,
+		"node": str(node.get_path()),
+		"property": prop,
+		"previous": str(previous),
+		"value": str(applied),
+	})
 
 func _cmd_save_scene(request_id: String, params: Dictionary):
 	var path: String = params.get("path", "res://mcp_scene.tscn")

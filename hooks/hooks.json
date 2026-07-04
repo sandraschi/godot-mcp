@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "SessionStart": [{
+      "matcher": "",
+      "hooks": [{
+        "type": "text",
+        "text": "## Session Context (Godot MCP)\n\nYou have access to a Godot 4 game engine control server with 49 tools across 10 domains: engine control, asset import/export, game building, fleet coordination, itch.io shipping, Steam publishing, animation, particles, HTML5 export, and cross-server MCP bridging.\n\n**Before starting work:**\n1. Check server health: godot_status()\n2. List available projects: list_projects()\n3. Check Godot bridge connection: check_bridge_status()\n\n**At end of work, save findings:**\n- Save any modified projects: save_project(project_id=...)"
+      }]
+    }]
+  }
+}

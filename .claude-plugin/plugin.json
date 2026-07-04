@@ -1,0 +1,6 @@
+{
+  "name": "godot-mcp",
+  "version": "0.3.0",
+  "description": "Godot 4 engine control via MCP — 49 tools, game builder, fleet pipeline",
+  "hooks": "../hooks/hooks.json"
+}

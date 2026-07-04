@@ -340,7 +340,7 @@ export default function LogsPage() {
 							>
 								<span className="text-slate-500 shrink-0">{entry.timestamp}</span>
 								<span
-									className={`shrink-0 px-1.5 py-0.5 rounded border text-[11px] font-semibold ${levelClass(entry.level)}`}
+									className={`shrink-0 px-1.5 py-0.5 rounded border text-xs font-semibold ${levelClass(entry.level)}`}
 								>
 									{entry.level}
 								</span>

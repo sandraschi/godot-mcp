@@ -1,27 +1,24 @@
-# godot-mcp (MCPB Bundle)
+# mcpb/ — MCPB bundle assets
 
-Godot MCP server — Godot 4.0 engine control via WebSocket bridge, STL/GLB/OBJ import, GPU particles, animation, HTML5 export through MCP tools and REST API
+MCPB packing for godot-mcp is done at the **repo root** via the fleet-standard
+recipe:
 
-## Usage
+```powershell
+just mcpb-pack
+```
 
-Add to \claude_desktop_config.json\:
-\\\json
-{
-  "mcpServers": {
-    "godot-mcp": {
-      "command": "uv",
-      "args": ["run", "--directory", "\D:\Dev\repos", "python", "-m", "godot_mcp"],
-      "env": { "PYTHONPATH": "\D:\Dev\repos/src" }
-    }
-  }
-}
-\\\
+That runs `scripts/mcpb-pack.ps1`, which packs the repo root (the real
+`src/godot_mcp` package, root `manifest.json`, root `run_server.py`,
+`.mcpbignore`) with the Anthropic `mcpb` CLI into
+`dist/godot-mcp-v<version>.mcpb`.
 
-## Tools
+This directory only holds bundle assets referenced by the root manifest:
 
-- **godot-mcp**: Godot MCP server — Godot 4.0 engine control via WebSocket bridge, STL/GLB/OBJ import, GPU particles, animation, HTML5 export through MCP tools and REST API
+- `assets/icon.png` — bundle icon
+- `assets/prompts/` — system/user prompt templates and examples
 
-## Requirements
-
-- Python 3.12+
-- uv
+History: this directory previously contained a duplicated flat copy of the
+server (`src/server.py`, own `manifest.json`/`pyproject.toml`) that drifted
+from the real package and produced broken bundles (tar.gz instead of mcpb zip,
+`${PWD}` manifest variables). That copy was removed in 0.3.0 — do not
+reintroduce it.

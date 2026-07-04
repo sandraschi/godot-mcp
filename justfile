@@ -3,7 +3,7 @@ import 'scripts/just/fleet.just'
 
 export NAME := "Godot MCP"
 export DESC := "Godot 4.0 engine control via WebSocket + MCP tools"
-export VER  := "0.1.0"
+export VER  := "0.3.0"
 export PORT := "10993"
 export WEB_PORT := "10992"
 export BRIDGE_PORT := "9080"
@@ -400,10 +400,6 @@ tauri-dev:
 tauri-build:
     pwsh -NoProfile -File '{{justfile_directory()}}\native\build.ps1'
 
-# Run CUA smoke test against installed NSIS app
-cua-nsis-test:
-    C:\Windows\py.exe scripts/cua-smoke.py
-
 # PyInstaller backend only (for Tauri sidecar)
 tauri-sidecar:
     pwsh -NoProfile -File '{{justfile_directory()}}\native\build-sidecar.ps1'
@@ -420,19 +416,8 @@ docker-run port=PORT:
 
 # ── MCPB Pack ──────────────────────────────────────────────────────────────────
 
-# Pack the MCPB bundle for Claude Desktop distribution
-pack-mcpb:
-    Set-Location '{{justfile_directory()}}\mcpb'
-    $files = @(
-        'manifest.json', 'pyproject.toml', 'README.md', 'run_server.py',
-        'assets\icon.png',
-        'assets\prompts\examples.json', 'assets\prompts\system.md', 'assets\prompts\user.md',
-        'src\__init__.py', 'src\server.py'
-    )
-    $out = '{{justfile_directory()}}\dist\godot-mcp-v{{VER}}.mcpb'
-    New-Item -ItemType Directory -Force -Path (Split-Path $out) | Out-Null
-    tar -czf $out @files
-    Write-Host "MCPB built: $out" -ForegroundColor Green
+# MCPB packing: use the fleet-standard recipe `just mcpb-pack` (scripts/just/fleet.just).
+# It packs the REPO ROOT (real godot_mcp package + root manifest.json) via the mcpb CLI.
 
 # ── Diagnostics ───────────────────────────────────────────────────────────────
 
@@ -459,9 +444,9 @@ bridge-test:
     $body = '{"tool":"godot_status","arguments":{}}'; \
     try { $r = Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/control/tool" -Method POST -Body $body -ContentType "application/json" -UseBasicParsing -TimeoutSec 10; $d = ($r.Content | ConvertFrom-Json); if ($d.success) { Write-Host "Bridge OK - Godot $($d.data.godot_version) @ $($d.data.fps) FPS" -ForegroundColor Green } else { Write-Host "Bridge error: $($d.message)" -ForegroundColor Red } } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
 
-# List all registered MCP tools
+# List all registered MCP tools (actually enumerates - no hardcoded counts)
 tools:
-    uv run python -c "from godot_mcp.tools import register_all; from fastmcp import FastMCP; m=FastMCP('x'); register_all(m); print('37+ tools (14 Godot bridge + 6 itch ship + workflows/artifacts/…)')"
+    uv run python -c "import asyncio; from godot_mcp.server import mcp; tools = asyncio.run(mcp.list_tools()); names = sorted(t.name for t in tools); print(str(len(names)) + ' MCP tools registered:'); [print('  ' + n) for n in names]"
 
 # Import a GLB/STL/OBJ from the fleet exchange depot into Godot (usage: just depot-import path/to/model.glb)
 depot-import file name="DepotImport":
@@ -525,11 +510,11 @@ git-log count="10":
 
 # Install Playwright browsers (one-time)
 e2e-install:
-    cd {{REPO}}\web_sota
-    npx playwright install chromium
+    Set-Location '{{justfile_directory()}}\web_sota'
+    cmd /c npx playwright install chromium
 
 # Run Playwright E2E smoke tests (start backend first: just serve)
 e2e:
-    cd {{REPO}}\web_sota
-    npx playwright test
+    Set-Location '{{justfile_directory()}}\web_sota'
+    cmd /c npx playwright test
 

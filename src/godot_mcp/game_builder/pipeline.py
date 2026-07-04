@@ -132,7 +132,7 @@ async def generate_game_worlds(
                 results[plan_slug]["world_id"] = marble_id
                 results[plan_slug]["assets"] = world_helpers.extract_world_assets(op)
                 if stage_meshes:
-                    world_helpers.enrich_world_result(results[plan_slug], stage_mesh=True)
+                    await asyncio.to_thread(world_helpers.enrich_world_result, results[plan_slug], stage_mesh=True)
                 del pending[plan_slug]
                 logger.info("  Completed: %s → marble %s", plan_slug, marble_id[:12] if marble_id else "?")
             except Exception as exc:
@@ -173,19 +173,21 @@ async def compose_game_scene(
     if import_to_godot:
         bridge = get_bridge()
         if not bridge.connected:
-            bridge.connect()
+            await asyncio.to_thread(bridge.connect)
 
     if bridge and plan.lighting and plan.viewport == "3d":
         try:
-            bridge.send(
+            await asyncio.to_thread(
+                bridge.send,
                 "add_light",
                 {"type": "directional", "intensity": plan.lighting.directional_intensity},
-                timeout=10,
+                10,
             )
-            bridge.send(
+            await asyncio.to_thread(
+                bridge.send,
                 "add_light",
                 {"type": "ambient", "intensity": plan.lighting.ambient_intensity},
-                timeout=10,
+                10,
             )
             steps.append("lighting")
         except Exception as exc:
@@ -193,7 +195,8 @@ async def compose_game_scene(
 
     if bridge and plan.camera and plan.viewport == "3d":
         try:
-            bridge.send(
+            await asyncio.to_thread(
+                bridge.send,
                 "create_camera",
                 {
                     "name": "GameCamera",
@@ -204,7 +207,7 @@ async def compose_game_scene(
                     },
                     "fov": plan.camera.fov,
                 },
-                timeout=10,
+                10,
             )
             steps.append("camera")
         except Exception as exc:
@@ -228,7 +231,7 @@ async def compose_game_scene(
 
         try:
             if mesh_path and Path(str(mesh_path)).is_file():
-                imported = fleet_pipeline.import_mesh_path(mesh_path, name=node_name, scale=1.0)
+                imported = await asyncio.to_thread(fleet_pipeline.import_mesh_path, mesh_path, node_name, 1.0)
                 world_imports[plan_slug] = {
                     "imported": imported.get("success", False),
                     "marble_world_id": marble_id,
@@ -236,7 +239,7 @@ async def compose_game_scene(
                     "result": imported,
                 }
             elif marble_id:
-                imported = fleet_pipeline.worldlabs_mesh_to_godot(marble_id, node_name=node_name, scale=1.0)
+                imported = await asyncio.to_thread(fleet_pipeline.worldlabs_mesh_to_godot, marble_id, node_name, 1.0)
                 world_imports[plan_slug] = {
                     "imported": imported.get("success", False),
                     "marble_world_id": marble_id,
@@ -259,14 +262,15 @@ async def compose_game_scene(
         for scene_spec in plan.scenes:
             if scene_spec.type in ("Node2D", "Node3D", "Control", "CanvasLayer", "CharacterBody2D"):
                 try:
-                    bridge.send(
+                    await asyncio.to_thread(
+                        bridge.send,
                         "add_node",
                         {
                             "parent": ".",
                             "type": scene_spec.type,
                             "name": scene_spec.name,
                         },
-                        timeout=10,
+                        10,
                     )
                 except Exception as exc:
                     logger.debug("Node '%s' creation skipped: %s", scene_spec.name, exc)
@@ -332,12 +336,12 @@ async def export_and_ship(
     channel: str = "html",
 ) -> dict[str, Any]:
     """Export the Godot project and optionally ship to itch.io."""
-    from godot_mcp.itch.service import godot_export_release as _export
-    from godot_mcp.itch.service import ship_to_itch as _ship
+    from godot_mcp.itch.service import godot_export_release_tool as _export
+    from godot_mcp.itch.service import ship_to_itch as _ship_kwargs
 
     target = plan.export.target if plan.export else "web"
 
-    export_result = _export(target=target, game="custom", project_path=game_project_path)
+    export_result = await asyncio.to_thread(_export, target, "custom", game_project_path)
     if not export_result.get("success"):
         return {"success": False, "export_error": export_result}
 
@@ -345,7 +349,8 @@ async def export_and_ship(
 
     if itch_target:
         try:
-            ship_result = _ship(
+            ship_result = await asyncio.to_thread(
+                _ship_kwargs,
                 target=target,
                 game="custom",
                 project_path=game_project_path,

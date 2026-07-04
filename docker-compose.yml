@@ -1,0 +1,11 @@
+services:
+  godot-mcp:
+    build: .
+    ports:
+      - "10993:10993"
+    environment:
+      - GODOT_MCP_PORT=10993
+      - GODOT_MCP_HOST=0.0.0.0
+    volumes:
+      - ./projects:/app/projects
+      - ./assets:/app/assets

@@ -1,10 +1,10 @@
 # Status — godot-mcp
 
-**Status**: v0.3.0 — 14 Godot bridge tools + 6 itch ship tools + **7 steam ship tools** + 6 fleet pipeline tools + **6 game_builder tools**; TCP bridge verified; World Labs GLB import wired; AI game-from-prompt pipeline; Steam publishing via steam-mcp.
+**Status**: v0.3.0 — 15 Godot bridge tools + 6 itch ship tools + **7 steam ship tools** + 6 fleet pipeline tools + **6 game_builder tools**; TCP bridge verified; World Labs GLB import wired; AI game-from-prompt pipeline; Steam publishing via steam-mcp; MCP-over-HTTP mounted at `/mcp`; sampling falls back to HTTP API/Ollama.
 
 **Repo**: `D:\Dev\repos\godot-mcp`  
 **Ports**: Backend 10993, Frontend 10992, Bridge 9080, World Labs 10864/10865, steam-mcp 11020  
-**Updated**: 2026-05-22
+**Updated**: 2026-07-01
 
 ## Runtime (two processes)
 
@@ -25,7 +25,7 @@ See `docs/architecture.md`, `docs/PRD.md`, `docs/ship-to-itch.md`, `docs/ship-to
 
 ## MCP tools
 
-### Godot bridge (14)
+### Godot bridge (15)
 
 | Tool | Status |
 |------|--------|
@@ -33,6 +33,7 @@ See `docs/architecture.md`, `docs/PRD.md`, `docs/ship-to-itch.md`, `docs/ship-to
 | `godot_import_stl` | Implemented |
 | `godot_import_glb` | Implemented |
 | `godot_import_obj` | Implemented |
+| `godot_play_animation` | Implemented |
 | `godot_load_velocity_field` | Implemented |
 | `godot_spawn_particles` | Implemented |
 | `godot_animate_streamlines` | Implemented |
@@ -43,6 +44,8 @@ See `docs/architecture.md`, `docs/PRD.md`, `docs/ship-to-itch.md`, `docs/ship-to
 | `godot_read_scene_tree` | Implemented |
 | `godot_set_config` | Implemented |
 | `godot_headless_verify` | Implemented |
+
+Bridge-only actions (REST action map + gateway, not MCP tools): `add_node`, `remove_node`, `modify_node`, `save_scene`.
 
 ### itch.io / Butler (6)
 
@@ -126,12 +129,12 @@ Pipeline: `prompt → design → worlds → compose → logic → export`. Spec:
 | `just ship web dodge` | Export + Butler push (needs env) |
 | `just steam-ship-beta dodge` | Export + stage + Steam beta upload (dry_run) |
 
-## Tauri native app (v0.2.1)
+## Tauri native app (v0.3.0)
 
 | Artifact | Path |
 |----------|------|
-| NSIS installer | `native/target/release/bundle/nsis/Godot MCP_0.2.1_x64-setup.exe` |
-| MSI installer | `native/target/release/bundle/msi/Godot MCP_0.2.1_x64_en-US.msi` |
+| NSIS installer | `native/target/release/bundle/nsis/Godot MCP_0.3.0_x64-setup.exe` |
+| MSI installer | `native/target/release/bundle/msi/Godot MCP_0.3.0_x64_en-US.msi` |
 | Dev binary | `native/target/release/godot-mcp-native.exe` |
 
 Build (requires Rust, Node 20+, uv, ~10 min first run):
@@ -142,7 +145,19 @@ just tauri-build
 
 Sidecar only: `just tauri-sidecar`. Dev shell: `just tauri-dev` (expects `web_sota` on 10992).
 
-## Done recently (2026-05-25)
+## Done recently (2026-07-01 correctness sweep)
+
+- justfile parse blocker removed (broken `pack-mcpb` recipe); `{{REPO}}` e2e fix; honest `tools` enumeration; VER 0.3.0
+- ws_gateway `LOG_RING` crash fixed (activity_log polling); `modify-node` → real `modify_node` GDScript handler
+- Sampling fallback chain: `ctx.sample()` → OpenAI-compatible API → Ollama; `SamplingUnavailableError` instead of fake-success string; Game Builder works over REST now
+- Bridge unified (module singleton), send lock + request_id correlation + recv buffer retention; settings.json wired into connect
+- All blocking bridge/subprocess/download calls wrapped in `asyncio.to_thread`
+- MCP HTTP transport mounted at `/mcp` (dual/http modes real now)
+- MCPB repaired: stale `mcpb/src/` drift copy deleted, root `manifest.json` with `${__dirname}`, path-robust `run_server.py`
+- Latent ImportError in `export_and_ship` fixed (`godot_export_release_tool`)
+- `GET /api/capabilities` added; versions unified at 0.3.0; CHANGELOG head corruption repaired
+
+## Done earlier (2026-05-25)
 
 - **Game Builder pipeline** (`godot_mcp/game_builder/`) — 6 MCP tools for prompt-to-game, GamePlan schema, LLM prompts, bridge orchestration
 - **Fleet pipeline module** (`godot_mcp/fleet/`) — exchange listing, World Labs mesh download/import, splat staging, REST + MCP tools
@@ -155,9 +170,37 @@ Sidecar only: `just tauri-sidecar`. Dev shell: `just tauri-dev` (expects `web_so
 - VibeCode Runner sample + `docs/ai-and-indie-games.md`
 - `docs/fleet-game-pipeline.md` + `docs/FLEET_ASSESSMENT.md`
 
+## Fleet standards compliance
+
+| Standard | Status | Notes |
+|----------|--------|-------|
+| `glama.json` | ✅ | Root |
+| `llms.txt` + `llms-full.txt` | ✅ | Root |
+| Tool annotations | ✅ | READ_ONLY/MUTATING per module |
+| `justfile` | ✅ | Comprehensive (520 lines) |
+| `start.ps1` + `start.bat` | ✅ | |
+| Tauri NSIS build pipeline | ✅ | `just tauri-build` |
+| NSIS hooks | ✅ | Kill both processes |
+| CUA smoke test | ✅ | `scripts/cua-smoke.py` |
+| `backend.rs` free_port() | ✅ | Multi-layer kill |
+| Web zoom (Ctrl+Scroll) | ✅ | |
+| Web dashboard | ✅ | 20 pages |
+| Skills page | ✅ | `src/godot_mcp/skills/` |
+| `data-testid` attributes | ✅ | |
+| Dark theme | ✅ | |
+| `@tauri-apps/api` | ✅ | |
+| Biome JS/TS linting | ✅ | `web_sota/biome.json` |
+| `.env.example` | ✅ | New — `.env` no longer bundled |
+| Session context injection | ✅ | New — 5 files |
+| `.pre-commit-config.yaml` | ✅ | New |
+| `mcpb/manifest.json` | ✅ | New |
+| Docker support | ✅ | New — `Dockerfile` + `docker-compose.yml` |
+| Tauri v2 config schema | ✅ | Fixed — removed invalid keys |
+
 ## Next steps
 
-1. Live E2E test: `build_game` with worldlabs + bridge + sampling client
-2. Optional: `/fleet` dashboard page
-3. R&D: `godot_import_splat` bridge action (SPZ in-engine)
-4. Multi-node Godot scene hierarchy from GamePlan
+1. Live E2E test: `build_game` with worldlabs + bridge + sampling (or `GODOT_MCP_LLM_BASE_URL`)
+2. Prefab UI cards + `fastmcp dev apps` preview (fleet GenerativeUI standard)
+3. Bun migration for `web_sota` (bun.lock, Biome)
+4. R&D: `godot_import_splat` bridge action (SPZ in-engine)
+5. Optional: `/fleet` dashboard page; multi-node scene hierarchy from GamePlan
