@@ -221,7 +221,7 @@ async def build_game(
 
 ## Webapp: Game Builder Page
 
-### New Page: `web_sota/src/pages/game-builder.tsx`
+### New Page: `webapp/src/pages/game-builder.tsx`
 
 Route: `/game-builder`
 
@@ -278,7 +278,7 @@ godot-mcp must have Godot running with the bridge active (port 9080). The custom
 6. Wire into `server.py` registration
 
 ### Phase 2: Webapp (next sprint)
-1. `web_sota/src/pages/game-builder.tsx` — UI page
+1. `webapp/src/pages/game-builder.tsx` — UI page
 2. REST routes at `POST /api/v1/game-builder/design`, etc.
 3. Live SSE progress streaming
 

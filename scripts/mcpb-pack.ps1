@@ -20,10 +20,10 @@ if (-not (Test-Path manifest.json)) {
 }
 if (-not (Test-Path .mcpbignore)) {
     $lines = "tests/",".git/","__pycache__/","*.pyc",".venv/","dist/","build/","target/"
-    $lines += "web_sota/node_modules/","web_sota/dist/","node_modules/"
+    $lines += "webapp/node_modules/","webapp/dist/","node_modules/"
     $lines += ".ruff_cache/",".pytest_cache/",".coverage",".snapshots/","*.bak"
     $lines | Set-Content .mcpbignore -Encoding utf8
     Write-Host "  Generated .mcpbignore" -ForegroundColor Yellow
 }
-npx --yes @anthropic-ai/mcpb pack $RepoRoot "$RepoRoot/dist/$name-v$ver.mcpb"
+bunx --yes @anthropic-ai/mcpb pack $RepoRoot "$RepoRoot/dist/$name-v$ver.mcpb"
 Write-Host "Bundle: $RepoRoot/dist/$name-v$ver.mcpb"

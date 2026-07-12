@@ -116,6 +116,12 @@ func _handle_message(raw: String):
 			_cmd_save_scene(request_id, params)
 		"play_animation":
 			_cmd_play_animation(request_id, params)
+		"capture_viewport":
+			_cmd_capture_viewport(request_id, params)
+		"simulate_input":
+			_cmd_simulate_input(request_id, params)
+		"generate_procedural_texture":
+			_cmd_generate_procedural_texture(request_id, params)
 		_:
 			_send_error("Unknown action: %s" % action, request_id)
 
@@ -785,6 +791,125 @@ func _find_animation_player_recursive(node: Node) -> AnimationPlayer:
 		if found:
 			return found
 	return null
+
+func _cmd_simulate_input(request_id: String, params: Dictionary):
+	var actions: Array = params.get("actions", [])
+	if actions.is_empty():
+		_send_error("Missing 'actions' array (each with key, pressed, duration)", request_id)
+		return
+	var results := []
+	for action in actions:
+		var key_name: String = action.get("key", "")
+		var pressed: bool = action.get("pressed", true)
+		var hold_ms: float = action.get("hold_ms", 50.0)
+		if key_name.is_empty():
+			continue
+		var event := InputEventKey.new()
+		event.keycode = OS.find_keycode(key_name)
+		if event.keycode == 0:
+			event.keycode = key_name.unicode_at(0)
+		event.pressed = pressed
+		event.echo = false
+		Input.parse_input_event(event)
+		if not pressed and hold_ms > 0:
+			await get_tree().create_timer(hold_ms / 1000.0).timeout
+			var release := InputEventKey.new()
+			release.keycode = event.keycode
+			release.pressed = false
+			Input.parse_input_event(release)
+		results.append({"key": key_name, "keycode": event.keycode, "pressed": pressed})
+	_send_response(request_id, {"actions_processed": len(results), "results": results})
+
+
+func _cmd_generate_procedural_texture(request_id: String, params: Dictionary):
+	var texture_type: String = params.get("type", "gradient")
+	var width: int = params.get("width", 256)
+	var height: int = params.get("height", 256)
+	var colors: Array = params.get("colors", ["#ff4444", "#4444ff"])
+	var output_path: String = params.get("output_path", "")
+	var img := Image.create(width, height, false, Image.FORMAT_RGBA8)
+
+	match texture_type:
+		"gradient":
+			img.fill(Color(0, 0, 0, 1))
+			for y in range(height):
+				var t := float(y) / float(height - 1) if height > 1 else 0.0
+				var ci := int(t * (colors.size() - 1))
+				var cf := t * (colors.size() - 1) - ci
+				var c1 := Color(colors[ci] if ci < colors.size() else colors[-1])
+				var c2 := Color(colors[min(ci + 1, colors.size() - 1)])
+				var c := c1.lerp(c2, cf)
+				for x in range(width):
+					img.set_pixel(x, y, c)
+
+		"noise":
+			var noise := FastNoiseLite.new()
+			noise.seed = params.get("seed", randi())
+			noise.frequency = params.get("frequency", 0.05)
+			for y in range(height):
+				for x in range(width):
+					var n := noise.get_noise_2d(float(x), float(y)) * 0.5 + 0.5
+					var c1 := Color(colors[0])
+					var c2 := Color(colors[1] if colors.size() > 1 else colors[0])
+					img.set_pixel(x, y, c1.lerp(c2, n))
+
+		"checker":
+			var cell_size: int = params.get("cell_size", 32)
+			var c1 := Color(colors[0])
+			var c2 := Color(colors[1] if colors.size() > 1 else Color.WHITE)
+			for y in range(height):
+				for x in range(width):
+					var cx := int(x / cell_size)
+					var cy := int(y / cell_size)
+					img.set_pixel(x, y, c1 if (cx + cy) % 2 == 0 else c2)
+
+		"solid":
+			var c := Color(colors[0])
+			img.fill(c)
+
+		_:
+			_send_error("Unknown texture type: " + texture_type, request_id)
+			return
+
+	if output_path.is_empty():
+		output_path = "user://procedural_%s_%d.png" % [texture_type, Time.get_unix_time_from_system()]
+	var save_err := img.save_png(output_path)
+	if save_err != OK:
+		_send_error("Failed to save texture: error %d" % save_err, request_id)
+		return
+	_send_response(request_id, {
+		"path": output_path,
+		"width": width,
+		"height": height,
+		"texture_type": texture_type,
+		"format": "png",
+		"colors": colors,
+	})
+
+
+func _cmd_capture_viewport(request_id: String, params: Dictionary):
+	var output_path: String = params.get("output_path", "")
+	var viewport := get_viewport()
+	if not viewport:
+		_send_error("No active viewport", request_id)
+		return
+	var img := viewport.get_texture().get_image()
+	if not img:
+		_send_error("Failed to capture viewport image", request_id)
+		return
+	if output_path.is_empty():
+		output_path = "user://viewport_capture_%d.png" % Time.get_unix_time_from_system()
+	var save_err := img.save_png(output_path)
+	if save_err != OK:
+		_send_error("Failed to save PNG: error %d" % save_err, request_id)
+		return
+	_send_response(request_id, {
+		"path": output_path,
+		"width": img.get_width(),
+		"height": img.get_height(),
+		"format": "png",
+	})
+
 
 func _build_scene_tree(node: Node) -> Dictionary:
 	var children: Array = []

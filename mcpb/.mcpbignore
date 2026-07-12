@@ -4,8 +4,8 @@ __pycache__/
 *.pyc
 .venv/
 node_modules/
-web_sota/node_modules/
-web_sota/dist/
+webapp/node_modules/
+webapp/dist/
 docs/
 tests/
 native/

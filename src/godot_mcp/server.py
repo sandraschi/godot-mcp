@@ -9,18 +9,21 @@ plain TCP socket. Godot must have the MCP bridge addon loaded to accept commands
 """
 
 import asyncio
+import json as _json
 import logging
 import os
 import shutil
 import sys
 import time as _time
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, WebSocket
+from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from fastmcp import FastMCP
 from fastmcp.server import create_proxy
 from pydantic import BaseModel, Field
@@ -36,7 +39,7 @@ from godot_mcp.game_builder.routes import router as game_builder_router
 from godot_mcp.itch.routes import router as itch_router
 from godot_mcp.routes.logs import router as logs_router
 from godot_mcp.services.activity_log import install_log_handler, log_activity, query_logs
-from godot_mcp.services.godot_bridge import GODOT_HOST, GODOT_PATH, GODOT_PORT, get_bridge
+from godot_mcp.services.godot_bridge import GODOT_HOST, GODOT_PATH, GODOT_PORT, find_godot, get_bridge, launch_bridge
 from godot_mcp.services.mobile_command import MobileCommand, MobileResponse, get_dispatcher
 from godot_mcp.services.mobile_help import generate_help_dict, get_endpoint_summary
 from godot_mcp.services.ws_gateway import mobile_ws_handler, start_background_tasks, stop_background_tasks
@@ -44,6 +47,8 @@ from godot_mcp.steam.routes import router as steam_router
 from godot_mcp.tools import register_all
 
 logger = logging.getLogger("godot-mcp")
+# Suppress FastMCP's chatty "Component already exists" warnings during dev
+logging.getLogger("fastmcp.local_provider").setLevel(logging.ERROR)
 
 try:
     from importlib.metadata import version as _pkg_version
@@ -59,6 +64,7 @@ _bridge = get_bridge()
 
 DEFAULT_PORT = 10993
 DEFAULT_HOST = "0.0.0.0"  # noqa: S104
+VIEWPORT_DIR = Path(os.getenv("GODOT_MCP_VIEWPORT_DIR", str(Path.home() / ".godot-mcp" / "viewport")))
 
 
 def _find_godot() -> str | None:
@@ -256,23 +262,53 @@ _server_start = _time.time()
 
 _TOOL_COUNT = 49
 _TOOL_NAMES = [
-    "godot_status", "godot_version", "godot_open_project", "godot_save_project",
-    "godot_import_glb", "godot_import_stl", "godot_import_obj", "godot_export_release",
-    "godot_export_html5", "godot_set_scene", "godot_run_scene", "godot_stop_scene",
-    "godot_add_node", "godot_modify_node", "godot_remove_node",
-    "itch_butler_status", "itch_push_build", "itch_preview_build", "itch_list_builds",
+    "godot_status",
+    "godot_version",
+    "godot_open_project",
+    "godot_save_project",
+    "godot_import_glb",
+    "godot_import_stl",
+    "godot_import_obj",
+    "godot_export_release",
+    "godot_export_html5",
+    "godot_set_scene",
+    "godot_run_scene",
+    "godot_stop_scene",
+    "godot_add_node",
+    "godot_modify_node",
+    "godot_remove_node",
+    "itch_butler_status",
+    "itch_push_build",
+    "itch_preview_build",
+    "itch_list_builds",
     "itch_channel_history",
-    "steam_status", "steam_set_app_id", "steam_stage_build", "ship_to_steam_prerelease",
-    "ship_to_steam_release", "ship_to_steam",
-    "fleet_exchange_status", "fleet_import_from_exchange",
-    "fleet_worldlabs_get_world", "fleet_worldlabs_stage_mesh",
-    "fleet_worldlabs_stage_splat", "fleet_worldlabs_import_mesh",
-    "design_game", "generate_game_worlds", "compose_game_scene",
-    "generate_game_logic", "export_and_ship", "build_game",
-    "ship_windows_steam_beta", "ship_windows_steam_release",
-    "sample_text", "generate_image",
-    "mcp_bridge_call", "mcp_bridge_list_servers",
-    "run_workflow", "list_workflows", "get_workflow",
+    "steam_status",
+    "steam_set_app_id",
+    "steam_stage_build",
+    "ship_to_steam_prerelease",
+    "ship_to_steam_release",
+    "ship_to_steam",
+    "fleet_exchange_status",
+    "fleet_import_from_exchange",
+    "fleet_worldlabs_get_world",
+    "fleet_worldlabs_stage_mesh",
+    "fleet_worldlabs_stage_splat",
+    "fleet_worldlabs_import_mesh",
+    "design_game",
+    "generate_game_worlds",
+    "compose_game_scene",
+    "generate_game_logic",
+    "export_and_ship",
+    "build_game",
+    "ship_windows_steam_beta",
+    "ship_windows_steam_release",
+    "sample_text",
+    "generate_image",
+    "mcp_bridge_call",
+    "mcp_bridge_list_servers",
+    "run_workflow",
+    "list_workflows",
+    "get_workflow",
 ]
 
 
@@ -660,6 +696,243 @@ async def execute_tool(req: ToolRequest):
         return {"success": False, "message": str(e), "tool": req.tool, "arguments": req.arguments}
 
 
+@dataclass
+class BridgeStartRequest:
+    project_root: str | None = None
+
+
+@app.post("/api/v1/bridge/start")
+async def start_bridge_endpoint(req: BridgeStartRequest):
+    """Locate Godot and launch it headless with the MCP bridge addon."""
+    return launch_bridge(req.project_root)
+
+
+@dataclass
+class GodotFindResult:
+    found: bool
+    path: str | None = None
+    message: str = ""
+
+
+@app.get("/api/v1/godot/find")
+async def find_godot_endpoint():
+    """Check if Godot is installed and where."""
+    path = find_godot()
+    return GodotFindResult(found=path is not None, path=path, message="Godot found" if path else "Godot not found")
+
+
+from godot_mcp.services.llm_detect import detect as _llm_detect
+from godot_mcp.services.llm_detect import recommend as _llm_recommend
+
+
+@app.get("/api/v1/llm/detect")
+async def llm_detect():
+    """Detect GPU, VRAM, Ollama, and installed models."""
+    return _llm_detect()
+
+
+@app.get("/api/v1/llm/recommend")
+async def llm_recommend():
+    """Recommend the best LLM model based on detected hardware + installed models."""
+    return _llm_recommend()
+
+
+@dataclass
+class ViewportCaptureRequest:
+    output_path: str | None = None
+
+
+@dataclass
+class ViewportCaptureResult:
+    success: bool
+    path: str = ""
+    width: int = 0
+    height: int = 0
+    error: str = ""
+
+
+@app.post("/api/v1/viewport/capture")
+async def capture_viewport_endpoint(req: ViewportCaptureRequest):
+    """Capture Godot viewport as PNG. Bridge must be connected."""
+    bridge = get_bridge()
+    if not bridge.connected:
+        return ViewportCaptureResult(
+            success=False, error="Godot bridge not connected. Use POST /api/v1/bridge/start first."
+        )
+
+    VIEWPORT_DIR.mkdir(parents=True, exist_ok=True)
+    output = str(VIEWPORT_DIR / "latest.png")
+    result = await asyncio.to_thread(bridge.send, "capture_viewport", {"output_path": output}, 30)
+    if result.get("success"):
+        data = result.get("data", {})
+        return ViewportCaptureResult(
+            success=True, path=data.get("path", output), width=data.get("width", 0), height=data.get("height", 0)
+        )
+    return ViewportCaptureResult(success=False, error=result.get("error", "Capture failed"))
+
+
+class SimulateInputRequest(BaseModel):
+    actions: list[dict]
+
+
+@app.post("/api/v1/viewport/simulate")
+async def simulate_input_endpoint(req: SimulateInputRequest):
+    """Simulate keyboard input in the Godot engine. Bridge must be connected."""
+    bridge = get_bridge()
+    if not bridge.connected:
+        return {"success": False, "error": "Godot bridge not connected. Use POST /api/v1/bridge/start first."}
+    result = await asyncio.to_thread(bridge.send, "simulate_input", {"actions": req.actions}, 30)
+    return result
+
+
+class ProceduralTextureRequest(BaseModel):
+    texture_type: str = "gradient"
+    width: int = 256
+    height: int = 256
+    colors: list[str] = ["#ff4444", "#4444ff", "#44ff44"]
+    cell_size: int = 32
+    frequency: float = 0.05
+    seed: int | None = None
+    output_path: str | None = None
+
+
+@app.post("/api/v1/viewport/texture")
+async def procedural_texture_endpoint(req: ProceduralTextureRequest):
+    """Generate a procedural texture (gradient, noise, checker, solid)."""
+    bridge = get_bridge()
+    if not bridge.connected:
+        return {"success": False, "error": "Godot bridge not connected. Use POST /api/v1/bridge/start first."}
+    params = req.model_dump(exclude_none=True)
+    result = await asyncio.to_thread(bridge.send, "generate_procedural_texture", params, 15)
+    return result
+
+
+@app.get("/api/v1/viewport/live")
+async def live_viewport():
+    """Return the latest viewport capture as a PNG image."""
+    bridge = get_bridge()
+    img_path = VIEWPORT_DIR / "latest.png"
+    if not bridge.connected or not img_path.is_file():
+        from fastapi.responses import HTMLResponse
+
+        return HTMLResponse(
+            "<svg width='400' height='300'><rect fill='#1a1a2e' width='400' height='300'/><text x='20' y='40' fill='#666' font-family='monospace' font-size='14'>Bridge not connected</text></svg>",
+            media_type="image/svg+xml",
+        )
+
+    return FileResponse(str(img_path), media_type="image/png")
+
+
+VIEWPORT_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/viewport", StaticFiles(directory=str(VIEWPORT_DIR)), name="viewport")
+
+
+@dataclass
+class PluginEntry:
+    name: str
+    repo: str
+    description: str
+    installed: bool = False
+
+
+@app.get("/api/v1/plugins")
+async def list_plugins():
+    """List available community plugins and their install status."""
+    from godot_mcp.tools.addon_tools import PLUGIN_REGISTRY
+
+    base = Path(os.getenv("GODOT_MCP_WEB_ROOT", "")) or Path.cwd()
+    entries = []
+    for name, info in sorted(PLUGIN_REGISTRY.items()):
+        addon_dir = base / "addons" / name
+        entries.append(
+            PluginEntry(
+                name=name,
+                repo=info["repo"],
+                description=info.get("description", ""),
+                installed=addon_dir.is_dir() and any(addon_dir.iterdir()),
+            )
+        )
+    return {"success": True, "plugins": entries}
+
+
+class PluginInstallRequest(BaseModel):
+    plugin_name: str
+    project_path: str = ""
+
+
+@app.post("/api/v1/plugins/install")
+async def install_plugin(req: PluginInstallRequest):
+    """Install a community plugin from the registry."""
+    from godot_mcp.tools.addon_tools import PLUGIN_REGISTRY
+
+    if req.plugin_name not in PLUGIN_REGISTRY:
+        known = ", ".join(sorted(PLUGIN_REGISTRY.keys()))
+        return {"success": False, "error": f"Unknown plugin '{req.plugin_name}'. Known: {known}"}
+
+    if not req.project_path:
+        for candidate in [Path.cwd(), Path(__file__).resolve().parent.parent.parent.parent]:
+            if (candidate / "project.godot").is_file():
+                req.project_path = str(candidate)
+                break
+    if not req.project_path:
+        return {"success": False, "error": "project_path required. Run from repo root with project.godot."}
+
+    project = Path(req.project_path)
+    if not (project / "project.godot").is_file():
+        return {"success": False, "error": f"No project.godot found at {project}"}
+
+    import httpx
+
+    entry = PLUGIN_REGISTRY[req.plugin_name]
+    repo = entry["repo"]
+    path_in_zip = entry["path_in_zip"]
+    target_dir = project / "addons" / req.plugin_name
+
+    archive_url = f"https://api.github.com/repos/{repo}/releases/latest"
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(archive_url)
+            tag = resp.json().get("tag_name", "") if resp.status_code == 200 else ""
+            dl_url = (
+                f"https://github.com/{repo}/archive/refs/tags/{tag}.zip"
+                if tag
+                else f"https://github.com/{repo}/archive/refs/heads/main.zip"
+            )
+            logger.info("Downloading %s from %s", req.plugin_name, dl_url)
+            zip_resp = await client.get(dl_url, timeout=60)
+            zip_resp.raise_for_status()
+    except Exception as e:
+        return {"success": False, "error": f"Failed to download {repo}: {e}"}
+
+    import io
+    import zipfile as _zipfile
+
+    extracted = 0
+    try:
+        with _zipfile.ZipFile(io.BytesIO(zip_resp.content)) as zf:
+            prefix = next(
+                (n.split("/")[0] for n in zf.namelist() if path_in_zip.rstrip("/") in n and n.count("/") >= 2), None
+            )
+            if not prefix:
+                return {"success": False, "error": f"Could not find addon path '{path_in_zip}' in archive"}
+            for name in zf.namelist():
+                rel = name.removeprefix(prefix + "/")
+                if not rel.startswith(path_in_zip):
+                    continue
+                dest = target_dir / rel.removeprefix(path_in_zip).lstrip("/")
+                if name.endswith("/"):
+                    dest.mkdir(parents=True, exist_ok=True)
+                else:
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    with zf.open(name) as src, open(dest, "wb") as dst:
+                        dst.write(src.read())
+                        extracted += 1
+    except Exception as e:
+        return {"success": False, "error": f"Failed to extract plugin: {e}"}
+
+    return {"success": True, "plugin": req.plugin_name, "addon_path": str(target_dir), "files_extracted": extracted}
+
+
 # ── Legacy SSE log stream (feeds from activity log) ──────────────────────────
 
 
@@ -756,6 +1029,142 @@ async def install_addon(req: AddonInstallRequest):
         "addon_path": str(addon_dir),
         "message": f"MCP Bridge addon installed to {addon_dir}. Add it as an Autoload in Project > Project Settings > Autoload.",
     }
+
+
+# ── LLM Chat (streaming proxy) ──────────────────────────────────────────────────
+
+
+@app.post("/api/llm/chat/stream")
+async def llm_chat_stream(request: Request):
+    """POST /api/llm/chat/stream — streaming chat via Ollama/OpenAI-compatible."""
+    import httpx
+
+    body = await request.json()
+    provider = body.get("provider", "ollama")
+    model = body.get("model", "llama3.2")
+    messages = body.get("messages", [])
+    prompt = body.get("prompt", "")
+    personality = body.get("personality", "professional")
+    base_url = body.get("base_url", "")
+
+    if not base_url:
+        base_url = {
+            "openai": "https://api.openai.com/v1",
+            "deepseek": "https://api.deepseek.com/v1",
+            "ollama": "http://localhost:11434",
+            "lmstudio": "http://localhost:1234/v1",
+        }.get(provider, "http://localhost:11434")
+
+    chat_messages: list[dict] = []
+    if personality != "professional":
+        chat_messages.append(
+            {"role": "system", "content": f"You are a helpful assistant with this personality: {personality}"}
+        )
+    chat_messages.extend(messages)
+    if prompt:
+        chat_messages.append({"role": "user", "content": prompt})
+
+    async def _stream():
+        try:
+            async with httpx.AsyncClient(timeout=120) as client:
+                if provider == "ollama":
+                    url = base_url.rstrip("/") + "/api/chat"
+                    async with client.stream(
+                        "POST", url, json={"model": model, "messages": chat_messages, "stream": True}
+                    ) as resp:
+                        async for line in resp.aiter_lines():
+                            if not line.strip():
+                                continue
+                            try:
+                                chunk = _json.loads(line)
+                                content = chunk.get("message", {}).get("content", "")
+                                if content:
+                                    yield f"data: {_json.dumps({'c': content})}\n\n"
+                            except _json.JSONDecodeError:
+                                pass
+                        yield "data: [DONE]\n\n"
+                else:
+                    headers = {"Content-Type": "application/json"}
+                    if provider in ("openai", "deepseek"):
+                        key = os.environ.get(f"{provider.upper()}_API_KEY", "")
+                        if key:
+                            headers["Authorization"] = f"Bearer {key}"
+                    url = base_url.rstrip("/") + "/chat/completions"
+                    async with client.stream(
+                        "POST",
+                        url,
+                        json={"model": model, "messages": chat_messages, "stream": True, "max_tokens": 1024},
+                        headers=headers,
+                    ) as resp:
+                        async for line in resp.aiter_lines():
+                            if line.startswith("data: "):
+                                data_str = line[6:].strip()
+                                if data_str == "[DONE]":
+                                    yield "data: [DONE]\n\n"
+                                    return
+                                try:
+                                    chunk = _json.loads(data_str)
+                                    content = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
+                                    if content:
+                                        yield f"data: {_json.dumps({'c': content})}\n\n"
+                                except _json.JSONDecodeError:
+                                    pass
+        except Exception as e:
+            yield f"data: {_json.dumps({'error': str(e)})}\n\n"
+
+    return StreamingResponse(_stream(), media_type="text/event-stream")
+
+
+@app.post("/api/llm/chat")
+async def llm_chat(request: Request):
+    """POST /api/llm/chat — non-streaming chat."""
+    import httpx
+
+    body = await request.json()
+    provider = body.get("provider", "ollama")
+    model = body.get("model", "llama3.2")
+    prompt = body.get("prompt", "")
+    system = body.get("system", "")
+    base_url = body.get("base_url", "")
+
+    if not base_url:
+        base_url = {
+            "ollama": "http://localhost:11434",
+            "lmstudio": "http://localhost:1234/v1",
+            "openai": "https://api.openai.com/v1",
+            "deepseek": "https://api.deepseek.com/v1",
+        }.get(provider, "http://localhost:11434")
+
+    messages: list[dict] = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    if prompt:
+        messages.append({"role": "user", "content": prompt})
+
+    try:
+        async with httpx.AsyncClient(timeout=60) as client:
+            if provider == "ollama":
+                r = await client.post(
+                    base_url.rstrip("/") + "/api/chat", json={"model": model, "messages": messages, "stream": False}
+                )
+                data = r.json()
+                reply = data.get("message", {}).get("content", "")
+            else:
+                headers = {"Content-Type": "application/json"}
+                if provider in ("openai", "deepseek"):
+                    key = os.environ.get(f"{provider.upper()}_API_KEY", "")
+                    if key:
+                        headers["Authorization"] = f"Bearer {key}"
+                r = await client.post(
+                    base_url.rstrip("/") + "/chat/completions",
+                    json={"model": model, "messages": messages, "max_tokens": 1024},
+                    headers=headers,
+                )
+                data = r.json()
+                reply = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            return {"response": reply}
+    except Exception as e:
+        return {"error": str(e)}
 
 
 # ── Settings (persist) ────────────────────────────────────────────────────────

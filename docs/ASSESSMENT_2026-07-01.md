@@ -1,6 +1,6 @@
 # godot-mcp — Assessment 2026-07-01
 
-Scope: full repo review of `D:\Dev\repos\godot-mcp` (v0.2.x/0.3.0, FastMCP 3.4.2, 56 MCP tools, TCP bridge, web_sota dashboard, Tauri native, MCPB bundle, mobile WS gateway). Findings below are code-verified; items marked **[verified live]** were confirmed by running commands on Goliath during the review.
+Scope: full repo review of `D:\Dev\repos\godot-mcp` (v0.2.x/0.3.0, FastMCP 3.4.2, 56 MCP tools, TCP bridge, webapp dashboard, Tauri native, MCPB bundle, mobile WS gateway). Findings below are code-verified; items marked **[verified live]** were confirmed by running commands on Goliath during the review.
 
 **Verdict:** Ambitious, well-documented, architecturally coherent repo with a genuinely novel pipeline (prompt → GamePlan → Marble worlds → Godot scene → GDScript → itch/Steam). But right now the **justfile does not parse at all**, the **MCPB bundle cannot start**, the **flagship game-builder pipeline cannot work via REST/dashboard** (sampling is structurally unavailable there), and a **background task crashes at every server start**. The gap between STATUS.md's "Implemented" claims and what actually runs is wider than fleet honesty standards allow. Roughly 2-3 AI-assisted days close all P0/P1 items.
 
@@ -84,7 +84,7 @@ Two additional bugs inside `sample_text` even when a sampling client exists:
 
 ### 2.6 Version chaos
 
-Five different versions coexist: `0.1.0` (justfile `VER`, plugin.cfg, web_sota package.json, mobile gateway hello message), `0.2.0` (pyproject, mcpb manifest), `0.2.1` (Tauri artifacts), `0.3.0` (STATUS.md, hardcoded in `/api/v1/status` and lifespan log). Single-source it: `importlib.metadata.version("godot-mcp")` at runtime, one bump touchpoint, and fix justfile `VER` since it names the `.mcpb` output.
+Five different versions coexist: `0.1.0` (justfile `VER`, plugin.cfg, webapp package.json, mobile gateway hello message), `0.2.0` (pyproject, mcpb manifest), `0.2.1` (Tauri artifacts), `0.3.0` (STATUS.md, hardcoded in `/api/v1/status` and lifespan log). Single-source it: `importlib.metadata.version("godot-mcp")` at runtime, one bump touchpoint, and fix justfile `VER` since it names the `.mcpb` output.
 
 ### 2.7 CHANGELOG.md head is corrupted
 
@@ -113,7 +113,7 @@ Two duplicate `[Unreleased] — 2026-06-14` blocks sit *above* the file header, 
 |---|---|
 | Prefab UI (mandatory for list/status/stats tools) | **Absent.** No `prefab-ui` dependency, no ToolResult cards. `godot_status`, `fleet_exchange_status`, `itch_status`, `steam_status`, `workflow_list`, `artifact_list` are prime candidates. |
 | `/api/capabilities` introspection (WEBAPP_STANDARDS §1.4, mandatory) | **Absent.** Webapp hardcodes feature availability. |
-| Bun (BUN_STANDARDS) | **Not migrated.** web_sota has `package-lock.json`; justfile calls `npm`/`npx` throughout. `biome` is invoked but not in devDependencies (npx prompts to download). No `bun.lock`. |
+| Bun (BUN_STANDARDS) | **Not migrated.** webapp has `package-lock.json`; justfile calls `npm`/`npx` throughout. `biome` is invoked but not in devDependencies (npx prompts to download). No `bun.lock`. |
 | Portmanteau tool design | 56 flat tools. The 15 engine-control tools are defensible as-is (agent ergonomics), but itch (6), steam (7), fleet (6) would each collapse into one portmanteau with an `operation` enum, cutting the surface from 56 to ~25. |
 | MCPB via mcpb CLI | Violated (see 1.3). |
 | Justfile standards | Parse-broken (1.1); duplicate `cua-nsis-test` recipe (local + fleet.just — works via override, but redundant). |
@@ -154,7 +154,7 @@ Day 1 (unblock): fix justfile parse + `{{REPO}}`; fix LOG_RING task; fix `modify
 
 Day 2 (flagship): sampling fallback chain (ctx → API → Ollama) plus `sample_text` content/system fixes; `asyncio.to_thread` wrapping + bridge send lock; GDScript `--check-only` validation pass; gb-smoke recipe.
 
-Day 3 (packaging + standards): rebuild MCPB via mcpb-pack.ps1 (delete stale mcpb/src/server.py); mount MCP HTTP transport or drop "dual" claims; Bun migration for web_sota; `/api/capabilities`; first Prefab cards (status tools).
+Day 3 (packaging + standards): rebuild MCPB via mcpb-pack.ps1 (delete stale mcpb/src/server.py); mount MCP HTTP transport or drop "dual" claims; Bun migration for webapp; `/api/capabilities`; first Prefab cards (status tools).
 
 Later: capture_viewport + input injection bridge actions; godot_scene portmanteau; splat R&D decision; portmanteau consolidation of itch/steam/fleet; STATUS.md refresh with honest tool counts.
 

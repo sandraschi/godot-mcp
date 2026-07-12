@@ -263,3 +263,73 @@ def send(action: str, params: dict[str, Any] | None = None, timeout: float = _DE
 
 def is_installed() -> bool:
     return _bridge.is_installed()
+
+
+def find_godot() -> str | None:
+    """Locate godot.exe — checks GODOT_PATH, PATH, then common install dirs."""
+    cfg = resolve_config()
+    if cfg["godot_path"] and Path(cfg["godot_path"]).is_file():
+        return cfg["godot_path"]
+    import shutil
+
+    found = shutil.which("godot") or shutil.which("godot.exe")
+    if found:
+        return found
+    candidates = [
+        r"C:\Program Files\Godot\godot.exe",
+        r"C:\Program Files (x86)\Godot\godot.exe",
+        str(Path.home() / "Godot" / "godot.exe"),
+        str(Path.home() / ".local" / "bin" / "godot.exe"),
+    ]
+    for p in candidates:
+        if Path(p).is_file():
+            return p
+    return None
+
+
+def launch_bridge(project_root: str | None = None) -> dict[str, Any]:
+    """Locate Godot and launch it headless with the MCP bridge project.
+
+    Returns immediately after spawning; the bridge takes a few seconds to
+    start. Call connect() to check readiness.
+    """
+    import subprocess
+
+    godot = find_godot()
+    if not godot:
+        return {"success": False, "error": "Godot not found. Set GODOT_PATH or install Godot 4.x."}
+
+    if not project_root:
+        # Default: look for project.godot in the MCP server's parent or CWD
+        for candidate in [Path.cwd(), Path(__file__).resolve().parent.parent.parent.parent]:
+            if (candidate / "project.godot").is_file():
+                project_root = str(candidate)
+                break
+
+    if not project_root or not Path(project_root).is_dir():
+        return {"success": False, "error": "Godot project root not found. Pass project_root or run from the repo root."}
+
+    log_dir = Path.home() / ".godot-mcp"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_path = log_dir / "godot-bridge.log"
+
+    try:
+        proc = subprocess.Popen(  # noqa: S603 — godot comes from PATH or GODOT_PATH, not user input
+            [godot, "--path", project_root, "--headless", "--verbose"],
+            stdout=open(log_path, "w"),
+            stderr=subprocess.STDOUT,
+            creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0,
+        )
+        logger.info("Launched Godot bridge (PID %d) from %s, log: %s", proc.pid, project_root, log_path)
+        return {
+            "success": True,
+            "pid": proc.pid,
+            "godot": godot,
+            "project": project_root,
+            "log": str(log_path),
+            "message": "Godot bridge launched. It takes ~5s to start — try godot_status or connect().",
+        }
+    except FileNotFoundError:
+        return {"success": False, "error": f"Godot not found at {godot}"}
+    except Exception as e:
+        return {"success": False, "error": f"Failed to launch Godot: {e}"}

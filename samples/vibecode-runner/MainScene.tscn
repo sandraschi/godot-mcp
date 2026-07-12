@@ -1,0 +1,94 @@
+[gd_scene load_steps=6 format=3 uid="uid://mainscene"]
+
+[sub_resource type="RectangleShape2D" id=1]
+size = Vector2(24, 40)
+
+[sub_resource type="RectangleShape2D" id=2]
+size = Vector2(32, 32)
+
+[sub_resource type="ButtonGroup" id=3]
+
+[node name="MainScene" type="Node2D"]
+
+[node name="TerminalBg" type="ColorRect" parent="."]
+offset = Vector2(0, 0)
+size = Vector2(1024, 600)
+color = Color(0.02, 0.02, 0.04)
+
+[node name="Scanlines" type="ColorRect" parent="."]
+offset = Vector2(0, 0)
+size = Vector2(1024, 600)
+color = Color(0, 0, 0, 0.08)
+material = SubResource(4)
+
+[node name="Player" type="CharacterBody2D" parent="."]
+position = Vector2(512, 500)
+collision_layer = 1
+collision_mask = 4
+script = ExtResource("res://Player.gd")
+
+[node name="PlayerSprite" type="ColorRect" parent="Player"]
+offset = Vector2(-12, -20)
+size = Vector2(24, 40)
+color = Color(0, 1, 0.3)
+
+[node name="Label" type="Label" parent="Player/PlayerSprite"]
+offset = Vector2(-8, -16)
+size = Vector2(24, 40)
+text = "</>"
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Player"]
+shape = SubResource(1)
+
+[node name="Enemies" type="Node2D" parent="."]
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="ScoreLabel" type="Label" parent="UI"]
+offset = Vector2(16, 12)
+size = Vector2(200, 24)
+text = "LOC: 0"
+theme_override_colors/font_color = Color(0, 1, 0.3)
+theme_override_fonts/font_size = 18
+
+[node name="MultLabel" type="Label" parent="UI"]
+offset = Vector2(16, 36)
+size = Vector2(100, 20)
+theme_override_colors/font_color = Color(1, 0.8, 0)
+
+[node name="ShipItButton" type="Button" parent="UI"]
+offset = Vector2(880, 12)
+size = Vector2(120, 32)
+text = "SHIP IT! (3)"
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_styles/normal = null
+button_group = SubResource(3)
+
+[node name="HackMessage" type="Label" parent="UI"]
+offset = Vector2(312, 12)
+size = Vector2(400, 24)
+theme_override_colors/font_color = Color(1, 0.2, 0.2)
+theme_override_fonts/font_size = 16
+hide()
+
+[node name="GameOverLabel" type="Label" parent="UI"]
+offset = Vector2(200, 180)
+size = Vector2(624, 240)
+theme_override_colors/font_color = Color(0, 1, 0.3)
+theme_override_fonts/font_size = 28
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 1
+hide()
+
+[node name="ShipItFlash" type="ColorRect" parent="."]
+offset = Vector2(0, 0)
+size = Vector2(1024, 600)
+color = Color(1, 1, 1, 0.3)
+hide()
+
+[node name="SpawnTimer" type="Timer" parent="."]
+wait_time = 2.0
+
+[connection signal="pressed" from="UI/ShipItButton" to="." method="ship_it"]

@@ -18,7 +18,7 @@
 | `src/godot_mcp/sampling/` | LLM sampling tools (2) |
 | `src/godot_mcp/mcp_bridge/` | Cross-server MCP bridge tools (2) |
 | `src/godot_mcp/workflows/` | Workflow engine + 3 built-in workflows |
-| `web_sota/` | Vite React dashboard (port 10992) |
+| `webapp/` | Vite React dashboard (port 10992) |
 | `templates/` | Godot project templates + export presets |
 | `samples/` | Sample games + MCPB bundles |
 | `native/` | Tauri 2.0 desktop wrapper |

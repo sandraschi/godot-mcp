@@ -32,4 +32,9 @@ def test_register_accepts_mcp():
     assert "godot_headless_verify" in names
     assert "godot_import_glb" in names
     assert "godot_play_animation" in names
-    assert len(mcp.registered) == 15
+    assert "start_bridge" in names
+    assert "godot_capture_viewport" in names
+    assert "godot_simulate_input" in names
+    assert "godot_scene" in names
+    assert "godot_generate_procedural_texture" in names
+    assert len(mcp.registered) == 20

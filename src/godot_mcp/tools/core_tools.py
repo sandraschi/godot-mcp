@@ -2,12 +2,12 @@
 
 import asyncio
 import logging
-from typing import Annotated
+from typing import Annotated, Any, Literal
 
 from fastmcp import Context
 from pydantic import Field
 
-from godot_mcp.services.godot_bridge import get_bridge
+from godot_mcp.services.godot_bridge import find_godot, get_bridge, launch_bridge
 
 logger = logging.getLogger("godot-mcp.tools")
 
@@ -30,9 +30,15 @@ async def godot_status(ctx: Context = None) -> dict:
     if not bridge.connected:
         result = await asyncio.to_thread(bridge.connect)
         if not result["success"]:
+            godot = await asyncio.to_thread(find_godot)
+            hint = ""
+            if godot:
+                hint = " Godot found — try start_bridge() or just godot-bridge."
+            else:
+                hint = " Install Godot 4.x (just install-godot) then start the bridge."
             return {
                 "success": False,
-                "error": result.get("error", "Cannot connect to Godot"),
+                "error": result.get("error", "Cannot connect to Godot") + hint,
                 "bridge_connected": False,
             }
 
@@ -596,6 +602,215 @@ async def godot_headless_verify(
     return await asyncio.to_thread(bridge.send, "headless_verify", {"script": script})
 
 
+async def godot_capture_viewport(
+    output_path: Annotated[
+        str | None, Field(description="Absolute path for the PNG (optional, auto-generated if omitted).", default=None)
+    ] = None,
+    ctx: Context = None,
+) -> dict:
+    """Capture the current Godot viewport as a PNG image.
+
+    Saves a screenshot of the active viewport to disk and returns the path
+    and dimensions. The Godot bridge must be connected.
+
+    ## Return Format
+    {"success": bool, "data": {"path": str, "width": int, "height": int, "format": "png"}}
+
+    ## Examples
+    await godot_capture_viewport()
+    await godot_capture_viewport(output_path="C:/captures/scene.png")
+    """
+    bridge = get_bridge()
+    if not bridge.connected:
+        result = await asyncio.to_thread(bridge.connect)
+        if not result["success"]:
+            return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
+
+    params = {}
+    if output_path:
+        params["output_path"] = output_path
+    return await asyncio.to_thread(bridge.send, "capture_viewport", params, timeout=30)
+
+
+async def godot_simulate_input(
+    actions: Annotated[
+        list[dict],
+        Field(
+            description='List of input actions: [{"key": "Space", "pressed": true, "hold_ms": 50}, ...]. Key names: Space, A, B, ..., ArrowLeft, ArrowRight, etc.',
+        ),
+    ],
+    ctx: Context = None,
+) -> dict:
+    """Simulate keyboard input in the Godot engine via Input.parse_input_event.
+
+    Sends key press/release events to Godot's input system. Useful for
+    agent playtesting: press Space to jump, wait, screenshot, verify.
+
+    ## Return Format
+    {"success": bool, "data": {"actions_processed": int, "results": [...]}}
+
+    ## Examples
+    await godot_simulate_input(actions=[{"key": "Space", "pressed": true, "hold_ms": 100}])
+    await godot_simulate_input(actions=[
+        {"key": "ArrowRight", "pressed": true, "hold_ms": 500},
+        {"key": "Space", "pressed": true, "hold_ms": 100},
+    ])
+    """
+    bridge = get_bridge()
+    if not bridge.connected:
+        result = await asyncio.to_thread(bridge.connect)
+        if not result["success"]:
+            return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
+
+    return await asyncio.to_thread(bridge.send, "simulate_input", {"actions": actions}, timeout=30)
+
+
+async def godot_scene(
+    operation: Annotated[
+        Literal["add_node", "remove_node", "modify_node", "save_scene"],
+        Field(
+            description="Scene operation: add_node (create a node), remove_node (delete by name/path), modify_node (set property by path), save_scene (persist the current scene)."
+        ),
+    ],
+    parent: Annotated[
+        str | None, Field(description="Parent node path (e.g. '.' or 'World/Player'). Used by: add_node.", default=None)
+    ] = None,
+    node_type: Annotated[
+        str | None,
+        Field(
+            description="Godot node class (e.g. 'Node3D', 'CharacterBody3D', 'Camera3D'). Used by: add_node.",
+            default=None,
+        ),
+    ] = None,
+    name: Annotated[
+        str | None, Field(description="Node name. Used by: add_node, remove_node, modify_node.", default=None)
+    ] = None,
+    node_path: Annotated[
+        str | None, Field(description="Full path to the node. Used by: modify_node, remove_node.", default=None)
+    ] = None,
+    property_name: Annotated[
+        str | None, Field(description="Property name (e.g. 'position', 'scale'). Used by: modify_node.", default=None)
+    ] = None,
+    value: Annotated[Any, Field(description="New value for the property. Used by: modify_node.", default=None)] = None,
+    ctx: Context = None,
+) -> dict:
+    """Manage the Godot scene tree: add, remove, modify nodes, or save the scene.
+
+    Portmanteau for 4 bridge-only REST actions: add_node, remove_node,
+    modify_node, save_scene.
+
+    ## Return Format
+    {"success": bool, "data": {...}}
+
+    ## Examples
+    await godot_scene(operation="add_node", parent=".", node_type="Camera3D", name="GameCam")
+    await godot_scene(operation="remove_node", name="OldNode")
+    await godot_scene(operation="modify_node", node_path="Player/Camera", property_name="current", value=True)
+    await godot_scene(operation="save_scene")
+    """
+    bridge = get_bridge()
+    if not bridge.connected:
+        result = await asyncio.to_thread(bridge.connect)
+        if not result["success"]:
+            return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
+
+    params = {}
+    if parent is not None:
+        params["parent"] = parent
+    if node_type is not None:
+        params["type"] = node_type
+    if name is not None:
+        params["name"] = name
+    if node_path is not None:
+        params["node_path"] = node_path
+    if property_name is not None:
+        params["property_name"] = property_name
+    if value is not None:
+        params["value"] = value
+
+    return await asyncio.to_thread(bridge.send, operation, params, timeout=15)
+
+
+async def godot_generate_procedural_texture(
+    texture_type: Annotated[
+        Literal["gradient", "noise", "checker", "solid"],
+        Field(
+            description="Texture type: gradient (vertical color ramp), noise (perlin noise), checker (checkerboard), solid (flat color)."
+        ),
+    ] = "gradient",
+    width: Annotated[int, Field(default=256, ge=16, le=2048, description="Texture width in pixels.")] = 256,
+    height: Annotated[int, Field(default=256, ge=16, le=2048, description="Texture height in pixels.")] = 256,
+    colors: Annotated[
+        list[str],
+        Field(
+            description="List of hex colors (e.g. ['#ff4444', '#4444ff']). Gradient uses all; noise lerps between first two; checker uses first two; solid uses first."
+        ),
+    ] = ["#ff4444", "#4444ff", "#44ff44"],
+    cell_size: Annotated[int, Field(default=32, ge=4, le=256, description="Cell size for checker pattern.")] = 32,
+    frequency: Annotated[float, Field(default=0.05, ge=0.001, le=1.0, description="Noise frequency.")] = 0.05,
+    seed: Annotated[int | None, Field(default=None, description="Noise seed (random if omitted).")] = None,
+    output_path: Annotated[str | None, Field(default=None, description="Optional output path for the PNG.")] = None,
+    ctx: Context = None,
+) -> dict:
+    """Generate a procedural texture (gradient, noise, checker, solid) in Godot.
+
+    Creates a runtime texture using Godot's Image API, saves it as PNG,
+    and returns the path. The texture can be used with godot_set_material
+    or as a sprite texture.
+
+    ## Return Format
+    {"success": bool, "data": {"path": str, "width": int, "height": int, "texture_type": str}}
+
+    ## Examples
+    await godot_generate_procedural_texture(texture_type="gradient", width=512, height=128, colors=["#ff0000", "#0000ff"])
+    await godot_generate_procedural_texture(texture_type="noise", width=256, height=256, colors=["#1a1a2e", "#e94560"], frequency=0.03)
+    await godot_generate_procedural_texture(texture_type="checker", cell_size=64, colors=["#333333", "#666666"])
+    """
+    bridge = get_bridge()
+    if not bridge.connected:
+        result = await asyncio.to_thread(bridge.connect)
+        if not result["success"]:
+            return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
+
+    params: dict = {
+        "type": texture_type,
+        "width": width,
+        "height": height,
+        "colors": colors,
+    }
+    if texture_type == "checker":
+        params["cell_size"] = cell_size
+    if texture_type == "noise":
+        params["frequency"] = frequency
+        if seed is not None:
+            params["seed"] = seed
+    if output_path:
+        params["output_path"] = output_path
+    return await asyncio.to_thread(bridge.send, "generate_procedural_texture", params, timeout=15)
+
+
+async def start_bridge(
+    project_root: Annotated[
+        str | None, Field(description="Godot project root path (optional — auto-detected).", default=None)
+    ] = None,
+    ctx: Context = None,
+) -> dict:
+    """Locate Godot and launch it headless with the MCP bridge addon.
+
+    Finds godot.exe via GODOT_PATH, PATH, or common install dirs, then starts
+    it with ``--headless`` and the bridge project. Call ``godot_status`` after
+    ~5s to verify the bridge is connected.
+
+    ## Return Format
+    {"success": bool, "pid": int, "godot": str, "project": str, "log": str, "message": str}
+
+    ## Examples
+    await start_bridge()
+    await start_bridge(project_root="C:/MyGame")
+    """
+    return await asyncio.to_thread(launch_bridge, project_root)
+
+
 def register(mcp):
     mcp.tool(annotations=_READ_ONLY, version="0.1.0")(godot_status)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_import_stl)
@@ -612,3 +827,8 @@ def register(mcp):
     mcp.tool(annotations=_READ_ONLY, version="0.1.0")(godot_read_scene_tree)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_set_config)
     mcp.tool(annotations=_READ_ONLY, version="0.1.0")(godot_headless_verify)
+    mcp.tool(annotations=_READ_ONLY, version="0.1.0")(godot_capture_viewport)
+    mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_simulate_input)
+    mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_scene)
+    mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_generate_procedural_texture)
+    mcp.tool(annotations=_MUTATING, version="0.1.0")(start_bridge)

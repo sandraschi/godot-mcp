@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastmcp import Context
 from pydantic import Field
@@ -115,6 +115,80 @@ async def ship_to_itch(
     )
 
 
+async def itch_ops(
+    operation: Annotated[
+        Literal["status", "export", "preview", "push", "latest", "ship"],
+        Field(
+            description="itch.io operation: status (check Butler), export (export project), preview (Butler diff), push (upload), latest (check version), ship (export + preview + push)."
+        ),
+    ],
+    target: Annotated[
+        str | None, Field(default=None, description="Export target: web or windows. Used by: export, ship.")
+    ] = None,
+    game: Annotated[
+        str | None, Field(default=None, description="Sample key: dodge, heart. Used by: export, ship.")
+    ] = None,
+    project_path: Annotated[
+        str | None, Field(default=None, description="Custom project path. Used by: export, ship.")
+    ] = None,
+    upload_dir: Annotated[
+        str | None, Field(default=None, description="Directory to upload. Used by: preview, push.")
+    ] = None,
+    itch_target: Annotated[
+        str | None, Field(default=None, description="user/game slug. Used by: preview, push, ship.")
+    ] = None,
+    channel: Annotated[
+        str | None, Field(default=None, description="Butler channel: html, win. Used by: preview, push, ship.")
+    ] = None,
+    hidden: Annotated[bool, Field(default=False, description="Hidden channel. Used by: push.")] = False,
+    preview: Annotated[bool, Field(default=True, description="Preview before push. Used by: ship.")] = True,
+    do_push: Annotated[bool, Field(default=True, description="Push after preview. Used by: ship.")] = True,
+    output_path: Annotated[
+        str | None, Field(default=None, description="Optional output path. Used by: export.")
+    ] = None,
+    ctx: Context = None,
+) -> dict:
+    """itch.io publishing — consolidated portmanteau for Butler operations.
+
+    ## Return Format
+    {"success": bool, ...}
+
+    ## Examples
+    await itch_ops(operation="status")
+    await itch_ops(operation="export", target="web", game="dodge")
+    await itch_ops(operation="push", upload_dir="build/dodge/web", itch_target="user/game")
+    await itch_ops(operation="ship", target="web", game="dodge", itch_target="user/game")
+    """
+    from godot_mcp.itch import service as s
+
+    match operation:
+        case "status":
+            return s.itch_status()
+        case "export":
+            return s.godot_export_release_tool(
+                target=target or "web", game=game or "dodge", project_path=project_path, output_path=output_path
+            )
+        case "preview":
+            return s.itch_push_preview(upload_dir or "", itch_target=itch_target, channel=channel)
+        case "push":
+            return s.itch_push(upload_dir or "", itch_target=itch_target, channel=channel, hidden=hidden)
+        case "latest":
+            return s.itch_latest_version(itch_target=itch_target, channel=channel)
+        case "ship":
+            return s.ship_to_itch(
+                target=target or "web",
+                game=game or "dodge",
+                project_path=project_path,
+                itch_target=itch_target,
+                channel=channel,
+                preview=preview,
+                push=do_push,
+                hidden=hidden,
+            )
+        case _:
+            return {"success": False, "error": f"Unknown itch operation: {operation}"}
+
+
 def register(mcp):
     mcp.tool(annotations=_READ_ONLY, version="0.2.1")(itch_status)
     mcp.tool(annotations=_MUTATING, version="0.2.1")(godot_export_release)
@@ -122,3 +196,4 @@ def register(mcp):
     mcp.tool(annotations=_MUTATING, version="0.2.1")(itch_push)
     mcp.tool(annotations=_READ_ONLY, version="0.2.1")(itch_latest_version)
     mcp.tool(annotations=_MUTATING, version="0.2.1")(ship_to_itch)
+    mcp.tool(annotations=_READ_ONLY, version="0.4.0")(itch_ops)

@@ -10,6 +10,7 @@ dependencies = [
     "uvicorn[standard]>=0.23",
     "httpx>=0.27",
     "pydantic>=2.0",
+    "prefab-ui>=0.14.0",
 ]
 
 [build-system]
@@ -24,6 +25,7 @@ minversion = "8.0"
 testpaths = ["tests"]
 pythonpath = ["src"]
 asyncio_mode = "auto"
+markers = ["slow: marks tests as slow (network-dependent, opt-in with -k 'not slow')"]
 
 [tool.ruff]
 line-length = 120
@@ -35,12 +37,16 @@ ignore = ["S101"]
 
 [tool.ruff.lint.per-file-ignores]
 "src/**/*.py" = ["E501"]
-"src/godot_mcp/server.py" = ["E501", "S110", "S603"]
+"src/godot_mcp/server.py" = ["E501", "S110", "S603", "E402"]
+"src/godot_mcp/services/llm_detect.py" = ["S607", "S310"]
+"scripts/*.py" = ["E501", "S310", "S603", "S607", "E402", "F841", "S110", "E741", "F401"]
 "tests/**/*.py" = ["E501", "S101"]
 
 [dependency-groups]
 dev = [
+    "pyinstaller>=6.21.0",
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
     "ruff>=0.9",
+    "gdtoolkit>=4.5,<5",
 ]

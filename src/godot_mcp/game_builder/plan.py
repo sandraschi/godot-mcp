@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -21,11 +21,16 @@ class WorldSpec(BaseModel):
 
 
 class SceneSpec(BaseModel):
-    """One Godot scene in the game."""
+    """One node in the Godot scene tree. Can have nested children."""
 
-    name: str = Field(description="Scene name (e.g. 'Game', 'Player', 'HUD').")
-    type: str = Field(default="Node2D", description="Root node type: Node2D, Node3D, Control, etc.")
+    name: str = Field(description="Node name (e.g. 'Player', 'Camera', 'HUD').")
+    type: str = Field(default="Node2D", description="Node type: Node2D, Node3D, Control, CharacterBody2D, etc.")
     scripts: list[str] = Field(default_factory=list, description="GDScript filenames attached to this node.")
+    children: list[SceneSpec] = Field(default_factory=list, description="Child nodes — nested scene hierarchy.")
+
+
+# Resolve forward ref for recursive SceneSpec.children
+SceneSpec.model_rebuild()
 
 
 class ScriptSpec(BaseModel):
@@ -58,6 +63,27 @@ class HazardSpec(BaseModel):
     behavior: str = Field(default="sine", description="Movement pattern: 'sine', 'linear', 'chase', 'static'.")
     speed: float = Field(default=200.0)
     color: str = Field(default="#ff4444", description="Hex color for procedural visuals.")
+
+
+class NPCSpec(BaseModel):
+    """A non-player character with dialogue."""
+
+    name: str = Field(description="NPC name (e.g. 'Old Sage', 'Shopkeeper').")
+    role: str = Field(
+        default="", description="Role in the game: 'quest_giver', 'merchant', 'enemy', 'ally', 'background'."
+    )
+    dialogues: list[str] = Field(
+        default_factory=list, description="Lines of dialogue this NPC says during interactions."
+    )
+    position: list[float] = Field(default_factory=lambda: [0.0, 0.0], description="2D or 3D position in the scene.")
+
+
+class NarrativeArc(BaseModel):
+    """Story structure for the game."""
+
+    premise: str = Field(default="", description="One-sentence premise / high concept.")
+    acts: list[str] = Field(default_factory=list, description="Major story beats (2-4 acts).")
+    tone: str = Field(default="neutral", description="Story tone: 'heroic', 'dark', 'comedy', 'mystery', 'neutral'.")
 
 
 class ScoringSpec(BaseModel):
@@ -109,6 +135,9 @@ class GamePlan(BaseModel):
     hazards: list[HazardSpec] = Field(default_factory=list, description="Enemy/obstacle types.")
     scoring: ScoringSpec | None = Field(default=None, description="Scoring system.")
 
+    npcs: list[NPCSpec] = Field(default_factory=list, description="Non-player characters with dialogue.")
+    narrative: NarrativeArc | None = Field(default=None, description="Story arc / narrative structure.")
+
     lighting: LightingSpec | None = Field(default=None, description="Lighting config (3D only).")
     camera: CameraSpec | None = Field(default=None, description="Camera config.")
 
@@ -116,7 +145,17 @@ class GamePlan(BaseModel):
 
     controls: dict[str, str] = Field(
         default_factory=lambda: {"jump": "space", "slide": "down", "shoot": "left_click"},
-        description="Input map (action → key).",
+        description="Input map (action -> key).",
+    )
+
+    procedural_visuals: dict[str, Any] = Field(
+        default_factory=lambda: {"palette": ["#ff4444", "#4444ff", "#44ff44"], "style": "flat"},
+        description="Procedural visual style: palette (list of hex colors), style (flat, gradient, outline, neon).",
+    )
+
+    plugins: list[str] = Field(
+        default_factory=list,
+        description="Godot plugins to auto-install: 'dialogic' (dialogue), 'godot-behavior-tree' (AI), 'gut' (testing), 'aseprite-wizard' (sprites), 'terrain3d', 'godot-voxel', 'godot-xr-tools'.",
     )
 
     def to_json(self) -> str:
@@ -127,4 +166,25 @@ class GamePlan(BaseModel):
         import json
 
         data = json.loads(raw) if isinstance(raw, (str, bytes)) else raw
+        if not isinstance(data, dict):
+            raise ValueError("GamePlan must be a JSON object")
+
+        # Strip null values so pydantic defaults apply
+        for key in list(data.keys()):
+            if data[key] is None:
+                if cls.model_fields.get(key) and cls.model_fields[key].get_default() is not None:
+                    del data[key]
+                continue
+            if isinstance(data[key], dict):
+                data[key] = {k: v for k, v in data[key].items() if v is not None}
+                if key == "controls" and not data[key]:
+                    del data[key]
+
+        # Fix common LLM output issues with Literal fields
+        export = data.get("export")
+        if isinstance(export, dict) and "target" in export:
+            t = str(export["target"])
+            if t and t not in ("web", "windows"):
+                export["target"] = t.split("|")[0].strip() if "|" in t else "web"
+
         return cls.model_validate(data)

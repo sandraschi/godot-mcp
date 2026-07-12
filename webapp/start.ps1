@@ -1,0 +1,23 @@
+# start.ps1 ÔÇö Godot MCP webapp frontend
+$WebPort = 10992
+$FleetStartPath = Join-Path $ProjectRoot "scripts\FleetStartMode.ps1"
+if (-not (Test-Path -LiteralPath $FleetStartPath)) {
+    Write-Host "ERROR: Missing vendored launcher helper: $FleetStartPath" -ForegroundColor Red
+    exit 1
+}
+. $FleetStartPath
+
+
+# Kill any existing processes on this port
+Get-NetTCPConnection -LocalPort $WebPort -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
+Start-Sleep -Seconds 1
+
+# Start webapp
+Push-Location "$PSScriptRoot"
+Start-Process cmd -ArgumentList "/c", "bun", "run", "dev"
+Pop-Location
+
+Start-Sleep -Seconds 5
+Write-Host "Godot MCP Webapp: http://localhost:$WebPort" -ForegroundColor Green
+Write-Host "Opening in default browser..." -ForegroundColor Cyan
+Start-Process "http://localhost:$WebPort"

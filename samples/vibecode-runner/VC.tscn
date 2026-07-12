@@ -1,0 +1,29 @@
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="RectangleShape2D" id=1]
+size = Vector2(80, 40)
+
+[node name="VC" type="Area2D"]
+collision_layer = 4
+collision_mask = 1
+script = ExtResource("res://VC.gd")
+
+[node name="Body" type="ColorRect" parent="."]
+offset = Vector2(-40, -20)
+size = Vector2(80, 40)
+color = Color(0.8, 0.8, 0)
+
+[node name="Question" type="Label" parent="."]
+offset = Vector2(-35, -15)
+size = Vector2(80, 40)
+text = "VALUATION?"
+theme_override_colors/font_color = Color(0, 0, 0)
+
+[node name="Label" type="Label" parent="."]
+offset = Vector2(-35, -15)
+size = Vector2(80, 40)
+hide()
+
+[node name="Timer" type="Timer" parent="."]
+
+[connection signal="body_entered" from="." to="." method="queue_free"]

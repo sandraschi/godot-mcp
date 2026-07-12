@@ -12,8 +12,8 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --no-dev --frozen
 
 COPY src/ src/
-COPY web_sota/backend/ web_sota/backend/
+COPY webapp/backend/ webapp/backend/
 
 EXPOSE 10993
 
-CMD ["uv", "run", "python", "-m", "web_sota.backend.server"]
+CMD ["uv", "run", "python", "-m", "webapp.backend.server"]

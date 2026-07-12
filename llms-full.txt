@@ -22,6 +22,10 @@ design_game → generate_game_worlds (worldlabs) → compose_game_scene → gene
 | `godot_read_scene_tree` | Dump full scene hierarchy as JSON |
 | `godot_headless_verify` | Check headless mode + CLI command |
 | `godot_set_config` | Write to project.godot INI-style config |
+| `godot_capture_viewport` | Capture Godot viewport as PNG |
+| `godot_simulate_input` | Send keyboard events for playtesting |
+| `godot_scene` | Portmanteau: add/remove/modify nodes, save scene |
+| `godot_generate_procedural_texture` | Create gradient/noise/checker/solid textures at runtime |
 
 ### 3D Import
 
@@ -48,6 +52,7 @@ design_game → generate_game_worlds (worldlabs) → compose_game_scene → gene
 
 | Tool | Description |
 |------|-------------|
+| `itch_ops` | **Portmanteau** — status/export/preview/push/latest/ship. One tool for all itch operations. |
 | `itch_status` | Butler install, API key, default slug |
 | `godot_export_release` | Export sample/custom project (web/windows) |
 | `itch_push_preview` | Diff NEW/MODIFIED/DELETED before push |
@@ -75,8 +80,10 @@ design_game → generate_game_worlds (worldlabs) → compose_game_scene → gene
 | `generate_game_worlds` | Marble world generation + collider GLB staging |
 | `compose_game_scene` | Assemble Godot scene from GamePlan + worlds |
 | `generate_game_logic` | Generate GDScript files from GamePlan |
+| `generate_game_tests` | Generate GUT test scripts + run via Godot headless |
+| `generate_dialogue` | Generate DialogueManager.gd + Dialogic .dtl from NPCs |
 | `export_and_ship` | Export + itch.io push in one call |
-| `build_game` | End-to-end: design → worlds → compose → logic → ship |
+| `build_game` | End-to-end: design → worlds → compose → logic → test → dialogue → ship |
 
 ### Fleet Integration
 
@@ -97,6 +104,16 @@ design_game → generate_game_worlds (worldlabs) → compose_game_scene → gene
 | `ai_generate_gdscript` | GDScript generation from natural language |
 | `cad_sampling` | Multi-step CAD reasoning via LLM |
 
+### Prefab Cards (in-chat rich UI)
+
+| Tool | Description |
+|------|-------------|
+| `show_godot_status_card` | Godot engine version, FPS, node count, bridge state |
+| `show_itch_status_card` | Butler install, API key, default slug |
+| `show_steam_status_card` | SteamPipe readiness, app/depot IDs |
+| `show_fleet_status_card` | Exchange depot assets, World Labs bridge status |
+| `show_workflows_card` | All built-in workflows with step counts |
+
 ## Config
 
 ### Env Vars
@@ -113,6 +130,21 @@ design_game → generate_game_worlds (worldlabs) → compose_game_scene → gene
 - 10992 — Frontend (Vite dev, React dashboard)
 - 9080 — Godot TCP bridge
 - 11020 — steam-mcp (fleet standard)
+
+## GDScript Validation & Repair
+
+Generated GDScript is validated through a two-pass pipeline:
+1. **gdlint** (gdtoolkit) — 28 style/naming rules (~50ms per file)
+2. **godot --check-only** — Godot headless compile check
+
+If either fails, errors are combined and fed to the LLM for up to 2 repair attempts.
+The repaired code is re-checked before acceptance.
+
+## Godot Ecosystem Tools
+
+See `docs/godot-ecosystem.md` for the full catalog of integrated secondary tools
+(gdlint, gdformat, gdparse, gdradon, Godot CLI flags, community plugins, fleet
+cross-repo servers).
 
 ## Error Handling
 

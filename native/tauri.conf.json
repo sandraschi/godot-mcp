@@ -3,10 +3,10 @@
   "version": "0.3.0",
   "identifier": "ai.fleet.godot-mcp",
   "build": {
-    "frontendDist": "../web_sota/dist",
+    "frontendDist": "../webapp/dist",
     "devUrl": "http://localhost:10992",
-    "beforeDevCommand": "npm --prefix ../web_sota run dev",
-    "beforeBuildCommand": "npm --prefix ../web_sota run build"
+"beforeDevCommand": "bun --cwd ../webapp run dev",
+"beforeBuildCommand": "bun --cwd ../webapp run build"
   },
   "app": {
     "windows": [
@@ -44,8 +44,8 @@
         "type": "skip"
       },
       "nsis": {
-        "install_mode": "currentUser",
-        "installer_hooks": "./windows/hooks.nsh"
+        "installMode": "currentUser",
+        "installerHooks": "./windows/hooks.nsh"
       }
     }
   },

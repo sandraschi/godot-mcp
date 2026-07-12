@@ -13,6 +13,7 @@ def register_all(mcp):
     from godot_mcp.itch.tools import register as reg_itch
     from godot_mcp.mcp_bridge.tools import register as reg_bridge
     from godot_mcp.mcpb.tools import register as reg_mcpb
+    from godot_mcp.prefabs.card_tools import register as reg_cards
     from godot_mcp.prefabs.tools import register as reg_prefabs
     from godot_mcp.prompts.tools import register as reg_prompts
     from godot_mcp.sampling.tools import register as reg_sampling
@@ -34,3 +35,4 @@ def register_all(mcp):
     reg_mcpb(mcp)
     reg_itch(mcp)
     reg_steam(mcp)
+    reg_cards(mcp)

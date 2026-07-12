@@ -1,10 +1,10 @@
 # Status — godot-mcp
 
-**Status**: v0.3.0 — 15 Godot bridge tools + 6 itch ship tools + **7 steam ship tools** + 6 fleet pipeline tools + **6 game_builder tools**; TCP bridge verified; World Labs GLB import wired; AI game-from-prompt pipeline; Steam publishing via steam-mcp; MCP-over-HTTP mounted at `/mcp`; sampling falls back to HTTP API/Ollama.
+**Status**: v0.3.0 — 15 Godot bridge tools + 6 itch ship tools + **7 steam ship tools** + 6 fleet pipeline tools + **6 game_builder tools** + **5 Prefab card tools**; TCP bridge verified; World Labs GLB import wired; AI game-from-prompt pipeline; Steam publishing via steam-mcp; MCP-over-HTTP mounted at `/mcp`; sampling falls back to HTTP API/Ollama. Bun migration complete. Prefab UI cards deployed.
 
 **Repo**: `D:\Dev\repos\godot-mcp`  
 **Ports**: Backend 10993, Frontend 10992, Bridge 9080, World Labs 10864/10865, steam-mcp 11020  
-**Updated**: 2026-07-01
+**Updated**: 2026-07-11
 
 ## Runtime (two processes)
 
@@ -87,7 +87,7 @@ Workflows: `ship_windows_steam_beta`, `ship_windows_steam_release`. Env: `STEAM_
 
 REST: `/api/v1/fleet/*`. Assessment: `docs/FLEET_ASSESSMENT.md`. Just: `fleet-status`, `fleet-import`, `fleet-worldlabs-*`.
 
-**Splat gap:** Gaussian splats (SPZ/RAD) are not rendered in Godot via godot-mcp yet — use Spark viewer URL or Unity handoff; GLB collision mesh works today.
+**Splat gap:** Gaussian splats (SPZ/RAD) are not rendered in Godot 4 via godot-mcp — use Spark viewer URL or Unity handoff. Multiple Godot 4 gaussian-splat GDExtensions exist (e.g. `Zylann/godot-gaussian-splat`) but none are stable enough for the pipeline. Decision: **document Spark viewer as the official handoff** and revisit when a GDExtension reaches 1.0. GLB collision mesh import works today.
 
 **Game Builder gap:** REST + UI + scene/script sync done. Live E2E still manual.
 
@@ -124,6 +124,7 @@ Pipeline: `prompt → design → worlds → compose → logic → export`. Spec:
 | `just demo-run` | Heart Platformer (4.0) |
 | `just demo-run platformer` | Official 2D platformer (4.4-patched) |
 | `just demo-run pong` | Pong |
+| `just demo-run vibecode` | Vibecoder Runner (original, AI-themed) |
 | `just demo-list` | All aliases |
 | `just little-game-export web dodge` | HTML5 → `build/little-game/dodge/web/` |
 | `just ship web dodge` | Export + Butler push (needs env) |
@@ -143,19 +144,48 @@ Build (requires Rust, Node 20+, uv, ~10 min first run):
 just tauri-build
 ```
 
-Sidecar only: `just tauri-sidecar`. Dev shell: `just tauri-dev` (expects `web_sota` on 10992).
+Sidecar only: `just tauri-sidecar`. Dev shell: `just tauri-dev` (expects `webapp` on 10992).
 
-## Done recently (2026-07-01 correctness sweep)
+## Sample game: Vibecoder Runner
 
-- justfile parse blocker removed (broken `pack-mcpb` recipe); `{{REPO}}` e2e fix; honest `tools` enumeration; VER 0.3.0
-- ws_gateway `LOG_RING` crash fixed (activity_log polling); `modify-node` → real `modify_node` GDScript handler
-- Sampling fallback chain: `ctx.sample()` → OpenAI-compatible API → Ollama; `SamplingUnavailableError` instead of fake-success string; Game Builder works over REST now
-- Bridge unified (module singleton), send lock + request_id correlation + recv buffer retention; settings.json wired into connect
-- All blocking bridge/subprocess/download calls wrapped in `asyncio.to_thread`
-- MCP HTTP transport mounted at `/mcp` (dual/http modes real now)
-- MCPB repaired: stale `mcpb/src/` drift copy deleted, root `manifest.json` with `${__dirname}`, path-robust `run_server.py`
-- Latent ImportError in `export_and_ship` fixed (`godot_export_release_tool`)
-- `GET /api/capabilities` added; versions unified at 0.3.0; CHANGELOG head corruption repaired
+Original game in `samples/vibecode-runner/`: 2D side-scrolling runner against 10 AI-themed
+enemy types (Hallucinator, PromptInjector, Tokenmaxxer, ContextOverflow, ClaudeDesktop,
+Techbro, LegacyCode, TheVC, TheMeeting, TheDatacenter). Procedural terminal visuals, all
+11 GDScript files pass `gdlint` clean. Created via the Game Builder pipeline.
+
+```
+just demo-run vibecode
+```
+
+Full catalog: `samples/vibecode-runner/README.md`.
+
+## Done recently (2026-07-11 standards sweep)
+
+- **5 Prefab UI card tools** — `show_godot_status_card`, `show_itch_status_card`, `show_steam_status_card`, `show_fleet_status_card`, `show_workflows_card`. Each returns `ToolResult(content=plain, structured_content=PrefabApp(...))`. Fleet Prefab standard compliance.
+- **`prefab-ui>=0.14.0`** — core dependency added.
+- **Bun migration** — `webapp` migrated from npm to Bun. All justfile, build scripts, and `tauri.conf.json` use `bun`/`bunx`. Fleet Bun standard compliance.
+- **`@biomejs/biome` in devDependencies** — explicit install, no `npx` fallback.
+- **`BUILD_LOG.md`** — created.
+- **`build.ps1` security fix** — bundles `.env.example` instead of `.env` (no API key leaks).
+- **`.bak` file purge** — 15 stale backup files deleted from `src/`.
+- **`main.rs`/`backend.rs` dedup** — `main.rs` now calls `backend::spawn_backend()` instead of maintaining inline copy. Reduced from 95 to 49 lines.
+- **`free_port()` upgraded** — multi-layer kill + 240s TIME_WAIT poll + UAC escalation fallback.
+- **`tauri.conf.json` NSIS schema fix** — camelCase for Tauri 2.0 compatibility.
+- **`manifest.json` fixed** — was double-stringified; proper JSON now. MCPB pack passes.
+- **`.mcpbignore` excludes `samples/`** — MCPB dropped from 242 MB to 377 KB.
+- **Playwright e2e expanded** — from 2 to 8 tests (KPIs, navigation, console errors, 422 validation).
+
+## Done earlier (2026-07-01 correctness sweep)
+
+- justfile parse blocker removed; `{{REPO}}` fix; `just tools` enumerates tools live
+- ws_gateway `LOG_RING` crash fixed; `modify-node` → real `modify_node` GDScript handler
+- Sampling fallback chain: `ctx.sample()` → OpenAI-compatible API → Ollama
+- Bridge unified singleton, send lock + request_id correlation + recv buffer retention
+- All blocking calls wrapped in `asyncio.to_thread`
+- MCP HTTP transport mounted at `/mcp`
+- MCPB repaired; root manifest.json fixed; path-robust `run_server.py`
+- `export_and_ship` ImportError fixed
+- `GET /api/capabilities` added; versions unified at 0.3.0
 
 ## Done earlier (2026-05-25)
 
@@ -177,30 +207,64 @@ Sidecar only: `just tauri-sidecar`. Dev shell: `just tauri-dev` (expects `web_so
 | `glama.json` | ✅ | Root |
 | `llms.txt` + `llms-full.txt` | ✅ | Root |
 | Tool annotations | ✅ | READ_ONLY/MUTATING per module |
-| `justfile` | ✅ | Comprehensive (520 lines) |
+| `justfile` | ✅ | Comprehensive (550 lines) |
 | `start.ps1` + `start.bat` | ✅ | |
 | Tauri NSIS build pipeline | ✅ | `just tauri-build` |
 | NSIS hooks | ✅ | Kill both processes |
 | CUA smoke test | ✅ | `scripts/cua-smoke.py` |
-| `backend.rs` free_port() | ✅ | Multi-layer kill |
+| `backend.rs` free_port() | ✅ | Multi-layer kill + 240s TIME_WAIT poll |
 | Web zoom (Ctrl+Scroll) | ✅ | |
 | Web dashboard | ✅ | 20 pages |
 | Skills page | ✅ | `src/godot_mcp/skills/` |
 | `data-testid` attributes | ✅ | |
 | Dark theme | ✅ | |
 | `@tauri-apps/api` | ✅ | |
-| Biome JS/TS linting | ✅ | `web_sota/biome.json` |
-| `.env.example` | ✅ | New — `.env` no longer bundled |
-| Session context injection | ✅ | New — 5 files |
-| `.pre-commit-config.yaml` | ✅ | New |
-| `mcpb/manifest.json` | ✅ | New |
-| Docker support | ✅ | New — `Dockerfile` + `docker-compose.yml` |
-| Tauri v2 config schema | ✅ | Fixed — removed invalid keys |
+| Biome JS/TS linting | ✅ | `@biomejs/biome` in devDeps |
+| `.env.example` | ✅ | `.env` no longer bundled in installer |
+| Session context injection | ✅ | 5 files |
+| `.pre-commit-config.yaml` | ✅ | |
+| `mcpb/manifest.json` | ✅ | |
+| Docker support | ✅ | `Dockerfile` + `docker-compose.yml` |
+| Tauri v2 config schema | ✅ | camelCase NSIS — fixed |
+| **`prefab-ui` core dep** | ✅ **NEW** | `prefab-ui>=0.14.0` |
+| **Prefab card tools** | ✅ **NEW** | 5 `@mcp.tool(app=True)` tools |
+| **Bun (fleet JS)** | ✅ **NEW** | `bun.lock`, `bun install`, `bunx` everywhere |
+| **`BUILD_LOG.md`** | ✅ **NEW** | NSIS build gate record |
+
+## Done this session (2026-07-11 features)
+
+- **`godot_generate_procedural_texture`** — creates gradient/noise/checker/solid textures at runtime via bridge.
+- **`generate_dialogue`** — generates DialogueManager.gd + Dialogic .dtl files from GamePlan NPCs.
+- **GUT test integration** — `generate_game_tests` runs after `build_game()` with improved prompt + examples.
+- **Portmanteau consolidation** — `itch_ops`, `steam_ops`, `fleet_ops` added (19 tools -> 3).
+- **`just gb-demo`** — one-command demo (design -> GDScript -> validate).
+- **`docs/game-builder-tutorial.md`** — 7-step tutorial from concept to HTML5.
+- **`docs/godot-ecosystem.md`** — full plugin catalog with 7 curated plugins.
+- **Vibecoder Runner** — sample game with 10 enemy types in `samples/vibecode-runner/`.
+
+## Integrated tools
+
+| Tool | Role | Status |
+|------|------|--------|
+| **gdlint** (gdtoolkit) | GDScript linter — 28 rules (naming, style, complexity) | Integrated in `generate_game_logic` validation pass |
+| **gdformat** (gdtoolkit) | GDScript formatter (Black-style) | Available as `just gdscript-format-check` |
+| **gdparse** (gdtoolkit) | GDScript AST parser | Available for static analysis |
+| **godot --check-only** | Godot headless compile check | Integrated in validation + repair loop |
+| **godot --export-release** | Headless HTML5/Windows export | `godot_export_release` tool |
+
+See `docs/godot-ecosystem.md` for the full ecosystem catalog.
+See `docs/ASSESSMENT_2026-07-11.md` for the full improvement roadmap.
 
 ## Next steps
 
-1. Live E2E test: `build_game` with worldlabs + bridge + sampling (or `GODOT_MCP_LLM_BASE_URL`)
-2. Prefab UI cards + `fastmcp dev apps` preview (fleet GenerativeUI standard)
-3. Bun migration for `web_sota` (bun.lock, Biome)
-4. R&D: `godot_import_splat` bridge action (SPZ in-engine)
-5. Optional: `/fleet` dashboard page; multi-node scene hierarchy from GamePlan
+1. Live E2E test: `build_game` with worldlabs + bridge + sampling (needs worldlabs-mcp running) — ~4h
+2. All other items from the 54h assessment are **done** — see `docs/ASSESSMENT_2026-07-11.md`
+
+## Tools registered
+
+20 core engine tools in `core_tools.py`:
+- 15 original (godot_status through godot_headless_verify)
+- 4 additions (godot_capture_viewport, godot_simulate_input, godot_scene, godot_generate_procedural_texture)
+- 1 utility (start_bridge)
+
+Plus 70+ tools across all modules (itch, steam, fleet, artifacts, game builder, mcpb, prefabs, prompts, sampling, workflows, card tools).

@@ -601,7 +601,7 @@ A: Three formats are supported: GLB/GLTF (glTF 2.0 binary and text), STL (binary
 A: No. The WebSocket bridge and all GDScript commands are written for Godot 4.x APIs. Godot 3.x uses a different scene tree API and rendering architecture that is not compatible.
 
 **Q: Is there a web dashboard?**
-A: Yes. A Vite React web dashboard runs on port 10992. Start it with `just web` or `npm run dev` from the web_sota/ directory. The dashboard shows live status, active tools, connection health, and AI chat integration.
+A: Yes. A Vite React web dashboard runs on port 10992. Start it with `just web` or `npm run dev` from the webapp/ directory. The dashboard shows live status, active tools, connection health, and AI chat integration.
 
 **Q: What ports does godot-mcp use?**
 A: Backend REST API and MCP SSE on port 10993, Vite web dashboard on port 10992, Godot TCP bridge on port 9080. All ports are configurable via environment variables.

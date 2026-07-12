@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import shutil
+import subprocess
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -15,14 +18,200 @@ from godot_mcp.game_builder.project import (
     ensure_project_path,
     sync_project_from_plan,
 )
-from godot_mcp.game_builder.prompts import GAME_DESIGNER_SYSTEM_PROMPT, GDScript_SPEC_PROMPT
+from godot_mcp.game_builder.prompts import GAME_DESIGNER_SYSTEM_PROMPT, GDSCRIPT_REPAIR_PROMPT, GDScript_SPEC_PROMPT
 from godot_mcp.mcp_bridge import get_or_create_bridge
 from godot_mcp.sampling.service import sample_text
+from godot_mcp.services.godot_bridge import find_godot
 
 logger = logging.getLogger("godot_mcp.game_builder")
 
 POLL_INTERVAL_SECONDS = 10
 MAX_WORLD_WAIT_SECONDS = 600
+MAX_REPAIR_ATTEMPTS = 2
+KNOW_NODE_TYPES = frozenset(
+    {
+        "Node2D",
+        "Node3D",
+        "Control",
+        "CanvasLayer",
+        "CharacterBody2D",
+        "CharacterBody3D",
+        "RigidBody2D",
+        "RigidBody3D",
+        "StaticBody2D",
+        "StaticBody3D",
+        "Area2D",
+        "Area3D",
+        "Sprite2D",
+        "Sprite3D",
+        "AnimatedSprite2D",
+        "AnimatedSprite3D",
+        "AudioStreamPlayer2D",
+        "AudioStreamPlayer3D",
+        "Camera2D",
+        "Camera3D",
+        "MeshInstance3D",
+        "GPUParticles3D",
+        "CPUParticles3D",
+        "Node",
+        "Panel",
+        "ColorRect",
+        "TextureRect",
+        "Label",
+        "RichTextLabel",
+        "Button",
+        "TextureButton",
+        "LineEdit",
+        "HSlider",
+        "VSlider",
+        "ProgressBar",
+        "HSplitContainer",
+        "VSplitContainer",
+        "TabContainer",
+        "ScrollContainer",
+        "MarginContainer",
+        "HBoxContainer",
+        "VBoxContainer",
+        "GridContainer",
+        "CenterContainer",
+        "AspectRatioContainer",
+        "NinePatchRect",
+        "ParallaxBackground",
+        "ParallaxLayer",
+        "TileMap",
+        "TileMapLayer",
+        "MultiMeshInstance2D",
+        "MultiMeshInstance3D",
+        "PointLight2D",
+        "DirectionalLight3D",
+        "OmniLight3D",
+        "SpotLight3D",
+    }
+)
+
+
+async def _lint_with_gdlint(path: str) -> str:
+    """Run gdlint on a .gd file and return combined error text (empty = clean)."""
+    gdlint = shutil.which("gdlint") or str(Path.home() / ".local" / "bin" / "gdlint.exe")
+    if not Path(gdlint).is_file():
+        return ""
+    try:
+        proc = await asyncio.to_thread(
+            subprocess.run,
+            [gdlint, path],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        errors = proc.stdout.strip() if proc.returncode != 0 else ""
+        return errors[:500] if errors else ""
+    except Exception:
+        return ""
+
+
+async def _compile_check_with_godot(path: str, godot: str) -> str:
+    """Run godot --check-only and return stderr text (empty = clean)."""
+    try:
+        proc = await asyncio.to_thread(
+            subprocess.run,
+            [godot, "--headless", "--check-only", "--script", path],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        return proc.stderr[:1000] if proc.returncode != 0 else ""
+    except subprocess.TimeoutExpired:
+        return "Godot check timed out after 30s"
+    except FileNotFoundError:
+        return "Godot not found"
+    except Exception as exc:
+        return str(exc)
+
+
+async def _validate_and_repair_scripts(scripts: dict[str, Any], plan: GamePlan, ctx: Any = None) -> dict[str, Any]:
+    """Validate generated GDScript via gdlint + godot --check-only, repair on failure.
+
+    1. Run gdlint (fast style/naming check).
+    2. Run godot --check-only (compilation check).
+    3. If either fails, feed ALL errors to the LLM for up to MAX_REPAIR_ATTEMPTS rounds.
+    """
+    godot = await asyncio.to_thread(find_godot)
+    has_gdlint = bool(shutil.which("gdlint")) or Path(Path.home() / ".local" / "bin" / "gdlint.exe").is_file()
+    if not godot and not has_gdlint:
+        logger.warning("Neither Godot nor gdlint found -- skipping GDScript validation")
+        return {}
+
+    report: dict[str, Any] = {}
+    for name, data in scripts.items():
+        if not data.get("generated"):
+            continue
+        code = data.get("code", "")
+        if not code.strip():
+            continue
+
+        tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".gd", delete=False, encoding="utf-8")
+        try:
+            tmp.write(code)
+            tmp.close()
+
+            for attempt in range(MAX_REPAIR_ATTEMPTS + 1):
+                lint_errors = await _lint_with_gdlint(tmp.name) if has_gdlint else ""
+                compile_errors = await _compile_check_with_godot(tmp.name, godot) if godot else ""
+                combined = "\n".join(filter(None, [lint_errors, compile_errors]))
+
+                if not combined:
+                    report[name] = {"valid": True, "attempts": attempt}
+                    break
+
+                if attempt >= MAX_REPAIR_ATTEMPTS:
+                    report[name] = {"valid": False, "error": combined[:500], "attempts": attempt}
+                    logger.warning(
+                        "Script '%s' still fails after %d repair attempts:\n%s", name, attempt, combined[:300]
+                    )
+                    break
+
+                repair_prompt = GDSCRIPT_REPAIR_PROMPT.format(
+                    script_name=name,
+                    error_text=combined[:1000],
+                    code=code,
+                )
+                try:
+                    repaired = await sample_text(ctx, prompt=repair_prompt, max_tokens=2048)
+                    repaired = (
+                        repaired.strip().removeprefix("```gdscript").removeprefix("```").removesuffix("```").strip()
+                    )
+                    if repaired:
+                        code = repaired
+                        data["code"] = code
+                        data["repaired_at_attempt"] = attempt + 1
+                        with open(tmp.name, "w", encoding="utf-8") as f:
+                            f.write(code)
+                        lint_after = await _lint_with_gdlint(tmp.name) if has_gdlint else ""
+                        compile_after = await _compile_check_with_godot(tmp.name, godot) if godot else ""
+                        still_clean = not lint_after and not compile_after
+                        if still_clean:
+                            report[name] = {"repaired": True, "attempts": attempt + 1}
+                            logger.info("Repaired '%s' cleanly (attempt %d)", name, attempt + 1)
+                        else:
+                            report[name] = {"repaired": True, "attempts": attempt + 1, "still_has_issues": True}
+                            logger.info(
+                                "Repaired '%s' (attempt %d) but %d checks still failing",
+                                name,
+                                attempt + 1,
+                                bool(lint_after) + bool(compile_after),
+                            )
+                except Exception as exc:
+                    logger.warning("Repair LLM call failed for '%s': %s", name, exc)
+                    report[name] = {"valid": False, "error": str(exc), "attempts": attempt}
+                    break
+        except Exception as exc:
+            report[name] = {"valid": False, "error": str(exc)}
+        finally:
+            try:
+                Path(tmp.name).unlink(missing_ok=True)
+            except Exception:
+                logger.debug("Failed to clean up temp script %s", tmp.name)
+    return report
 
 
 async def design_game(game_concept: str, ctx: Any = None) -> GamePlan:
@@ -259,21 +448,22 @@ async def compose_game_scene(
     steps.append("worlds_imported")
 
     if bridge:
-        for scene_spec in plan.scenes:
-            if scene_spec.type in ("Node2D", "Node3D", "Control", "CanvasLayer", "CharacterBody2D"):
+
+        async def _create_node_tree(spec, parent_path: str = "."):
+            """Recursively create nodes from a SceneSpec tree."""
+            if hasattr(spec, "type") and spec.type in KNOW_NODE_TYPES:
                 try:
                     await asyncio.to_thread(
-                        bridge.send,
-                        "add_node",
-                        {
-                            "parent": ".",
-                            "type": scene_spec.type,
-                            "name": scene_spec.name,
-                        },
-                        10,
+                        bridge.send, "add_node", {"parent": parent_path, "type": spec.type, "name": spec.name}, 10
                     )
+                    child_path = parent_path.rstrip("/") + "/" + spec.name if parent_path != "." else spec.name
+                    for child in getattr(spec, "children", []):
+                        await _create_node_tree(child, child_path)
                 except Exception as exc:
-                    logger.debug("Node '%s' creation skipped: %s", scene_spec.name, exc)
+                    logger.debug("Node '%s' creation skipped: %s", spec.name, exc)
+
+        for scene_spec in plan.scenes:
+            await _create_node_tree(scene_spec, ".")
         steps.append("scene_structure")
 
     imported_count = sum(1 for v in world_imports.values() if v.get("imported"))
@@ -326,7 +516,17 @@ async def generate_game_logic(plan: GamePlan, ctx: Any = None) -> dict[str, Any]
             results[script.name] = {"error": str(exc), "generated": False}
 
     completed = sum(1 for r in results.values() if r.get("generated"))
-    return {"scripts": results, "summary": f"{completed}/{len(plan.scripts)} scripts generated"}
+    if completed > 0:
+        repair_report = await _validate_and_repair_scripts(results, plan, ctx)
+        results["_validation"] = repair_report
+        repaired = sum(1 for r in repair_report.values() if r.get("repaired"))
+        if repaired:
+            logger.info("Repaired %d script(s) via GDScript validation", repaired)
+    return {
+        "scripts": results,
+        "summary": f"{completed}/{len(plan.scripts)} scripts generated",
+        "validation": results.get("_validation", {}),
+    }
 
 
 async def export_and_ship(
@@ -381,6 +581,10 @@ async def build_game(
         plan = await design_game(game_concept, ctx)
         result["plan"] = plan.model_dump()
         result["summary"] = f"Game: {plan.title} ({plan.genre})"
+        if plan.narrative:
+            result["summary"] += f" | Story: {plan.narrative.tone} — {plan.narrative.premise[:60]}"
+        if plan.npcs:
+            result["summary"] += f" | {len(plan.npcs)} NPCs"
 
         world_map: dict[str, Any] = {}
         if plan.worlds:
@@ -391,6 +595,29 @@ async def build_game(
         project = ensure_project_path(plan.title, game_project_path)
         result["project_path"] = str(project)
 
+        # Auto-install plugins requested by the game plan
+        effective_plugins = list(plan.plugins)
+        if plan.npcs or plan.narrative:
+            if "dialogic" not in effective_plugins:
+                effective_plugins.append("dialogic")
+        if effective_plugins:
+            from godot_mcp.tools.addon_tools import install_community_plugin as _install_p
+
+            plugin_results = []
+            for pname in effective_plugins:
+                try:
+                    pr = await _install_p(pname, str(project))
+                    plugin_results.append(
+                        {
+                            "plugin": pname,
+                            "status": "installed" if pr.get("success") else "failed",
+                            "error": pr.get("error"),
+                        }
+                    )
+                except Exception as exc:
+                    plugin_results.append({"plugin": pname, "status": "error", "error": str(exc)})
+            result["plugins"] = plugin_results
+
         if world_map:
             result["project_assets"] = copy_world_meshes_to_project(project, world_map)
 
@@ -400,6 +627,28 @@ async def build_game(
         logic_result = await generate_game_logic(plan, ctx)
         result["scripts"] = logic_result
         result["project_scripts"] = sync_project_from_plan(project, plan, logic_result)
+
+        # Generate tests for the generated scripts
+        try:
+            from godot_mcp.game_builder.tools import generate_game_tests
+
+            test_result = await generate_game_tests(plan.to_json(), str(project), ctx)
+            result["tests"] = test_result
+        except Exception as exc:
+            logger.warning("Test generation skipped: %s", exc)
+            result["tests"] = {"success": False, "error": str(exc)}
+
+        # Generate dialogue manager from narrative/NPCs
+        if plan.npcs or plan.narrative:
+            try:
+                from godot_mcp.game_builder.dialogue import generate_dialogue_manager
+
+                npcs_data = [n.model_dump() for n in plan.npcs]
+                narrative_data = plan.narrative.model_dump() if plan.narrative else None
+                dialogue_result = generate_dialogue_manager(str(project), npcs_data, narrative_data)
+                result["dialogue"] = dialogue_result
+            except Exception as exc:
+                logger.warning("Dialogue generation skipped: %s", exc)
 
         itch = itch_target or (plan.export.itch_target if plan.export else "")
         export = await export_and_ship(plan, str(project), itch_target=itch if ship else "", channel="html")

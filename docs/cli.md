@@ -213,7 +213,7 @@ just setup
 
 #### `just tauri-build`
 
-Full Tauri 2.0 release: builds `web_sota`, PyInstaller sidecar, and Windows installers (NSIS + MSI). Output:
+Full Tauri 2.0 release: builds `webapp`, PyInstaller sidecar, and Windows installers (NSIS + MSI). Output:
 
 `native/target/release/bundle/nsis/Godot MCP_0.2.1_x64-setup.exe`
 

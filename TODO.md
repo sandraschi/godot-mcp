@@ -1,49 +1,143 @@
-# godot-mcp — TODO (from assessment 2026-07-01)
+# godot-mcp — TODO (from assessment 2026-07-11)
 
-Source: `docs/ASSESSMENT_2026-07-01.md`. Estimates are AI-assisted dev time. Check items off and mark this file OBSOLETE when superseded.
+Source: `docs/ASSESSMENT_2026-07-11.md`. This file tracks active work items.
+Mark items off as completed and update CHANGELOG.md.
 
-**2026-07-02: P0 + P1 + quick P2 wins DONE (correctness sweep, see CHANGELOG). Verified: `just --list`, ruff check + format, 52/52 pytest, live boot on :10999 with working `/api/v1/status`, `/api/capabilities`, and a successful MCP initialize handshake at `/mcp`. `just tools` enumerates 93 tools. Remaining open items below.**
+---
 
-## P0 — Broken right now — ✅ ALL DONE 2026-07-02
+## ✅ ALL COMPLETED (2026-07-11 session)
 
-- [x] **justfile parse fix** — `pack-mcpb` deleted; `just --list` verified.
-- [x] **justfile `{{REPO}}` undefined** — replaced with `{{justfile_directory()}}`. (`npx` → `bunx` deliberately deferred to the Bun migration item.)
-- [x] **ws_gateway LOG_RING ImportError** — rewritten against `activity_log.query_logs(after_id=...)`.
-- [x] **`modify-node` phantom bridge action** — `modify_node` implemented in mcp_bridge.gd (`set_indexed`, path-or-name lookup); all callers fixed (ws_gateway + mobile_command + mobile_help docs).
-- [x] **Sampling dead over REST/dashboard** — fallback chain implemented: `ctx.sample()` → OpenAI-compatible API (`GODOT_MCP_LLM_BASE_URL/_API_KEY/_MODEL`) → Ollama (`GODOT_MCP_OLLAMA_URL/_MODEL`, default qwen3.5:27b); raises `SamplingUnavailableError` instead of fake-success string.
-- [x] **sample_text result handling** — `.text` / content-block extraction; `system_prompt=` param.
-- [x] **MCPB bundle rebuild** — stale `mcpb/src/` deleted (incl. .pyc); root `manifest.json` with `${__dirname}`; path-robust root `run_server.py`; packing root-level via `just mcpb-pack`. Still to do at next release: `bunx @anthropic-ai/mcpb validate` + actual pack.
+### Standards & Security
+- [x] `build.ps1` bundle `.env.example` not `.env` (was leaking API keys)
+- [x] Bun migration: npm -> bun, `bun.lock`, `package-lock.json` deleted
+- [x] `prefab-ui>=0.14.0` core dependency
+- [x] `BUILD_LOG.md` created
+- [x] 15 stale `.bak` files deleted from `src/`
+- [x] `tauri.conf.json` nsis snake_case -> camelCase
+- [x] `main.rs` `CommandExt` import added
 
-## P1 — Correctness / architecture — ✅ ALL DONE 2026-07-02
+### Tauri / Rust
+- [x] `backend.rs` `free_port()` upgraded (multi-layer kill + 240s TIME_WAIT poll + UAC)
+- [x] `main.rs` deduplicated (calls `backend::spawn_backend()`)
+- [x] Bridge unused-const cleanup (no dead_code warnings)
+- [x] NSIS installer built and verified (Rust + PyInstaller + NSIS)
+- [x] `build.ps1` uses project-venv pyinstaller, bunx
 
-- [x] **Unify GodotBridge singleton** — `get_bridge()` everywhere; `/api/v1/status` reports live `bridge_connected` (+ legacy `ws_connected` key).
-- [x] **Stop blocking the event loop** — `asyncio.to_thread` in core_tools (28 call sites), ws_gateway, mobile_command, game_builder pipeline, REST tool handlers (itch/steam/fleet).
-- [x] **Bridge concurrency safety** — `threading.Lock`, request_id correlation with stale-reply draining, `_recv_line` buffer retention.
-- [x] **Dual mode: actually serve MCP over HTTP** — `mcp.http_app()` mounted at `/mcp`, lifespan wired; initialize handshake verified live.
-- [x] **CI dev-deps** — ruff in `[dependency-groups].dev`; duplicate optional-dependencies removed.
-- [x] **ci.yml** — stray `.bak` deleted; `*.bak` already gitignored. Tag-only trigger change left uncommitted for Sandra to commit/revert. Ubuntu lint-only PR job: still open (optional).
-- [x] **Version single-sourcing** — 0.3.0 everywhere; runtime via `importlib.metadata`.
-- [x] **CHANGELOG.md repair** — corrupted duplicate blocks removed, content merged.
-- [x] **Honest tool counts** — server.py comment lists the 15 tools; STATUS says 15; `just tools` enumerates (93 total, incl. depot/prefab/prompt/workflow tools).
-- [x] **Small bugs** — environment-dup fixed, `fastmcp<4`, `websockets` dropped (grep-confirmed unused), uploads/outputs env-configurable (`GODOT_MCP_UPLOADS_DIR`/`_OUTPUTS_DIR`), settings wired into bridge connect (env → settings.json → defaults; PUT drops connection), TCP naming in docstrings.
+### MCPB
+- [x] Root `manifest.json` fixed (was double-stringified JSON)
+- [x] `.mcpbignore` excludes `samples/` — 242 MB -> 377 KB
+- [x] MCPB bundle rebuilt and validated
 
-## P2 — Fleet standards (partially done)
+### Prefab UI Cards
+- [x] 5 status cards: godot, itch, steam, fleet, workflows
+- [x] viewport capture card
 
-- [ ] **Prefab UI cards** — add `prefab-ui` dep; Prefab surfaces for `godot_status`, `fleet_exchange_status`, `itch_status`, `steam_status`, `workflow_list`, `artifact_list` (mandatory list/status/stats per SOTA_REQUIREMENTS §2.2). (0.5-1 d)
-- [x] **`GET /api/capabilities`** — backend endpoint done (godot/bridge/butler/steam/worldlabs/sampling/mcp_http/gateway/logs). Still open: web_sota consumes it for feature gating. (1-2 h)
-- [ ] **Bun migration (BUN_STANDARDS)** — web_sota: `bun install`, commit `bun.lock`, delete `package-lock.json`; add `@biomejs/biome` + playwright scripts to package.json; justfile: `npm/npx` → `bun/bunx`. (2-3 h)
-- [x] **STATUS.md refresh** — done 2026-07-01.
-- [x] **Justfile dedup** — local `cua-nsis-test` removed.
+### Dashboard
+- [x] Onboarding welcome card + Godot hint + Launch Bridge button
+- [x] `start_bridge` MCP tool + REST + auto-detect
+- [x] `godot_status` improved error messages
+- [x] Live viewport preview (`GET /api/v1/viewport/live`)
+- [x] `/fleet` page (exchange assets, World Labs status, pipeline)
+- [x] Game Builder pipeline visualization (PipelineViz DAG)
+- [x] `/plugins` page (install community plugins from GitHub)
+- [x] Playwright e2e from 2 to 8 tests
 
-## Extensions (post-fix, highest value first)
+### Game Builder
+- [x] `just gb-smoke` — 4/4 steps pass
+- [x] `godot_capture_viewport` GDScript + MCP tool + REST + Prefab
+- [x] Two-pass GDScript validation (gdlint + godot --check-only) + LLM repair
+- [x] Multi-node scene hierarchy (SceneSpec.children with recursive compose)
+- [x] `godot_simulate_input` — input injection for agent playtesting
+- [x] `godot_scene` portmanteau (add/remove/modify/save nodes as MCP tool)
+- [x] `install_community_plugin` tool + REST + web UI
+- [x] `generate_game_tests` — GUT test generation + runner
+- [x] Procedural visuals enforcement in prompts
+- [x] Plugin-aware GamePlan (auto-install plugins from spec)
+- [x] Narrative + NPC support in GamePlan
+- [x] `just gb-preview` — serve HTML5 export + open browser
 
-- [ ] **`godot_capture_viewport`** — new bridge action rendering the viewport to PNG (path or base64) + MCP tool + REST. Enables agent verify-loops on generated scenes, README screenshots, mobile previews. The single biggest capability gap for an AI game-dev server. (0.5-1 d)
-- [ ] **GDScript validation loop** — after `generate_game_logic`, run `godot --headless --check-only` per script; on errors, one LLM repair round with the error text. (0.5 d)
-- [ ] **`just gb-smoke`** — E2E smoke of design→logic via Ollama fallback (worlds skipped), asserting a parseable GamePlan and syntactically valid scripts. Closes STATUS "Live E2E" gap. (2 h)
-- [ ] **`godot_scene` portmanteau** — expose existing bridge actions `add_node` / `remove_node` / `save_scene` / `modify_node` as one MCP tool with `operation` enum. (Bridge actions are already in the REST action map since 2026-07-02.) (2-3 h)
-- [ ] **Input injection bridge action** — `simulate_input` (key/mouse via `Input.parse_input_event`) for agent playtesting. (0.5 d)
-- [ ] **Portmanteau consolidation** — collapse itch (6), steam (7), fleet (6) tool groups into three portmanteaus; 93 → much smaller tool surface. Keep the 15 engine tools flat. (0.5-1 d)
-- [ ] **Multi-node scene hierarchy from GamePlan** — nested node trees + script attachment instead of flat top-level nodes (existing roadmap item). (1 d)
-- [ ] **Splat decision** — either adopt a Godot 4.x gaussian-splat GDExtension for in-engine SPZ/PLY, or formally document the Spark-viewer handoff as the design and close the R&D item. (research 0.5 d)
-- [ ] **Residual sync-in-async** — itch/steam/fleet `tools.py` MCP tool wrappers still call sync service functions directly (FastMCP runs them on the loop); low traffic, but wrap in `to_thread` for consistency. (1 h)
-- [ ] **Optional ubuntu lint-only PR job** in CI (tag-only Windows job stays). (30 min)
+### Vibecoder Runner (sample game)
+- [x] 10 enemy types: Hallucinator, PromptInjector, Tokenmaxxer, ContextOverflow, ClaudeDesktop, Techbro, LegacyCode, TheVC, TheMeeting, TheDatacenter
+- [x] 11 GDScript files, 329 lines, all gdlint-clean
+- [x] Procedural terminal visuals
+- [x] Carbon meter, Ship It! ultimate, score multiplier systems
+- [x] Full README documentation
+
+### Plugin Ecosystem
+- [x] `install_community_plugin` module-level function (importable)
+- [x] Plugin registry with 7 plugins (Dialogic, Behavior Tree, GUT, Aseprite Wizard, Terrain3D, Voxel, XR Tools)
+- [x] `gdtoolkit>=4.5,<5` dev dependency
+- [x] `just gdscript-lint` / `just gdscript-format-check`
+- [x] `docs/godot-ecosystem.md` with full catalog
+
+---
+
+## REMAINING — High Impact
+
+### Portmanteau consolidation (8h)
+Collapse itch (6), steam (7), fleet (6) tool groups into three portmanteaus with
+`operation` enum. Reduces 95 -> ~60 tools. Use FastMCP Transforms to project
+individual operations as atomic tools to the host.
+
+### Game Builder E2E with worlds (4h)
+`just gb-smoke` validates design->logic pipeline but skips world generation
+(needs worldlabs-mcp) and scene composition (needs bridge). A full E2E test
+with Marble world generation + scene compose + export would prove the entire
+pipeline end-to-end.
+
+### GDScript test runner (GUT) polish (2h)
+`generate_game_tests` exists but needs: better test generation prompts, CI
+integration, and automatic test running after `build_game()`. The GUT CLI
+invocation is fragile (depends on exact godot path + addon path).
+
+---
+
+## REMAINING — Medium Impact
+
+### Bridge disconnect-reconnect stability test (2h)
+Kill Godot bridge mid-operation, verify graceful degradation + recovery.
+
+### Game Builder tutorial (2h)
+A "Build Your First Game" walkthrough document showing the full pipeline.
+
+### Plugin install E2E test (1h)
+Test that installs GUT into a temp Godot project, verifies addon exists.
+
+### Procedural sprite generation tool (2h)
+`godot_generate_procedural_texture` — create textures at runtime via bridge.
+
+---
+
+## REMAINING — Low Impact
+
+### Dialogic timeline generation (3h)
+Generate Dialogic `.dtl` timeline files from GamePlan narrative + NPCs.
+
+### Splat import decision (0.5h)
+Adopt a Godot 4 gaussian-splat GDExtension or close the R&D item.
+
+### Ubuntu lint-only CI job (0.5h)
+
+### Portmanteau registration test (1h)
+
+### gb-demo script (2h)
+
+---
+
+## Effort Summary
+
+| Category | Remaining | Est. |
+|----------|-----------|------|
+| Structural | Portmanteau consolidation | 8h |
+| Testing | Game Builder E2E with worlds | 4h |
+| Testing | Bridge disconnect-reconnect | 2h |
+| Testing | GUT polish | 2h |
+| Testing | Plugin install E2E | 1h |
+| Testing | Portmanteau registration | 1h |
+| Game Builder | Procedural sprite tool | 2h |
+| Game Builder | Narrative -> Dialogic timelines | 3h |
+| Docs | Tutorial | 2h |
+| Docs | gb-demo script | 2h |
+| Misc | Splat decision | 0.5h |
+| Misc | Ubuntu CI | 0.5h |
+| **Total** | | **~28h** |

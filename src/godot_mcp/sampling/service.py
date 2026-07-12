@@ -9,7 +9,7 @@ Provider chain (first available wins):
    ``GODOT_MCP_LLM_API_KEY``, and ``GODOT_MCP_LLM_MODEL``.
 3. **Local Ollama** — ``GODOT_MCP_OLLAMA_URL`` (default
    ``http://127.0.0.1:11434``) with ``GODOT_MCP_OLLAMA_MODEL`` (default
-   ``qwen3.5:27b``).
+   ``gemma4:12b`` — fast, fits on RTX 4090, multimodal).
 
 If every provider fails, ``SamplingUnavailableError`` is raised — callers get
 an honest exception instead of a fake-success placeholder string.
@@ -36,7 +36,7 @@ def sampling_capabilities() -> dict[str, Any]:
         "llm_api_configured": bool(os.getenv("GODOT_MCP_LLM_BASE_URL", "").strip()),
         "llm_api_model": os.getenv("GODOT_MCP_LLM_MODEL", "") or None,
         "ollama_url": os.getenv("GODOT_MCP_OLLAMA_URL", "http://127.0.0.1:11434"),
-        "ollama_model": os.getenv("GODOT_MCP_OLLAMA_MODEL", "qwen3.5:27b"),
+        "ollama_model": os.getenv("GODOT_MCP_OLLAMA_MODEL", "gemma4:12b"),
     }
 
 
@@ -112,7 +112,7 @@ async def _sample_via_openai_api(prompt: str, system: str | None, max_tokens: in
 
 async def _sample_via_ollama(prompt: str, system: str | None, max_tokens: int) -> str | None:
     base_url = os.getenv("GODOT_MCP_OLLAMA_URL", "http://127.0.0.1:11434").strip().rstrip("/")
-    model = os.getenv("GODOT_MCP_OLLAMA_MODEL", "qwen3.5:27b").strip()
+    model = os.getenv("GODOT_MCP_OLLAMA_MODEL", "gemma4:12b").strip()
 
     messages = []
     if system:

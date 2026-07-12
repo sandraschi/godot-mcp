@@ -1,9 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod backend;
-use backend::{BackendProcess, materialize_backend};
-use std::io::BufRead;
-use std::process::{Command, Stdio};
+use backend::{spawn_backend, BackendProcess};
 use std::sync::Mutex;
 use tauri::{Emitter, Manager};
 
@@ -12,50 +10,7 @@ async fn start_backend(
     app: tauri::AppHandle,
     state: tauri::State<'_, BackendProcess>,
 ) -> Result<String, String> {
-    let path = materialize_backend(&app)?;
-    let mut child = Command::new(&path)
-        .env("GODOT_TAURI", "1")
-        .args(["--mode", "dual", "--port", "10993"])
-        .creation_flags(0x0800_0000)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|e| format!("Failed to start backend: {e}"))?;
-
-    let stdout = child.stdout.take().ok_or("No stdout")?;
-    let stderr = child.stderr.take().ok_or("No stderr")?;
-    *state.0.lock().unwrap() = Some(child);
-
-    let ac1 = app.clone();
-    let ac2 = app.clone();
-    tauri::async_runtime::spawn(async move {
-        let reader = std::io::BufReader::new(stdout);
-        for line in reader.lines().flatten() {
-            eprintln!("[backend] {}", line.trim());
-            if line.contains("Uvicorn running")
-                || line.contains("Application startup complete")
-                || line.contains("Starting Godot MCP on")
-            {
-                let _ = ac1.emit("backend-status", "ready");
-                break;
-            }
-        }
-    });
-    tauri::async_runtime::spawn(async move {
-        let reader = std::io::BufReader::new(stderr);
-        for line in reader.lines().flatten() {
-            eprintln!("[backend] {}", line.trim());
-            if line.contains("Uvicorn running")
-                || line.contains("Application startup complete")
-                || line.contains("Starting Godot MCP on")
-            {
-                let _ = ac2.emit("backend-status", "ready");
-                break;
-            }
-        }
-    });
-
-    Ok("Backend starting on port 10993".into())
+    spawn_backend(app, &state)
 }
 
 fn main() {

@@ -19,7 +19,10 @@ dist/
 build/
 *.mcpb
 
+# Sample games (heavy — 30+ MB demo data)
+samples/
+
 # Non-MCP components (webapp, native, scripts)
 native/
-web_sota/
+webapp/
 scripts/

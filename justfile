@@ -39,15 +39,15 @@ install-export-templates version="4.4":
 # Synchronise all dependencies and dev extras (auto-installs Godot)
 bootstrap: install-godot
     uv sync --all-extras
-    Set-Location '{{justfile_directory()}}\web_sota'
-    cmd /c npm install
+    Set-Location '{{justfile_directory()}}\webapp'
+    bun install
 
 # Pin all deps to exact versions and freeze lockfiles
 freeze:
     uv sync --all-extras
     uv lock --upgrade
-    Set-Location '{{justfile_directory()}}\web_sota'
-    cmd /c npm install --package-lock-only
+    Set-Location '{{justfile_directory()}}\webapp'
+    bun install --frozen-lockfile
 
 # Upgrade all Python deps to latest compatible
 upgrade:
@@ -64,17 +64,17 @@ doctor:
     if (Get-Command godot.exe -ErrorAction SilentlyContinue) { Write-Host "  $(godot --version)" -ForegroundColor Green } else { Write-Host "  NOT INSTALLED" -ForegroundColor Red }; \
     Write-Host "=== Python ===" -ForegroundColor Cyan; \
     uv run python --version; \
+    Write-Host "=== Bun ===" -ForegroundColor Cyan; \
+    bun --version; \
     Write-Host "=== Node ===" -ForegroundColor Cyan; \
     node --version; \
-    Write-Host "=== npm ===" -ForegroundColor Cyan; \
-    npm --version; \
     Write-Host "=== Ports ===" -ForegroundColor Cyan; \
     $ports = @({{PORT}}, {{WEB_PORT}}, {{BRIDGE_PORT}}); \
     foreach ($p in $ports) { $tcp = Get-NetTCPConnection -LocalPort $p -ErrorAction SilentlyContinue; if ($tcp) { Write-Host "  Port ${p}: $($tcp.State) PID=$($tcp.OwningProcess)" -ForegroundColor Green } else { Write-Host "  Port ${p}: free" -ForegroundColor Gray } }; \
     Write-Host "=== Ruff ===" -ForegroundColor Cyan; \
     uv run ruff --version; \
     Write-Host "=== Biome ===" -ForegroundColor Cyan; \
-    cmd /c npx biome --version 2>$null
+    bunx biome --version 2>$null
 
 # Print version info
 info:
@@ -95,7 +95,7 @@ clean:
 # Nuke and reinstall everything from scratch
 reset: clean
     if (Test-Path -Path ".venv") { Remove-Item -Recurse -Force ".venv" }; \
-    if (Test-Path -Path "web_sota\node_modules") { Remove-Item -Recurse -Force "web_sota\node_modules" }; \
+    if (Test-Path -Path "webapp\node_modules") { Remove-Item -Recurse -Force "webapp\node_modules" }; \
     if (Test-Path -Path "native\target") { Remove-Item -Recurse -Force "native\target" }; \
     Write-Host "Cleaned. Run 'just bootstrap' to rebuild." -ForegroundColor Yellow
 
@@ -123,10 +123,10 @@ dev port=PORT:
 
 # Start the Vite dashboard
 web:
-    Set-Location '{{justfile_directory()}}\web_sota'
-    cmd /c npm run dev
+    Set-Location '{{justfile_directory()}}\webapp'
+    bun run dev
 
-# Start everything (backed + web_sota) via start script
+# Start everything (backed + webapp) via start script
 start:
     & '{{justfile_directory()}}\start.ps1'
 
@@ -302,23 +302,23 @@ godot-export path="user://export/web/index.html":
 # Execute linting (ruff + biome)
 lint:
     uv run ruff check src/ tests/
-    -cmd /c npx biome lint web_sota/src/
+    -bunx biome lint webapp/src/
 
 # Execute auto-fixes and formatting
 fix:
     uv run ruff check src/ tests/ --fix
     uv run ruff format src/ tests/
-    cmd /c npx biome check --write web_sota/src/
+    bunx biome check --write webapp/src/
 
 # TypeScript type checking (biome check already covers, add explicit tsc)
 typecheck:
-    Set-Location '{{justfile_directory()}}\web_sota'
-    cmd /c npx tsc --noEmit
+    Set-Location '{{justfile_directory()}}\webapp'
+    bunx tsc --noEmit
 
 # Full format check (CI style)
 format-check:
     uv run ruff format src/ tests/ --check
-    cmd /c npx biome format web_sota/src/ --check
+    bunx biome format webapp/src/ --check
 
 # Security scan (Python)
 security:
@@ -330,6 +330,14 @@ docstrings:
 
 # Fast quality check (lint + typecheck + tests)
 check: lint typecheck test
+
+# Lint GDScript files with gdlint
+gdscript-lint:
+    Get-ChildItem -Path '{{justfile_directory()}}' -Recurse -Filter '*.gd' | ForEach-Object { & "$env:USERPROFILE\.local\bin\gdlint.exe" $_.FullName }
+
+# Format GDScript files with gdformat (check mode)
+gdscript-format-check:
+    Get-ChildItem -Path '{{justfile_directory()}}' -Recurse -Filter '*.gd' | ForEach-Object { & "$env:USERPROFILE\.local\bin\gdformat.exe" --check $_.FullName 2>&1 }
 
 # Full CI check (all quality gates)
 ci-check: lint typecheck format-check test
@@ -343,6 +351,22 @@ test:
 # Run tests with coverage report
 test-cov:
     uv run pytest --cov=godot_mcp --cov-report=term-missing --cov-report=html
+
+# Game Builder E2E smoke test (design → logic → validate; needs Ollama/LLM)
+gb-smoke:
+    uv run python scripts/gb-smoke.py
+
+# Run the full Game Builder demo (design -> GDScript -> validate)
+gb-demo concept="A 2D runner where you collect stars and avoid spikes.":
+    pwsh -NoProfile -File '{{justfile_directory()}}\scripts\gb-demo.ps1' -Concept '{{concept}}'
+
+# Run the Game Builder smoke test (design -> logic -> validate)
+gb-test game_plan_json="" project_path="":
+    uv run python -c "import asyncio, json; from godot_mcp.game_builder.tools import generate_game_tests; from godot_mcp.game_builder.plan import GamePlan; plan = GamePlan.from_json(open('{{game_plan_json}}').read() if '{{game_plan_json}}' else '{\"title\":\"Test\",\"viewport\":\"2d\",\"scenes\":[{\"name\":\"Main\",\"type\":\"Node2D\"}],\"scripts\":[{\"name\":\"player.gd\",\"description\":\"Player controller\"}]}'); r = asyncio.run(generate_game_tests(plan.to_json(), '{{project_path}}' if '{{project_path}}' else '.', None)); print(json.dumps(r, indent=2))"
+
+# Serve the latest HTML5 export and preview in browser
+gb-preview build_dir="" port="10994":
+    pwsh -NoProfile -File '{{justfile_directory()}}\scripts\gb-preview.ps1' -BuildDir '{{build_dir}}' -Port {{port}}
 
 # Run tests matching a keyword (e.g. just test-match bridge)
 test-match pattern:
@@ -370,33 +394,33 @@ test-seq:
 
 # ── Webapp ────────────────────────────────────────────────────────────────────
 
-# Build web_sota for production
+# Build webapp for production
 web-build:
-    Set-Location '{{justfile_directory()}}\web_sota'
-    cmd /c npm run build
+    Set-Location '{{justfile_directory()}}\webapp'
+    bun run build
 
 # Preview production build
 web-preview:
-    Set-Location '{{justfile_directory()}}\web_sota'
-    cmd /c npm run preview
+    Set-Location '{{justfile_directory()}}\webapp'
+    bun run preview
 
-# Install web_sota deps only
+# Install webapp deps only
 web-install:
-    Set-Location '{{justfile_directory()}}\web_sota'
-    cmd /c npm install
+    Set-Location '{{justfile_directory()}}\webapp'
+    bun install
 
-# Add a web_sota dependency (usage: just web-add <package>)
+# Add a webapp dependency (usage: just web-add <package>)
 web-add package:
-    Set-Location '{{justfile_directory()}}\web_sota'
-    cmd /c npm install {{package}}
+    Set-Location '{{justfile_directory()}}\webapp'
+    bun add {{package}}
 
 # ── Tauri Native ──────────────────────────────────────────────────────────────
 
-# Build Tauri native desktop app (dev mode — expects web_sota dev server on 10992)
+# Build Tauri native desktop app (dev mode — expects webapp dev server on 10992)
 tauri-dev:
     pwsh -NoProfile -File '{{justfile_directory()}}\native\build.ps1' -Mode dev
 
-# Full release: web_sota + PyInstaller sidecar + NSIS installer
+# Full release: webapp + PyInstaller sidecar + NSIS installer
 tauri-build:
     pwsh -NoProfile -File '{{justfile_directory()}}\native\build.ps1'
 
@@ -510,11 +534,11 @@ git-log count="10":
 
 # Install Playwright browsers (one-time)
 e2e-install:
-    Set-Location '{{justfile_directory()}}\web_sota'
-    cmd /c npx playwright install chromium
+    Set-Location '{{justfile_directory()}}\webapp'
+    bunx playwright install chromium
 
 # Run Playwright E2E smoke tests (start backend first: just serve)
 e2e:
-    Set-Location '{{justfile_directory()}}\web_sota'
-    cmd /c npx playwright test
+    Set-Location '{{justfile_directory()}}\webapp'
+    bunx playwright test
 

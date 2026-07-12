@@ -1,0 +1,25 @@
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="RectangleShape2D" id=1]
+size = Vector2(60, 30)
+
+[node name="LegacyCode" type="Area2D"]
+collision_layer = 8
+collision_mask = 1
+script = ExtResource("res://LegacyCode.gd")
+
+[node name="Body" type="ColorRect" parent="."]
+offset = Vector2(-30, -15)
+size = Vector2(60, 30)
+color = Color(0.5, 0.3, 0.1)
+
+[node name="Label" type="Label" parent="Body"]
+offset = Vector2(-25, -10)
+size = Vector2(60, 30)
+text = "COBOL"
+theme_override_colors/font_color = Color(1, 0.8, 0.3)
+theme_override_fonts/font_size = 10
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource(1)
+[connection signal="body_entered" from="." to="." method="_on_body_entered"]
