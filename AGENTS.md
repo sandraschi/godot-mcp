@@ -1,7 +1,7 @@
 # AGENTS.md — godot-mcp Context
 
 **Repo**: godot-mcp — AI-driven Godot 4.4 engine control via MCP + game builder pipeline  
-**Version**: 0.3.0 (49 MCP tools)  
+**Version**: 0.4.0-beta.1 (49 MCP tools)  
 **Python**: 3.10+ | **FastMCP**: 3.2.0+ | **Godot**: 4.4 | **Frontend**: Vite 7 + React 19
 
 ## Essential Paths

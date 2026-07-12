@@ -1,7 +1,7 @@
 {
   "manifest_version": "0.3",
   "name": "godot-mcp",
-  "version": "0.3.0",
+  "version": "0.4.0-beta.1",
   "description": "Godot MCP server — Godot 4.x engine control via TCP bridge, STL/GLB/OBJ import, GPU particles, animation, HTML5 export, itch.io/Steam publishing, AI game builder pipeline, artifact depot, and cross-server MCP bridge",
   "author": { "name": "sandraschi" },
   "icon": "mcpb/assets/icon.png",

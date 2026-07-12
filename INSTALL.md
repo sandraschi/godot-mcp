@@ -29,7 +29,7 @@ Or `.\start.ps1` for backend + webapp.
 
 ## Option B — MCPB (Claude Desktop)
 
-1. Download `godot-mcp-v0.3.0.mcpb` from [Releases](https://github.com/sandraschi/godot-mcp/releases)
+1. Download `godot-mcp-v0.4.0-beta.1.mcpb` from [Releases](https://github.com/sandraschi/godot-mcp/releases)
 2. Open Claude Desktop -> drag the file onto the window
 3. Or add to `claude_desktop_config.json`:
    ```json

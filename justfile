@@ -3,7 +3,7 @@ import 'scripts/just/fleet.just'
 
 export NAME := "Godot MCP"
 export DESC := "Godot 4.0 engine control via WebSocket + MCP tools"
-export VER  := "0.3.0"
+export VER  := "0.4.0-beta.1"
 export PORT := "10993"
 export WEB_PORT := "10992"
 export BRIDGE_PORT := "9080"

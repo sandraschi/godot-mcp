@@ -1,7 +1,7 @@
 {
   "manifest_version": "0.3",
   "name": "godot-mcp",
-  "version": "0.3.0",
+  "version": "0.4.0-beta.1",
   "description": "Godot 4 game engine control via MCP — 49 tools: engine control, game builder, asset import, itch.io/Steam shipping, fleet pipeline",
   "author": { "name": "Sandra Schipal", "url": "https://github.com/sandraschi" },
   "repository": { "type": "git", "url": "https://github.com/sandraschi/godot-mcp.git" },

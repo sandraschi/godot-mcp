@@ -55,7 +55,7 @@ try:
 
     __version__ = _pkg_version("godot-mcp")
 except Exception:
-    __version__ = "0.3.0"
+    __version__ = "0.4.0-beta.1"
 
 # The ONE shared bridge instance (services.godot_bridge module singleton).
 _bridge = get_bridge()
@@ -999,7 +999,7 @@ PLUGIN_CFG_CONTENT = """[plugin]
 name=MCP Bridge
 description=TCP server for MCP commands
 author=godot-mcp
-version=0.3.0
+version=0.4.0-beta.1
 script=mcp_bridge.gd
 """
 

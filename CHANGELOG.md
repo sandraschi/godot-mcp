@@ -5,7 +5,7 @@ All notable changes to **godot-mcp** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.4.0-beta.1] - 2026-07-11
 
 ### Added (2026-07-11 web_sota/ -> webapp/ rename)
 - **WEBAPP_DIRECTORY_STANDARD.md** — fleet standard: frontend dir MUST be `webapp/`, not `web_sota/`. The SOTA naming was redundant — every repo we build is SOTA.

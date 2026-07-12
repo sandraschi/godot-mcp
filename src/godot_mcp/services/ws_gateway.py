@@ -29,7 +29,7 @@ def _server_version() -> str:
 
         return version("godot-mcp")
     except Exception:
-        return "0.3.0"
+        return "0.4.0-beta.1"
 
 
 # ── Client Manager ────────────────────────────────────────────────────────────
