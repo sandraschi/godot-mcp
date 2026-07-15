@@ -58,12 +58,39 @@ Godot is MIT-licensed, self-hosted, headless-capable, and controllable via MCP. 
 - [ ] **Object spawning** — props, furniture, teaching aids around the avatar
 - [ ] **Multi-avatar** — load multiple VRMs for group scenes (teacher + student)
 
-### P5 — Godot editor automation
+### P5 — Social layer (optional, lightweight)
+
+Godot ships with ENet (UDP), WebRTC, and WebSocket built in. Adding social features uses existing modules — no engine fork needed.
+
+- [ ] **ENet sync** — sync avatar position/rotation/expression to a second client
+  - GDScript: `ENetMultiplayerPeer`, 50 lines for transform replication
+  - Web export with `--headless` as lobby server
+- [ ] **WebRTC voice** — speech-mcp already handles TTS; WebRTC for user-to-user voice
+  - Godot's `WebRTCPeerConnection` wrapper
+  - Or: learnbot handles voice, users just see the avatar
+- [ ] **Web export** — `godot_export_web` → friend opens URL → sees Miko-chan
+  - No install, no login — just a browser tab
+- [ ] **Guest book** — persistent messages from visitors appear as notecards in-world
+  - SQLite-backed, served via godot-mcp REST
+
+**Design philosophy**: The social layer is additive, not foundational. The avatar works perfectly alone. Adding sync, voice, or web export doesn't change the core loop — it just lets other people see what you see. This keeps the architecture simple and avoids the feature creep that killed Vircadia.
+
+### P6 — Godot editor automation
 
 - [ ] **VRM-to-scene wizard** — `godot_vrm_create_scene(vrm_path, preset="studio")` — full scene setup in one command
 - [ ] **Avatar animation** — load FBX/GLB animation clips, retarget to VRM skeleton
 - [ ] **Pose presets** — T-pose, A-pose, sitting, bowing, pointing
 - [ ] **Screenshot** — `godot_vrm_screenshot()` — render avatar with current expression and lighting
+
+### P7 — Research directions
+
+Interesting papers and concepts to explore for novel social avatar interaction:
+
+- **arXiv:2403.17134** — Coordinated inauthentic behavior ecologies (anti-patterns to avoid)
+- **Nowak & Biocca (2003)** — "The Effect of Agency and Anthropomorphism on Sense of Telepresence" — classic on avatar agency perception
+- **Blascovich & Bailenson (2011)** — "Infinite Reality" — social presence theory for avatars
+- **Slater & Wilbur (1997)** — "A Framework for Immersive Virtual Environments" — presence dimensions
+- **Search arXiv cs.HC** for "avatar-mediated interaction" and "social presence virtual humans" for current work
 
 ## Architecture
 
