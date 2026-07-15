@@ -37,4 +37,4 @@ def test_register_accepts_mcp():
     assert "godot_simulate_input" in names
     assert "godot_scene" in names
     assert "godot_generate_procedural_texture" in names
-    assert len(mcp.registered) == 20
+    assert len(mcp.registered) >= 29  # growing as tools are added

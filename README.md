@@ -8,9 +8,11 @@
 </p>
 
 AI-driven Godot 4 control via MCP — scene manipulation, 3D import, GPU particles,
-procedural textures, HTML5 export. **Game Builder**: describe a game in natural
-language and get playable GDScript + export. Publish to itch.io and Steam.
-80+ tools, 73 tests, NSIS desktop installer.
+procedural textures, HTML5 export. **Deterministic playtesting**: freeze the game
+clock, inject analog/joypad/mouse input, step frame-by-step until a condition is
+met, read live game state as structured JSON. **Game Builder**: describe a game
+in natural language and get playable GDScript + export. Publish to itch.io and
+Steam. 95+ tools, 77 tests, NSIS desktop installer.
 
 ---
 
@@ -32,7 +34,14 @@ See [INSTALL.md](INSTALL.md) for all options (MCPB, dev setup, naked PC).
 
 - **Game Builder** — `design_game` -> `generate_game_logic` -> `generate_game_tests` -> `generate_dialogue` -> export. Validated with gdlint + godot --check-only, auto-repaired by LLM. [Tutorial](docs/game-builder-tutorial.md)
 - **Procedural textures** — `godot_generate_procedural_texture`: gradient, noise, checker, solid. No external assets needed.
-- **Engine control** — 20 bridge tools: import STL/GLB/OBJ, particles, cameras, lighting, animation, viewport capture, input simulation, scene node management.
+- **Deterministic playtesting** — freeze game clock, step frame-by-step, step-until GDScript condition, analog/joypad/mouse/text input injection. Three-phase implementation inspired by satelliteoflove/godot-mcp.
+- **Structured game state** — `godot_state_digest` reads live node state as JSON via `_mcp_state()` convention or auto-collected properties. Cheaper than full scene tree dump.
+- **Engine control** — 30 bridge tools: import STL/GLB/OBJ, particles, cameras, lighting, animation, viewport capture, input simulation, scene node management.
+- **Animation keyframe editor** — query tracks down to individual keyframes, insert/remove keys, set interpolation.
+- **TileMap/GridMap editing** — read and write cell data directly (bypasses base64 `.tscn` serialization).
+- **Performance profiler** — 14 engine metrics with auto-sampling and spike detection (>2 stddev).
+- **Mesh validation** — scan for NaN vertices, degenerate triangles, zero normals.
+- **3D Gaussian Splat import** — import `.ply` and `.spz` files with a custom billboarded Gaussian shader (per-splat scale, SH DC color).
 - **Publishing** — `itch_ops` and `steam_ops` portmanteaus for itch.io Butler and SteamPipe. Cross-repo fleet pipeline.
 - **GDScript validation** — two-pass (gdlint style + godot compile) with LLM repair. 
 - **Plugin ecosystem** — 7 community plugins installable from the `/plugins` page.
@@ -54,7 +63,9 @@ just gb-preview                           # preview latest HTML5 export
 |-----|----------|
 | [Installation](INSTALL.md) | All install methods |
 | [Configuration](docs/CONFIGURATION.md) | Env vars, settings |
-| [Tool Reference](docs/TOOLS.md) | All 80+ MCP tools |
+| [Tool Reference](docs/TOOLS.md) | All 90+ MCP tools |
+| [Playtesting Spec](docs/SPEC_DETERMINISTIC_PLAYTESTING.md) | Deterministic playtesting architecture |
+| [Demo Scripts](demos/) | Playtesting, profiling, scene inspection, splat import demos |
 | [Game Builder Tutorial](docs/game-builder-tutorial.md) | Prompt-to-game walkthrough |
 | [Godot Ecosystem](docs/godot-ecosystem.md) | Plugins, gdtoolkit, fleet pipeline |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Common issues |

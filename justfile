@@ -3,7 +3,7 @@ import 'scripts/just/fleet.just'
 
 export NAME := "Godot MCP"
 export DESC := "Godot 4.0 engine control via WebSocket + MCP tools"
-export VER  := "0.4.0-beta.1"
+export VER  := "0.5.0-beta.1"
 export PORT := "10993"
 export WEB_PORT := "10992"
 export BRIDGE_PORT := "9080"
@@ -539,6 +539,60 @@ e2e-install:
 
 # Run Playwright E2E smoke tests (start backend first: just serve)
 e2e:
-    Set-Location '{{justfile_directory()}}\webapp'
-    bunx playwright test
+	Set-Location '{{justfile_directory()}}\webapp'
+	bunx playwright test
+
+# ── Profiling ───────────────────────────────────────────────────────
+
+# Snapshot Godot performance metrics
+profile-snapshot:
+	$body = '{"tool":"godot_profile","arguments":{"operation":"snapshot"}}'; \
+	try { $r = Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/control/tool" -Method POST -Body $body -ContentType "application/json" -UseBasicParsing -TimeoutSec 10; ($r.Content | ConvertFrom-Json) | ConvertTo-Json -Depth 10 } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
+
+# Enable auto-profiling (300-frame rolling window)
+profile-enable:
+	$body = '{"tool":"godot_profile","arguments":{"operation":"enable","enabled":true}}'; \
+	try { Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/control/tool" -Method POST -Body $body -ContentType "application/json" -UseBasicParsing -TimeoutSec 10 | Out-Null; Write-Host "Profiling enabled" -ForegroundColor Green } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
+
+# Show profiling history with spike detection
+profile-history:
+	$body = '{"tool":"godot_profile","arguments":{"operation":"history"}}'; \
+	try { $r = Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/control/tool" -Method POST -Body $body -ContentType "application/json" -UseBasicParsing -TimeoutSec 10; ($r.Content | ConvertFrom-Json) | ConvertTo-Json -Depth 10 } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
+
+# ── Animation ───────────────────────────────────────────────────────
+
+# List animations on an AnimationPlayer node
+anim-list node="AnimationPlayer":
+	$body = (@{tool="godot_animation"; arguments=@{operation="list_animations"; node="{{node}}"}} | ConvertTo-Json -Compress); \
+	try { $r = Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/control/tool" -Method POST -Body $body -ContentType "application/json" -UseBasicParsing -TimeoutSec 10; ($r.Content | ConvertFrom-Json).data | ConvertTo-Json -Depth 10 } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
+
+# ── Mesh Validation ─────────────────────────────────────────────────
+
+# Validate all meshes in the scene for geometric corruption
+mesh-validate:
+	$body = '{"tool":"godot_validate_meshes","arguments":{}}'; \
+	try { $r = Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/control/tool" -Method POST -Body $body -ContentType "application/json" -UseBasicParsing -TimeoutSec 30; ($r.Content | ConvertFrom-Json) | ConvertTo-Json -Depth 10 } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
+
+# ── Documentation ───────────────────────────────────────────────────
+
+# Import a 3D Gaussian splat file into Godot (usage: just splat-import path/to/scene.ply)
+splat-import path max_splats="200000":
+	Set-Location '{{justfile_directory()}}'
+	uv run python demos/splat_import.py {{path}} --max-splats {{max_splats}}
+
+# Fetch Godot class reference docs (usage: just godot-docs Node3D)
+godot-docs class="Node3D":
+	$body = (@{tool="godot_docs"; arguments=@{query="{{class}}"}} | ConvertTo-Json -Compress); \
+	try { $r = Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/control/tool" -Method POST -Body $body -ContentType "application/json" -UseBasicParsing -TimeoutSec 20; ($r.Content | ConvertFrom-Json).data | Select-Object -ExpandProperty content | Write-Host } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
+
+# ── Demo Scripts ────────────────────────────────────────────────────
+
+# List available demo scripts
+demos:
+	Get-ChildItem '{{justfile_directory()}}\demos\*.py' | ForEach-Object { Write-Host "  $($_.Name): $($_.BaseName)" }
+
+# Run a demo script (usage: just demo <name>)
+demo name="playtesting":
+	Set-Location '{{justfile_directory()}}'
+	uv run python demos/{{name}}.py
 

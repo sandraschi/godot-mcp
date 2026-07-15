@@ -1,6 +1,6 @@
 [project]
 name = "godot-mcp"
-version = "0.4.0-beta.1"
+version = "0.5.0-beta.1"
 description = "Godot MCP server — Godot 4.x engine control via TCP bridge, STL/GLB/OBJ import, GPU particles, animation, HTML5 export, itch.io/Steam shipping, AI game builder through MCP tools and REST API"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -11,6 +11,7 @@ dependencies = [
     "httpx>=0.27",
     "pydantic>=2.0",
     "prefab-ui>=0.14.0",
+    "websockets>=13.0",
 ]
 
 [build-system]

@@ -7,6 +7,7 @@ import {
 	ChevronRight,
 	Code2,
 	Database,
+	FlaskConical,
 	Gamepad2,
 	HelpCircle,
 	LayoutDashboard,
@@ -59,6 +60,7 @@ const navGroups = [
 			{ path: "/workflows", label: "Workflows", icon: Play },
 			{ path: "/prefabs", label: "Prefabs", icon: Box },
 			{ path: "/prompts", label: "Prompts", icon: Sparkles },
+			{ path: "/demos", label: "Demos", icon: FlaskConical },
 		],
 	},
 	{

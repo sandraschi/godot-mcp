@@ -1,7 +1,7 @@
 # AGENTS.md — godot-mcp Context
 
 **Repo**: godot-mcp — AI-driven Godot 4.4 engine control via MCP + game builder pipeline  
-**Version**: 0.4.0-beta.1 (49 MCP tools)  
+**Version**: 0.5.0-beta.1 (95+ MCP tools)  
 **Python**: 3.10+ | **FastMCP**: 3.2.0+ | **Godot**: 4.4 | **Frontend**: Vite 7 + React 19
 
 ## Essential Paths
@@ -14,7 +14,10 @@
 | `src/godot_mcp/game_builder/` | AI game-from-prompt pipeline (6 tools) |
 | `src/godot_mcp/fleet/` | Cross-server fleet pipeline (6 tools) |
 | `src/godot_mcp/itch/` | Butler/itch.io shipping (6 tools) |
-| `src/godot_mcp/tools/core_tools.py` | Godot engine control tools (14) |
+| `src/godot_mcp/tools/core_tools.py` | Engine control + deterministic playtesting tools (31) |
+| `src/godot_mcp/tools/docs_tools.py` | Godot documentation fetcher tool |
+| `src/godot_mcp/services/splat_import.py` | 3D Gaussian splat parser (.ply/.spz) |
+| `src/godot_mcp/bridge/shaders/gaussian_splat.gdshader` | Gaussian splat rendering shader |
 | `src/godot_mcp/sampling/` | LLM sampling tools (2) |
 | `src/godot_mcp/mcp_bridge/` | Cross-server MCP bridge tools (2) |
 | `src/godot_mcp/workflows/` | Workflow engine + 3 built-in workflows |
@@ -23,6 +26,7 @@
 | `samples/` | Sample games + MCPB bundles |
 | `native/` | Tauri 2.0 desktop wrapper |
 | `docs/SPEC_GAME_BUILDER.md` | Game Builder architecture spec |
+| `docs/SPEC_DETERMINISTIC_PLAYTESTING.md` | Deterministic playtesting implementation plan |
 | `justfile` | Task runner — `just serve`, `just godot-bridge`, etc. |
 
 ## Module Registration

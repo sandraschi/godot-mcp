@@ -44,10 +44,12 @@ async def workflow_run(
     workflow_name: Annotated[
         str,
         Field(
-            description="Workflow name: scene_setup, particle_cfd, ship_web_itch, ship_windows_steam_beta, ship_windows_steam_release."
+            description="Workflow name: scene_setup, particle_cfd, playtest, ship_web_itch, ship_windows_steam_beta, ship_windows_steam_release."
         ),
     ],
     csv_path: Annotated[str | None, Field(description="CSV path (required for particle_cfd).", default=None)] = None,
+    condition: Annotated[str | None, Field(description="GDScript condition expression (required for playtest workflow).", default=None)] = None,
+    timeout_frames: Annotated[int | None, Field(description="Max frames for step-until (playtest workflow).", default=600)] = None,
     game: Annotated[str | None, Field(description="Sample game for ship_web_itch.", default="dodge")] = None,
     itch_target: Annotated[str | None, Field(description="user/game slug for ship_web_itch.", default=None)] = None,
     channel: Annotated[str | None, Field(description="Butler channel for ship_web_itch.", default="html")] = None,
@@ -71,6 +73,10 @@ async def workflow_run(
     context = {}
     if csv_path:
         context["csv_path"] = csv_path
+    if condition:
+        context["condition"] = condition
+    if timeout_frames is not None:
+        context["timeout_frames"] = str(timeout_frames)
     if game:
         context["game"] = game
     if itch_target:

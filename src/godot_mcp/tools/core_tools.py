@@ -129,6 +129,62 @@ async def godot_import_glb(
     )
 
 
+async def godot_import_vrm(
+    path: Annotated[str, Field(description="Absolute path to .vrm file on disk.")],
+    name: Annotated[str, Field(description="Node name for the imported avatar.", default="VRM_Import")] = "VRM_Import",
+    ctx: Context = None,
+) -> dict:
+    """Import a VRM avatar model into the current Godot scene.
+
+    Copies the VRM file into the project, installs the V-Sekai/godot-vrm
+    addon if missing, and loads it via Godot's ResourceLoader which
+    triggers the VRM addon's glTF extension importer.
+
+    ## Return Format
+    {"success": bool, "data": {"imported": bool, "name": str}}
+
+    ## Examples
+    await godot_import_vrm(path="~/.avatarmcp/models/Nekomimi-chan.vrm", name="Miko")
+    """
+    bridge = get_bridge()
+    if not bridge.connected:
+        result = await asyncio.to_thread(bridge.connect)
+        if not result["success"]:
+            return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
+
+    import os
+
+    abs_path = os.path.abspath(os.path.expanduser(path))
+    return await asyncio.to_thread(bridge.send, "import_vrm", {"path": abs_path, "name": name})
+
+
+async def godot_list_vrm(
+    depot_path: Annotated[
+        str, Field(description="Path to VRM depot directory.", default="~/.avatarmcp/models")
+    ] = "~/.avatarmcp/models",
+    ctx: Context = None,
+) -> dict:
+    """List available VRM models in the shared avatar depot.
+
+    ## Return Format
+    {"success": bool, "data": {"models": list[dict], "depot_path": str}}
+
+    ## Examples
+    await godot_list_vrm()
+    """
+    import glob
+    import os
+
+    depot = os.path.abspath(os.path.expanduser(depot_path))
+    models = []
+    if os.path.isdir(depot):
+        for f in sorted(glob.glob(os.path.join(depot, "*.vrm"))):
+            name = os.path.splitext(os.path.basename(f))[0]
+            size_mb = round(os.path.getsize(f) / (1024 * 1024), 1)
+            models.append({"name": name, "path": f, "size_mb": size_mb})
+    return {"success": True, "models": models, "depot_path": depot, "count": len(models)}
+
+
 async def godot_import_obj(
     path: Annotated[str, Field(description="Absolute path to OBJ file on disk.")],
     name: Annotated[
@@ -636,24 +692,65 @@ async def godot_simulate_input(
     actions: Annotated[
         list[dict],
         Field(
-            description='List of input actions: [{"key": "Space", "pressed": true, "hold_ms": 50}, ...]. Key names: Space, A, B, ..., ArrowLeft, ArrowRight, etc.',
+            description="""List of input actions. Each action dict selects a format by its keys:
+
+**Key press/release** (legacy, backward-compat):
+  {"key": "Space", "pressed": true, "hold_ms": 100}
+
+**Action press with analog strength:**
+  {"action": "move_left", "strength": 1.0}
+  {"action": "jump", "pressed": false}
+
+**Joypad axis:**
+  {"joypad": {"device": 0, "axis": 0, "value": -0.8}}
+
+**Joypad button:**
+  {"joypad": {"device": 0, "button": 0, "pressed": true}}
+
+**Mouse look (relative motion):**
+  {"mouse_look": {"dx": 15, "dy": -3}}
+
+**Mouse button click:**
+  {"mouse_button": {"button": 1, "pressed": true, "position": {"x": 960, "y": 540}}}
+
+**Text input (per-character key events):**
+  {"type": "text", "text": "hello"}""",
         ),
     ],
     ctx: Context = None,
 ) -> dict:
-    """Simulate keyboard input in the Godot engine via Input.parse_input_event.
+    """Simulate input in the Godot engine — keyboard, action, joypad, mouse, and text.
 
-    Sends key press/release events to Godot's input system. Useful for
-    agent playtesting: press Space to jump, wait, screenshot, verify.
+    Dispatches each action dict by its key signature. Legacy ``{"key": ...}``
+    entries use ``InputEventKey`` with optional hold-timed release. New formats
+    use ``Input.action_press`` (analog actions), ``InputEventJoypadMotion`` /
+    ``InputEventJoypadButton``, ``InputEventMouseMotion``, ``InputEventMouseButton``,
+    and per-character ``InputEventKey`` (text).
 
     ## Return Format
     {"success": bool, "data": {"actions_processed": int, "results": [...]}}
 
     ## Examples
+    # Legacy key press with hold
     await godot_simulate_input(actions=[{"key": "Space", "pressed": true, "hold_ms": 100}])
+
+    # Analog action
+    await godot_simulate_input(actions=[{"action": "move_left", "strength": 0.5}])
+
+    # Joypad axis
+    await godot_simulate_input(actions=[{"joypad": {"axis": 0, "value": -0.8}}])
+
+    # Mouse look
+    await godot_simulate_input(actions=[{"mouse_look": {"dx": 45, "dy": -10}}])
+
+    # Text input
+    await godot_simulate_input(actions=[{"type": "text", "text": "hello"}])
+
+    # Mixed
     await godot_simulate_input(actions=[
-        {"key": "ArrowRight", "pressed": true, "hold_ms": 500},
-        {"key": "Space", "pressed": true, "hold_ms": 100},
+        {"action": "move_left", "strength": 1.0},
+        {"joypad": {"axis": 0, "value": -0.8}},
+        {"mouse_look": {"dx": 200, "dy": 0}},
     ])
     """
     bridge = get_bridge()
@@ -663,6 +760,710 @@ async def godot_simulate_input(
             return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
 
     return await asyncio.to_thread(bridge.send, "simulate_input", {"actions": actions}, timeout=30)
+
+
+async def godot_read_node(
+    node: Annotated[
+        str,
+        Field(description="Node path (e.g. 'Player' or 'World/Enemy') or node name to search for recursively."),
+    ],
+    ctx: Context = None,
+) -> dict:
+    """Read properties of a single node by path or name.
+
+    Returns effective properties (position, rotation, scale, velocity, visible,
+    current_animation) and child list. Lightweight alternative to read_scene_tree
+    when you only need one node. If the node defines ``_mcp_state()``, that takes
+    priority over auto-collected properties.
+
+    ## Return Format
+    {"success": bool, "data": {"node": {"name": str, "type": str, "path": str, ...}}}
+
+    ## Examples
+    await godot_read_node(node="Player")
+    await godot_read_node(node="World/Camera3D")
+    """
+    bridge = get_bridge()
+    if not bridge.connected:
+        result = await asyncio.to_thread(bridge.connect)
+        if not result["success"]:
+            return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
+
+    return await asyncio.to_thread(bridge.send, "read_node", {"node": node}, timeout=10)
+
+
+async def godot_inspect_resource(
+    path: Annotated[
+        str,
+        Field(
+            description="Resource path (e.g. 'res://assets/player.tres', 'res://tileset.tres'). Loaded via ResourceLoader inside the Godot engine."
+        ),
+    ],
+    ctx: Context = None,
+) -> dict:
+    """Inspect a resource file loaded in the Godot engine.
+
+    Type-aware inspection for:
+    - **SpriteFrames**: animation names, frame counts, speed, loop
+    - **TileSet**: source count, source IDs, tile counts
+    - **Material** (StandardMaterial3D): albedo, roughness, metallic, emission
+    - **ShaderMaterial**: shader path, parameter list with values
+    - **Texture2D**: width, height, format, mipmap status
+    - **Generic**: property list for any other resource type
+
+    ## Return Format
+    {"success": bool, "data": {"resource": {"path": str, "type": str, ...}}}
+
+    ## Examples
+    await godot_inspect_resource(path="res://characters/player.tres")
+    await godot_inspect_resource(path="res://materials/ground.material")
+    """
+    bridge = get_bridge()
+    if not bridge.connected:
+        result = await asyncio.to_thread(bridge.connect)
+        if not result["success"]:
+            return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
+
+    return await asyncio.to_thread(bridge.send, "inspect_resource", {"path": path}, timeout=15)
+
+
+_tilemap_literals = Literal["read", "set_cell", "erase_cell", "clear"]
+
+
+async def godot_tilemap(
+    operation: Annotated[
+        _tilemap_literals,
+        Field(
+            description="Operation: ``read`` returns all used cells, ``set_cell`` writes cells (requires ``cells`` param), ``erase_cell`` removes cells (requires ``coords`` param), ``clear`` removes all cells."
+        ),
+    ],
+    node: Annotated[
+        str,
+        Field(description="Node path or name of a TileMapLayer or GridMap node in the scene."),
+    ],
+    cells: Annotated[
+        list[dict] | None,
+        Field(
+            description='List of cell data for ``set_cell``: ``[{"x": 0, "y": 0, "source_id": 1, "atlas_coords": {"x": 0, "y": 0}, "alternative_tile": 0}]``.',
+            default=None,
+        ),
+    ] = None,
+    coords: Annotated[
+        list[dict] | None,
+        Field(
+            description='List of coordinates for ``erase_cell``: ``[{"x": 0, "y": 0}]``.',
+            default=None,
+        ),
+    ] = None,
+    ctx: Context = None,
+) -> dict:
+    """Read or edit TileMapLayer and GridMap cells.
+
+    For TileMapLayer: reads cell source IDs, atlas coordinates, and alternative
+    tiles. For GridMap: reads cell item IDs and orientations. The ``set_cell``
+    operation writes cells that would otherwise be base64-encoded in the ``.tscn``
+    file — this is the only practical way for agents to edit tilemap data.
+
+    ## Return Format
+    {"success": bool, "data": {"node": str, "type": str, "cells": [...], "cell_count": int}}
+
+    ## Examples
+    await godot_tilemap(operation="read", node="GroundLayer")
+    await godot_tilemap(operation="set_cell", node="GroundLayer", cells=[{"x": 5, "y": 3, "source_id": 0, "atlas_coords": {"x": 2, "y": 1}}])
+    await godot_tilemap(operation="erase_cell", node="GroundLayer", coords=[{"x": 5, "y": 3}])
+    await godot_tilemap(operation="clear", node="GroundLayer")
+    """
+    bridge = get_bridge()
+    if not bridge.connected:
+        result = await asyncio.to_thread(bridge.connect)
+        if not result["success"]:
+            return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
+
+    if operation == "read":
+        return await asyncio.to_thread(bridge.send, "tilemap_read", {"node": node}, timeout=10)
+    else:
+        params: dict = {"node": node, "operation": operation}
+        if cells is not None:
+            params["cells"] = cells
+        if coords is not None:
+            params["coords"] = coords
+        return await asyncio.to_thread(bridge.send, "tilemap_edit", params, timeout=10)
+
+
+_anim_literals = Literal[
+    "list_animations", "list_tracks", "list_keyframes", "insert_keyframe", "remove_keyframe", "set_interpolation"
+]
+
+
+async def godot_animation(
+    operation: Annotated[
+        _anim_literals,
+        Field(
+            description="Operation: ``list_animations`` (list all), ``list_tracks`` (tracks in one anim), ``list_keyframes`` (keys in one track), ``insert_keyframe``, ``remove_keyframe``, ``set_interpolation``."
+        ),
+    ],
+    node: Annotated[
+        str,
+        Field(description="Node path or name of an AnimationPlayer node in the scene."),
+    ],
+    animation: Annotated[
+        str | None,
+        Field(
+            description="Animation name. Required for: list_tracks, list_keyframes, insert_keyframe, remove_keyframe, set_interpolation.",
+            default=None,
+        ),
+    ] = None,
+    track: Annotated[
+        int | None,
+        Field(
+            description="Track index. Required for: list_keyframes, insert_keyframe, remove_keyframe, set_interpolation.",
+            default=None,
+        ),
+    ] = None,
+    time: Annotated[
+        float | None,
+        Field(description="Time position in seconds. Required for: insert_keyframe, remove_keyframe.", default=None),
+    ] = None,
+    value: Annotated[
+        Any,
+        Field(description="Keyframe value. Required for: insert_keyframe.", default=None),
+    ] = None,
+    mode: Annotated[
+        str | None,
+        Field(
+            description="Interpolation mode for set_interpolation: 'nearest', 'linear', 'cubic', 'linear_angle', 'cubic_angle'.",
+            default=None,
+        ),
+    ] = None,
+    ctx: Context = None,
+) -> dict:
+    """Read and edit animation keyframes and tracks on an AnimationPlayer.
+
+    Query existing animations, inspect their tracks down to individual keyframes,
+    insert or remove keyframes, and change track interpolation modes.
+
+    ## Return Format
+    {"success": bool, "data": {"node": str, "animation": str, ...}}
+
+    ## Examples
+    await godot_animation(operation="list_animations", node="AnimationPlayer")
+    await godot_animation(operation="list_tracks", node="AnimationPlayer", animation="walk")
+    await godot_animation(operation="list_keyframes", node="AnimationPlayer", animation="walk", track=0)
+    await godot_animation(operation="insert_keyframe", node="AnimationPlayer", animation="walk", track=0, time=1.5, value=100.0)
+    await godot_animation(operation="remove_keyframe", node="AnimationPlayer", animation="walk", track=0, time=1.5)
+    await godot_animation(operation="set_interpolation", node="AnimationPlayer", animation="walk", track=0, mode="cubic")
+    """
+    bridge = get_bridge()
+    if not bridge.connected:
+        result = await asyncio.to_thread(bridge.connect)
+        if not result["success"]:
+            return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
+
+    params: dict = {"node": node, "operation": operation}
+    if animation is not None:
+        params["animation"] = animation
+    if track is not None:
+        params["track"] = track
+    if time is not None:
+        params["time"] = time
+    if value is not None:
+        params["value"] = value
+    if mode is not None:
+        params["mode"] = mode
+
+    timeout = 30 if operation == "insert_keyframe" else 10
+    return await asyncio.to_thread(bridge.send, "animation_edit", params, timeout=timeout)
+
+
+_profile_literals = Literal["snapshot", "enable", "history"]
+
+
+async def godot_profile(
+    operation: Annotated[
+        _profile_literals,
+        Field(
+            description="Operation: ``snapshot`` (read all current metrics), ``enable`` (start/stop auto-sampling), ``history`` (analyze sampled frames for spikes)."
+        ),
+    ],
+    enabled: Annotated[
+        bool | None,
+        Field(description="Toggle auto-sampling on/off (used with ``enable`` operation).", default=None),
+    ] = None,
+    ctx: Context = None,
+) -> dict:
+    """Read Godot performance metrics and detect frame spikes.
+
+    Snapshots read 14 metrics from Godot's ``Performance`` singleton: FPS, process
+    time, physics time, memory (static/dynamic), object/node/orphan counts, render
+    draw calls/primitives/video memory, physics active objects/collisions, audio
+    latency.
+
+    Enable auto-sampling to record a rolling history of 300 frames, then use
+    ``history`` to detect anomalous spikes (>2 stddev from the window mean).
+
+    ## Return Format
+    {"success": bool, "data": {"snapshot": dict, "enabled": bool, "spikes": list}}
+
+    ## Examples
+    await godot_profile(operation="snapshot")
+    await godot_profile(operation="enable", enabled=True)
+    # ... play some frames ...
+    await godot_profile(operation="history")
+    """
+    bridge = get_bridge()
+    if not bridge.connected:
+        result = await asyncio.to_thread(bridge.connect)
+        if not result["success"]:
+            return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
+
+    if operation == "snapshot":
+        return await asyncio.to_thread(bridge.send, "profile_snapshot", {}, timeout=10)
+    elif operation == "enable":
+        return await asyncio.to_thread(
+            bridge.send, "profile_enable", {"enabled": enabled if enabled is not None else True}, timeout=10
+        )
+    elif operation == "history":
+        return await asyncio.to_thread(bridge.send, "profile_history", {}, timeout=10)
+    return {"success": False, "error": f"Unknown operation: {operation}"}
+
+
+async def godot_help(
+    topic: Annotated[
+        str | None,
+        Field(
+            description="Optional topic: 'playtesting', 'scene', 'import', 'input', 'animation', 'tilemap', 'publishing', 'profiling', 'docs', or omit for the full index.",
+            default=None,
+        ),
+    ] = None,
+    ctx: Context = None,
+) -> dict:
+    """Get context-aware help for godot-mcp tools and workflows.
+
+    Returns markdown with tool categories, example commands, and usage tips.
+    Use ``topic`` to drill into a specific area.
+
+    ## Return Format
+    {"success": bool, "help": str, "topic": str}
+
+    ## Examples
+    await godot_help()
+    await godot_help(topic="playtesting")
+    await godot_help(topic="scene")
+    """
+    index = """# godot-mcp Help
+
+**85+ tools** for Godot 4 engine control via MCP.
+
+## Categories
+
+| Topic | Tools | Description |
+|-------|-------|-------------|
+| `playtesting` | game_time, step_until, simulate_input, state_digest, capture_viewport | Deterministic game testing with frozen clock |
+| `scene` | scene, read_scene_tree, read_node, add_node, remove_node, modify_node | Scene tree management |
+| `import` | import_stl, import_glb, import_obj | 3D model import |
+| `input` | simulate_input | Keyboard, action, joypad, mouse, text injection |
+| `animation` | play_animation, animation | Playback and keyframe authoring |
+| `tilemap` | tilemap | TileMapLayer and GridMap cell read/write |
+| `material` | set_material, inspect_resource | PBR material and resource inspection |
+| `particles` | spawn_particles, animate_streamlines, load_velocity_field | GPU particle systems |
+| `camera` | create_camera, add_light, capture_viewport | Scene setup |
+| `profiling` | profile | Performance metrics and spike detection |
+| `publishing` | itch_ops, steam_ops | itch.io and Steam publishing |
+| `docs` | godot_docs | Fetch Godot documentation |
+
+## Quick Start
+
+```python
+# Check bridge
+await godot_status()
+
+# Freeze and step
+await godot_game_time(action="freeze")
+await godot_simulate_input(actions=[{"action": "jump", "strength": 1.0}])
+await godot_step_until(condition="get_node('Player').is_on_floor()")
+await godot_capture_viewport()
+```
+
+See ``docs/TOOLS.md`` for the full reference.
+"""
+    topics = {
+        "playtesting": """## Deterministic Playtesting
+
+Freeze the game clock, inject input, step frame-by-step until a condition, capture results.
+
+```python
+await godot_game_time(action="freeze")
+await godot_simulate_input(actions=[{"action": "jump", "strength": 1.0}])
+step = await godot_step_until(condition="get_node('Player').is_on_floor()")
+state = await godot_state_digest(node_names=["Player"])
+await godot_capture_viewport()
+```
+
+**Tools**: godot_game_time, godot_step_until, godot_simulate_input, godot_state_digest, godot_capture_viewport
+""",
+        "scene": """## Scene Management
+
+Read or modify the Godot scene tree.
+
+```python
+# Read
+await godot_read_scene_tree()
+await godot_read_node(node="Player")
+
+# Write
+await godot_scene(operation="add_node", parent=".", node_type="Camera3D", name="Cam")
+await godot_scene(operation="modify_node", node_path="Player", property_name="position", value={"x": 0, "y": 5, "z": 0})
+await godot_scene(operation="save_scene")
+```
+
+**Tools**: godot_scene, godot_read_scene_tree, godot_read_node
+""",
+        "import": """## 3D Model Import
+
+Import STL, GLB/GLTF, or OBJ files into the scene.
+
+```python
+await godot_import_glb(path="/models/robot.glb", name="Robot", scale=0.01)
+await godot_import_stl(path="/models/part.stl", name="Bracket")
+```
+
+**Tools**: godot_import_stl, godot_import_glb, godot_import_obj
+""",
+        "input": """## Input Injection
+
+Simulate keyboard, action, joypad, mouse, or text input.
+
+```python
+# Analog action
+await godot_simulate_input(actions=[{"action": "move_left", "strength": 0.5}])
+
+# Mouse look
+await godot_simulate_input(actions=[{"mouse_look": {"dx": 45, "dy": -10}}])
+
+# Joypad
+await godot_simulate_input(actions=[{"joypad": {"axis": 0, "value": -0.8}}])
+
+# Legacy key
+await godot_simulate_input(actions=[{"key": "Space", "hold_ms": 100}])
+```
+
+**Tools**: godot_simulate_input
+""",
+        "animation": """## Animation
+
+Query and edit AnimationPlayer keyframes.
+
+```python
+# List
+await godot_animation(operation="list_animations", node="AnimationPlayer")
+await godot_animation(operation="list_tracks", node="AnimationPlayer", animation="walk")
+await godot_animation(operation="list_keyframes", node="AnimationPlayer", animation="walk", track=0)
+
+# Edit
+await godot_animation(operation="insert_keyframe", node="AnimationPlayer", animation="walk", track=0, time=1.5, value=100.0)
+await godot_animation(operation="set_interpolation", node="AnimationPlayer", animation="walk", track=0, mode="cubic")
+
+# Play
+await godot_play_animation(root_name="Robot", animation="dance_01")
+```
+
+**Tools**: godot_animation, godot_play_animation
+""",
+        "tilemap": """## TileMap & GridMap
+
+Read and edit TileMapLayer and GridMap cells.
+
+```python
+# Read all cells
+await godot_tilemap(operation="read", node="GroundLayer")
+
+# Set a cell
+await godot_tilemap(operation="set_cell", node="GroundLayer", cells=[{"x": 5, "y": 3, "source_id": 0, "atlas_coords": {"x": 2, "y": 1}}])
+
+# Clear
+await godot_tilemap(operation="clear", node="GroundLayer")
+```
+
+**Tools**: godot_tilemap
+""",
+        "publishing": """## Publishing
+
+Ship games to itch.io and Steam.
+
+```python
+# itch.io
+await itch_ops(operation="status")
+await ship_to_itch()
+
+# Steam
+await steam_ops(operation="status")
+await ship_to_steam()
+```
+
+**Tools**: itch_ops, steam_ops, ship_to_itch, ship_to_steam
+""",
+        "profiling": """## Profiling
+
+Read performance metrics and detect frame spikes.
+
+```python
+# One-shot snapshot
+await godot_profile(operation="snapshot")
+
+# Auto-sample 300 frames
+await godot_profile(operation="enable", enabled=True)
+# ... play some frames ...
+await godot_profile(operation="history")
+```
+
+**Tools**: godot_profile
+""",
+        "docs": """## Godot Documentation
+
+Fetch Godot class reference docs as markdown.
+
+```python
+await godot_docs(query="Node3D")
+await godot_docs(query="AnimationPlayer", section="methods")
+```
+
+**Tools**: godot_docs
+""",
+    }
+
+    if topic and topic.lower() in topics:
+        return {"success": True, "help": topics[topic.lower()], "topic": topic}
+    return {"success": True, "help": index, "topic": "index"}
+
+
+async def godot_import_splat(
+    path: Annotated[str, Field(description="Path to .ply or .spz (compressed) 3D Gaussian Splatting file.")],
+    name: Annotated[
+        str, Field(description="Node name for the resulting MultiMeshInstance3D.", default="SplatCloud")
+    ] = "SplatCloud",
+    max_splats: Annotated[
+        int, Field(description="Max splats to import (higher = slower).", default=200000, ge=1000, le=500000)
+    ] = 200000,
+    pos_scale: Annotated[
+        float, Field(description="Position scale factor (use 0.01 for cm→m conversion).", default=1.0)
+    ] = 1.0,
+    ctx: Context = None,
+) -> dict:
+    """Import a 3D Gaussian Splatting (.ply or .spz) file into the Godot scene.
+
+    Parses the splat file (decompressing SPZ if needed), extracts per-splat
+    positions, SH DC colors, and covariance scales, then renders via a custom
+    ``gaussian_splat.gdshader`` on a ``MultiMeshInstance3D``. The shader applies
+    proper billboarded Gaussian falloff with per-splat scale.
+
+    Supports ``.ply`` (binary 3DGS format) and ``.spz`` (gzip-compressed).
+    Use ``fleet_worldlabs_stage_splat`` to download World Labs splats first.
+
+    ## Return Format
+    {"success": bool, "data": {"imported": bool, "name": str, "splat_count": int, "shader": bool}}
+
+    ## Examples
+    await godot_import_splat(path="C:/data/scene.ply")
+    await godot_import_splat(path="C:/exchange/splat_full.spz", name="WorldLabs", pos_scale=0.01)
+    """
+    try:
+        from godot_mcp.services.splat_import import import_splat_file
+
+        result = import_splat_file(path, output_name=name, max_splats=max_splats, pos_scale=pos_scale)
+        if not result["success"]:
+            return result
+
+        bridge = get_bridge()
+        if not bridge.connected:
+            conn = await asyncio.to_thread(bridge.connect)
+            if not conn["success"]:
+                return {"success": False, "error": conn.get("error", "Cannot connect to Godot")}
+
+        return await asyncio.to_thread(
+            bridge.send,
+            "import_splat",
+            {"path": result["binary_path"], "name": name},
+            timeout=60,
+        )
+    except ImportError as e:
+        return {"success": False, "error": f"Splat import requires numpy: {e}"}
+    except Exception as e:
+        logger.exception("godot_import_splat error")
+        return {"success": False, "error": str(e)}
+
+
+async def godot_validate_meshes(
+    ctx: Context = None,
+) -> dict:
+    """Validate all MeshInstance3D meshes in the scene for geometric corruption.
+
+    Checks each mesh surface for:
+    - **NaN/inf values** in vertex positions (segfault risk at render time)
+    - **Zero-length normals** (causes flat shading on affected faces)
+    - **Degenerate triangles** (zero-area faces from collapsed geometry)
+    - **Empty surface arrays** (missing vertex data)
+
+    Catches silently corrupt procedural mesh data that masquerades as lighting
+    bugs or invisible geometry — the kind of issue that wastes hours of
+    debugging because there's no visible error.
+
+    ## Return Format
+    {"success": bool, "data": {"total_meshes": int, "corrupt_meshes": int, "total_issues": int, "issues": list}}
+
+    ## Examples
+    await godot_validate_meshes()
+    """
+    bridge = get_bridge()
+    if not bridge.connected:
+        result = await asyncio.to_thread(bridge.connect)
+        if not result["success"]:
+            return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
+
+    return await asyncio.to_thread(bridge.send, "validate_meshes", {}, timeout=30)
+
+
+async def godot_state_digest(
+    node_names: Annotated[
+        list[str] | None,
+        Field(
+            description="Optional node name filter. Omit to return state for all nodes in the ``mcp_watch`` group. Provide a list to target specific nodes by name (found recursively in the scene tree).",
+            default=None,
+        ),
+    ] = None,
+    ctx: Context = None,
+) -> dict:
+    """Read structured runtime state from the game scene.
+
+    Two modes:
+    - **Watch group** (omit ``node_names``): returns state for every node in the
+      ``mcp_watch`` group. Nodes in this group can define a ``_mcp_state()`` method
+      for custom state, or fall back to automatic property collection (position,
+      rotation, scale, velocity, visible, current_animation).
+    - **Named lookup** (provide ``node_names``): finds each node by name anywhere in
+      the tree and returns its state, regardless of watch group membership.
+
+    Cheaper than ``read_scene_tree`` — returns structured JSON without full hierarchy.
+
+    ## Return Format
+    {"success": bool, "data": {"nodes": {name: state_dict, ...}, "count": int}}
+
+    ## Examples
+    # All watched nodes
+    await godot_state_digest()
+
+    # Specific nodes
+    await godot_state_digest(node_names=["Player", "EnemyBoss"])
+    """
+    bridge = get_bridge()
+    if not bridge.connected:
+        result = await asyncio.to_thread(bridge.connect)
+        if not result["success"]:
+            return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
+
+    params = {}
+    if node_names is not None:
+        params["nodes"] = node_names
+    return await asyncio.to_thread(bridge.send, "state_digest", params, timeout=15)
+
+
+_playtest_literals = Literal["freeze", "unfreeze", "step"]
+
+
+async def godot_game_time(
+    action: Annotated[
+        _playtest_literals,
+        Field(
+            description="Clock action: ``freeze`` pauses the game loop (time_scale = 0), ``unfreeze`` resumes normal speed, ``step`` advances N frames then re-freezes."
+        ),
+    ],
+    frames: Annotated[
+        int, Field(description="Number of frames to advance (required for ``step`` action).", default=1, ge=1, le=3600)
+    ] = 1,
+    ctx: Context = None,
+) -> dict:
+    """Control the game clock for deterministic playtesting.
+
+    **freeze** — pauses the game loop (``Engine.time_scale = 0``). The bridge
+    keeps running so you can send input, read state, or set up scenarios.
+
+    **unfreeze** — resumes normal game speed.
+
+    **step** — advances the game by *frames* frames with real time-scale, then
+    automatically re-freezes. Use after a freeze to tick the game forward
+    deterministically.
+
+    ## Return Format
+    {"success": bool, "data": {"state": str, "time_scale": float}}
+
+    ## Examples
+    await godot_game_time(action="freeze")
+    await godot_game_time(action="step", frames=60)
+    await godot_game_time(action="unfreeze")
+    """
+    bridge = get_bridge()
+    if not bridge.connected:
+        result = await asyncio.to_thread(bridge.connect)
+        if not result["success"]:
+            return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
+
+    gaction = f"game_time_{action}"
+    params = {"frames": frames} if action == "step" else {}
+    return await asyncio.to_thread(bridge.send, gaction, params, timeout=30)
+
+
+async def godot_step_until(
+    condition: Annotated[
+        str,
+        Field(
+            description="A GDScript expression evaluated each frame. When it returns ``true``, stepping stops. Examples:\n  ``get_node('Player').position.y < -10``\n  ``get_node('Boss').health <= 0``\n  ``get_tree().get_nodes_in_group('enemies').size() == 0``\nThe expression runs with ``get_tree().get_root()`` as the base instance, so ``get_node()`` calls are relative to the scene root."
+        ),
+    ],
+    timeout_frames: Annotated[
+        int,
+        Field(
+            description="Maximum frames before giving up (prevents infinite loops).",
+            default=3600,
+            ge=1,
+            le=86400,
+        ),
+    ] = 3600,
+    ctx: Context = None,
+) -> dict:
+    """Step the game frame-by-frame until a GDScript expression becomes true.
+
+    Freeze the clock first with ``godot_game_time(action=\"freeze\")``, then
+    call this to advance one frame at a time until the condition is met.
+    The clock re-freezes automatically when the condition triggers (or on timeout).
+    The ``timeout_frames`` param prevents runaway conditions.
+
+    The condition expression runs in the context of the scene root, so
+    ``get_node(\"Player\")`` resolves relative to the root of the active scene.
+
+    ## Return Format
+    {"success": bool, "data": {"condition_met": bool, "frames_elapsed": int, "timed_out": bool | None}}
+
+    ## Examples
+    # Jump and wait until Player lands
+    await godot_game_time(action="freeze")
+    await godot_simulate_input(actions=[{"action": "jump", "strength": 1.0}])
+    await godot_step_until(condition="get_node('Player').is_on_floor()")
+    await godot_capture_viewport()
+
+    # Wait until boss is dead
+    await godot_step_until(condition="get_node('Boss').health <= 0")
+    """
+    bridge = get_bridge()
+    if not bridge.connected:
+        result = await asyncio.to_thread(bridge.connect)
+        if not result["success"]:
+            return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
+
+    return await asyncio.to_thread(
+        bridge.send,
+        "game_time_step_until",
+        {"condition": condition, "timeout_frames": timeout_frames},
+        timeout=120,
+    )
 
 
 async def godot_scene(
@@ -815,6 +1616,8 @@ def register(mcp):
     mcp.tool(annotations=_READ_ONLY, version="0.1.0")(godot_status)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_import_stl)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_import_glb)
+    mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_import_vrm)
+    mcp.tool(annotations=_READ_ONLY, version="0.1.0")(godot_list_vrm)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_import_obj)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_play_animation)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_load_velocity_field)
@@ -829,6 +1632,17 @@ def register(mcp):
     mcp.tool(annotations=_READ_ONLY, version="0.1.0")(godot_headless_verify)
     mcp.tool(annotations=_READ_ONLY, version="0.1.0")(godot_capture_viewport)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_simulate_input)
+    mcp.tool(annotations=_READ_ONLY, version="0.1.0")(godot_read_node)
+    mcp.tool(annotations=_READ_ONLY, version="0.1.0")(godot_inspect_resource)
+    mcp.tool(annotations=_READ_ONLY, version="0.1.0")(godot_help)
+    mcp.tool(annotations=_MUTATING, version="0.2.0")(godot_import_splat)
+    mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_tilemap)
+    mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_animation)
+    mcp.tool(annotations=_READ_ONLY, version="0.1.0")(godot_profile)
+    mcp.tool(annotations=_READ_ONLY, version="0.1.0")(godot_validate_meshes)
+    mcp.tool(annotations=_READ_ONLY, version="0.2.0")(godot_state_digest)
+    mcp.tool(annotations=_MUTATING, version="0.3.0")(godot_game_time)
+    mcp.tool(annotations=_MUTATING, version="0.3.0")(godot_step_until)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_scene)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_generate_procedural_texture)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(start_bridge)

@@ -12,6 +12,20 @@ var _stl_mesh_parent: Node3D = null
 var _particle_system: GPUParticles3D = null
 var _camera: Camera3D = null
 
+# Profiler ring buffer (last 300 frames for spike detection)
+var _profile_history: Array = []
+const _PROFILE_HISTORY_MAX := 300
+var _profile_enabled := false
+
+# Playtest state machine (deterministic step control)
+enum PlaytestState { RUNNING, FROZEN, STEPPING }
+var _playtest_state := PlaytestState.RUNNING
+var _step_pending := 0
+var _step_until_request_id := ""
+var _step_until_condition := ""
+var _step_until_counter := 0
+var _step_until_timeout := 0
+
 func _ready():
 	print("[MCP-Bridge] Initializing Godot MCP bridge v0.1.0...")
 	start_server(_port)
@@ -46,7 +60,7 @@ func _process(_delta: float):
 			# Send handshake
 			_send_json({"type": "handshake", "version": "0.1.0", "godot_version": Engine.get_version_info(), "ready": true})
 
-	# Process incoming data
+	# Process incoming data (always runs — bridge is an Autoload)
 	if _peer and _peer.get_status() == StreamPeerTCP.STATUS_CONNECTED:
 		var available := _peer.get_available_bytes()
 		if available > 0:
@@ -58,6 +72,61 @@ func _process(_delta: float):
 	if _peer and _peer.get_status() == StreamPeerTCP.STATUS_ERROR:
 		print("[MCP-Bridge] Client disconnected")
 		_peer = null
+
+	# ─── Profiler auto-sampling (if enabled) ──────────────────────────────
+	if _profile_enabled:
+		var snap := _collect_profile_snapshot()
+		_profile_history.append(snap)
+		if _profile_history.size() > _PROFILE_HISTORY_MAX:
+			_profile_history.pop_front()
+
+	# ─── Deterministic stepping logic ─────────────────────────────────────
+	if _playtest_state == PlaytestState.STEPPING:
+		Engine.time_scale = 1.0  # this frame advances in real time
+		_step_pending -= 1
+		_step_until_counter += 1
+
+		# Evaluate step-until condition if active
+		if _step_until_condition != "":
+			var expr := Expression.new()
+			var parse_err := expr.parse(_step_until_condition)
+			if parse_err == OK:
+				var met = expr.execute([], get_tree().get_root(), true)
+				if met == true:
+					_playtest_state = PlaytestState.FROZEN
+					Engine.time_scale = 0
+					_send_response(_step_until_request_id, {
+						"condition_met": true,
+						"condition": _step_until_condition,
+						"frames_elapsed": _step_until_counter,
+					})
+					_step_until_condition = ""
+					_step_until_request_id = ""
+					return
+			else:
+					printerr("[MCP-Bridge] step_until expression parse error: %s" % parse_err)
+
+		# Timeout check
+		if _step_until_timeout > 0 and _step_until_counter >= _step_until_timeout:
+			_playtest_state = PlaytestState.FROZEN
+			Engine.time_scale = 0
+			_send_response(_step_until_request_id, {
+				"condition_met": false,
+				"condition": _step_until_condition,
+				"frames_elapsed": _step_until_counter,
+				"timed_out": true,
+			})
+			_step_until_condition = ""
+			_step_until_request_id = ""
+			return
+
+		# Plain step count exhausted — re-freeze
+		if _step_pending <= 0 and _step_until_condition == "":
+			_playtest_state = PlaytestState.FROZEN
+			Engine.time_scale = 0
+
+	elif _playtest_state == PlaytestState.FROZEN:
+		Engine.time_scale = 0
 
 func _handle_message(raw: String):
 	var json := JSON.new()
@@ -82,6 +151,8 @@ func _handle_message(raw: String):
 			_cmd_status(request_id)
 		"import_stl":
 			_cmd_import_stl(request_id, params)
+		"import_vrm":
+			_cmd_import_vrm(request_id, params)
 		"import_glb":
 			_cmd_import_glb(request_id, params)
 		"import_obj":
@@ -122,6 +193,40 @@ func _handle_message(raw: String):
 			_cmd_simulate_input(request_id, params)
 		"generate_procedural_texture":
 			_cmd_generate_procedural_texture(request_id, params)
+		"read_node":
+			_cmd_read_node(request_id, params)
+		"inspect_resource":
+			_cmd_inspect_resource(request_id, params)
+		"tilemap_read":
+			_cmd_tilemap_read(request_id, params)
+		"tilemap_edit":
+			_cmd_tilemap_edit(request_id, params)
+		"animation_edit":
+			_cmd_animation_edit(request_id, params)
+		"profile_snapshot":
+			_cmd_profile_snapshot(request_id)
+		"profile_enable":
+			_cmd_profile_enable(request_id, params)
+		"profile_history":
+			_cmd_profile_history(request_id)
+		"validate_meshes":
+			_cmd_validate_meshes(request_id)
+		"import_splat":
+			_cmd_import_splat(request_id, params)
+		"state_digest":
+			_cmd_state_digest(request_id, params)
+		"state_watch_add":
+			_cmd_state_watch_add(request_id, params)
+		"state_watch_remove":
+			_cmd_state_watch_remove(request_id, params)
+		"game_time_freeze":
+			_cmd_game_time_freeze(request_id)
+		"game_time_unfreeze":
+			_cmd_game_time_unfreeze(request_id)
+		"game_time_step":
+			_cmd_game_time_step(request_id, params)
+		"game_time_step_until":
+			_cmd_game_time_step_until(request_id, params)
 		_:
 			_send_error("Unknown action: %s" % action, request_id)
 
@@ -187,6 +292,47 @@ func _cmd_import_stl(request_id: String, params: Dictionary):
 		"vertices": mesh.get_surface_count() > 0 if mesh else 0,
 		"aabb": {"size_x": aabb.size.x, "size_y": aabb.size.y, "size_z": aabb.size.z},
 	})
+
+func _cmd_import_vrm(request_id: String, params: Dictionary):
+	var vrm_path: String = params.get("path", "")
+	var import_name: String = params.get("name", "VRM_Import")
+
+	if vrm_path.is_empty():
+		_send_error("Missing path parameter", request_id)
+		return
+
+	if not FileAccess.file_exists(vrm_path):
+		_send_error("File not found: %s" % vrm_path, request_id)
+		return
+
+	# Copy VRM into project models/ directory so the V-Sekai addon processes it
+	var project_root := ProjectSettings.globalize_path("res://")
+	var models_dir := project_root.path_join("models")
+	DirAccess.make_dir_recursive_absolute(models_dir)
+	var dest := models_dir.path_join(import_name + ".vrm")
+	DirAccess.copy_absolute(vrm_path, dest)
+
+	# Load via ResourceLoader — the V-Sekai addon handles VRM→scene conversion
+	var scene := ResourceLoader.load("res://models/" + import_name + ".vrm")
+	if not scene:
+		_send_error("VRM addon failed to import: resource returned null", request_id)
+		return
+
+	var instance := scene.instantiate()
+	if not instance:
+		_send_error("Failed to instantiate VRM scene", request_id)
+		return
+
+	instance.name = import_name
+	var parent := _get_or_create_container("VRM_Imports")
+	parent.add_child(instance)
+
+	_send_response(request_id, {
+		"imported": true,
+		"name": import_name,
+		"vrm_path": dest,
+	})
+
 
 func _cmd_import_glb(request_id: String, params: Dictionary):
 	var path: String = params.get("path", "")
@@ -795,10 +941,89 @@ func _find_animation_player_recursive(node: Node) -> AnimationPlayer:
 func _cmd_simulate_input(request_id: String, params: Dictionary):
 	var actions: Array = params.get("actions", [])
 	if actions.is_empty():
-		_send_error("Missing 'actions' array (each with key, pressed, duration)", request_id)
+		_send_error("Missing 'actions' array", request_id)
 		return
-	var results := []
-	for action in actions:
+
+	var instant_results := []
+	var timed_actions: Array = []
+
+	for act in actions:
+		# --- Action press/release with analog strength ---
+		if act.has("action"):
+			var name: String = act.get("action", "")
+			var strength: float = act.get("strength", 1.0)
+			var pressed: bool = act.get("pressed", true)
+			if pressed:
+				Input.action_press(name, strength)
+			else:
+				Input.action_release(name)
+			instant_results.append({"type": "action", "name": name, "strength": strength, "pressed": pressed})
+
+		# --- Joypad axis motion ---
+		elif act.has("joypad") and act["joypad"].has("axis"):
+			var jp: Dictionary = act["joypad"]
+			var event := InputEventJoypadMotion.new()
+			event.device = jp.get("device", 0)
+			event.axis = jp["axis"]
+			event.axis_value = jp.get("value", 0.0)
+			Input.parse_input_event(event)
+			instant_results.append({"type": "joypad_motion", "device": event.device, "axis": event.axis, "value": event.axis_value})
+
+		# --- Joypad button press/release ---
+		elif act.has("joypad") and act["joypad"].has("button"):
+			var jp: Dictionary = act["joypad"]
+			var event := InputEventJoypadButton.new()
+			event.device = jp.get("device", 0)
+			event.button_index = jp["button"]
+			event.pressed = jp.get("pressed", true)
+			Input.parse_input_event(event)
+			instant_results.append({"type": "joypad_button", "device": event.device, "button": event.button_index, "pressed": event.pressed})
+
+		# --- Mouse look (relative motion) ---
+		elif act.has("mouse_look"):
+			var ml: Dictionary = act["mouse_look"]
+			var event := InputEventMouseMotion.new()
+			event.relative = Vector2(ml.get("dx", 0), ml.get("dy", 0))
+			var vp := get_viewport()
+			event.position = vp.get_mouse_position() if vp else Vector2.ZERO
+			event.velocity = Vector2.ZERO
+			Input.parse_input_event(event)
+			instant_results.append({"type": "mouse_look", "dx": ml.get("dx", 0), "dy": ml.get("dy", 0)})
+
+		# --- Mouse button click ---
+		elif act.has("mouse_button"):
+			var mb: Dictionary = act["mouse_button"]
+			var event := InputEventMouseButton.new()
+			event.button_index = mb.get("button", 1)
+			event.pressed = mb.get("pressed", true)
+			var pos: Dictionary = mb.get("position", {})
+			event.position = Vector2(pos.get("x", 0.0), pos.get("y", 0.0))
+			Input.parse_input_event(event)
+			instant_results.append({"type": "mouse_button", "button": event.button_index, "pressed": event.pressed})
+
+		# --- Text input (simulate per-character key events) ---
+		elif act.get("type") == "text":
+			var text: String = act.get("text", "")
+			for ch in text:
+				var ev := InputEventKey.new()
+				ev.keycode = ch.unicode_at(0)
+				ev.unicode = ch.unicode_at(0)
+				ev.pressed = true
+				Input.parse_input_event(ev)
+				var rel := InputEventKey.new()
+				rel.keycode = ev.keycode
+				rel.unicode = ev.unicode
+				rel.pressed = false
+				Input.parse_input_event(rel)
+			instant_results.append({"type": "text", "text": text, "chars": text.length()})
+
+		# --- Legacy key press/release (backward compat) ---
+		elif act.has("key"):
+			timed_actions.append(act)
+
+	# Process legacy key events with optional hold timing (sequential awaits)
+	var timed_results := []
+	for action in timed_actions:
 		var key_name: String = action.get("key", "")
 		var pressed: bool = action.get("pressed", true)
 		var hold_ms: float = action.get("hold_ms", 50.0)
@@ -811,14 +1036,749 @@ func _cmd_simulate_input(request_id: String, params: Dictionary):
 		event.pressed = pressed
 		event.echo = false
 		Input.parse_input_event(event)
-		if not pressed and hold_ms > 0:
+		if pressed and hold_ms > 0:
 			await get_tree().create_timer(hold_ms / 1000.0).timeout
 			var release := InputEventKey.new()
 			release.keycode = event.keycode
 			release.pressed = false
 			Input.parse_input_event(release)
-		results.append({"key": key_name, "keycode": event.keycode, "pressed": pressed})
-	_send_response(request_id, {"actions_processed": len(results), "results": results})
+		timed_results.append({"key": key_name, "keycode": event.keycode, "pressed": pressed})
+
+	var all_results := instant_results + timed_results
+	_send_response(request_id, {"actions_processed": len(all_results), "results": all_results})
+
+
+func _cmd_inspect_resource(request_id: String, params: Dictionary):
+	var res_path: String = params.get("path", "")
+	if res_path.is_empty():
+		_send_error("Missing 'path' param (resource path like res://assets/player.tres)", request_id)
+		return
+	var res = ResourceLoader.load(res_path)
+	if not res:
+		_send_error("Failed to load resource: %s" % res_path, request_id)
+		return
+
+	var result := {"path": res_path, "type": res.get_class()}
+
+	if res is SpriteFrames:
+		var sf := res as SpriteFrames
+		var anims := []
+		for anim_name in sf.get_animation_names():
+			anims.append({
+				"name": anim_name,
+				"frame_count": sf.get_frame_count(anim_name),
+				"speed": sf.get_animation_speed(anim_name),
+				"loop": sf.get_animation_loop(anim_name),
+			})
+		result["animation_count"] = anims.size()
+		result["animations"] = anims
+
+	elif res is TileSet:
+		var ts := res as TileSet
+		var sources := []
+		for i in ts.get_source_count():
+			var src_id := ts.get_source_id(i)
+			var src = ts.get_source(src_id)
+			var src_info := {"source_id": src_id, "type": src.get_class()}
+			if src.has_method("get_tiles_count"):
+				src_info["tiles_count"] = src.get_tiles_count()
+			sources.append(src_info)
+		result["source_count"] = ts.get_source_count()
+		result["sources"] = sources
+
+	elif res is Material:
+		var mat_info := {}
+		if res is StandardMaterial3D:
+			var sm := res as StandardMaterial3D
+			mat_info["albedo_color"] = "#" + sm.albedo_color.to_html()
+			mat_info["roughness"] = sm.roughness
+			mat_info["metallic"] = sm.metallic
+			mat_info["emission"] = "#" + sm.emission.to_html() if sm.emission_enabled else null
+			mat_info["transparency"] = sm.transparency
+			mat_info["billboard_mode"] = sm.billboard_mode
+		elif res is ShaderMaterial:
+			var shm := res as ShaderMaterial
+			mat_info["shader_path"] = shm.shader.resource_path if shm.shader else null
+			var param_list := shm.get_shader_parameter_list()
+			var params_dict := {}
+			for p in param_list:
+				var val := shm.get_shader_parameter(p.name)
+				if val is Color:
+					params_dict[p.name] = "#" + val.to_html()
+				else:
+					params_dict[p.name] = val
+			mat_info["parameters"] = params_dict
+			mat_info["parameter_count"] = param_list.size()
+		else:
+			mat_info["material_type"] = res.get_class()
+		result["material"] = mat_info
+
+	elif res is Texture2D:
+		var tex := res as Texture2D
+		result["texture"] = {
+			"width": tex.get_width(),
+			"height": tex.get_height(),
+			"has_mipmaps": tex.has_mipmaps(),
+			"format": tex.get_image().get_format() if tex.get_image() else null,
+		}
+
+	else:
+		# Generic resource: list exposed properties
+		var props := []
+		for prop in res.get_property_list():
+			if prop.usage & PROPERTY_USAGE_EDITOR:
+				var pname: String = prop.name
+				props.append({"name": pname, "type": prop.type})
+		result["property_count"] = props.size()
+		result["properties"] = props
+
+	_send_response(request_id, {"resource": result})
+
+
+func _collect_profile_snapshot() -> Dictionary:
+	return {
+		"fps": Performance.get_monitor(Performance.TIME_FPS),
+		"process_time": Performance.get_monitor(Performance.TIME_PROCESS),
+		"physics_time": Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS),
+		"memory_static": Performance.get_monitor(Performance.MEMORY_STATIC),
+		"memory_dynamic": Performance.get_monitor(Performance.MEMORY_DYNAMIC),
+		"objects": Performance.get_monitor(Performance.OBJECT_COUNT),
+		"nodes": Performance.get_monitor(Performance.OBJECT_NODE_COUNT),
+		"orphan_nodes": Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT),
+		"render_draw_calls": Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
+		"render_primitives": Performance.get_monitor(Performance.RENDER_PRIMITIVES_IN_FRAME),
+		"render_video_mem": Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED),
+		"physics_active": Performance.get_monitor(Performance.PHYSICS_ACTIVE_OBJECTS),
+		"physics_collisions": Performance.get_monitor(Performance.PHYSICS_COLLISION_PAIRS),
+		"audio_latency": Performance.get_monitor(Performance.AUDIO_OUTPUT_LATENCY),
+	}
+
+
+func _detect_spikes(snapshots: Array) -> Array:
+	"""Detect anomalous metrics: values deviating >2 stddev from the window mean."""
+	if snapshots.size() < 10:
+		return []
+	var spikes := []
+	var keys := ["process_time", "physics_time", "render_draw_calls", "render_primitives"]
+	for key in keys:
+		var vals := []
+		for s in snapshots:
+			if s.has(key):
+				vals.append(s[key])
+		if vals.size() < 5:
+			continue
+		var avg := 0.0
+		for v in vals:
+			avg += v
+		avg /= vals.size()
+		var variance := 0.0
+		for v in vals:
+			var d := v - avg
+			variance += d * d
+		variance /= vals.size()
+		var std := sqrt(variance)
+		if std < 0.001:
+			continue
+		var latest := vals[-1]
+		if abs(latest - avg) > 2.0 * std:
+			spikes.append({"metric": key, "value": latest, "mean": avg, "std": std})
+	return spikes
+
+
+func _cmd_import_splat(request_id: String, params: Dictionary):
+	"""Read a compact binary splat file and create a Gaussian-splat rendered scene.
+
+	Binary format: [N:uint32] [x:f32 y:f32 z:f32 r:u8 g:u8 b:u8 a:u8 sx:f32 sy:f32 sz:f32] × N
+	Uses the gaussian_splat.gdshader for proper billboarded Gaussian falloff.
+	"""
+	var binary_path: String = params.get("path", "")
+	var node_name: String = params.get("name", "SplatCloud")
+
+	if binary_path.is_empty():
+		_send_error("Missing 'path' param", request_id)
+		return
+
+	var file := FileAccess.open(binary_path, FileAccess.READ)
+	if not file:
+		_send_error("Cannot open splat binary: %s" % binary_path, request_id)
+		return
+
+	var n := file.get_32()
+	if n <= 0 or n > 500000:
+		file.close()
+		_send_error("Invalid splat count: %d" % n, request_id)
+		return
+
+	# Read splat data
+	var positions := PackedVector3Array()
+	var colors := PackedColorArray()
+	var custom_data := PackedVector4Array()
+	positions.resize(n)
+	colors.resize(n)
+	custom_data.resize(n)
+
+	var has_scale := false
+	for i in range(n):
+		var x := file.get_float()
+		var y := file.get_float()
+		var z := file.get_float()
+		var r := file.get_8()
+		var g := file.get_8()
+		var b := file.get_8()
+		var a := file.get_8()
+		positions[i] = Vector3(x, y, z)
+		colors[i] = Color(r / 255.0, g / 255.0, b / 255.0, a / 255.0)
+
+		# Try reading scale data (3 floats). EOF-safe.
+		var sx := 0.05
+		var sy := 0.05
+		var sz := 0.05
+		if file.get_length() >= file.get_position() + 12:
+			sx = file.get_float()
+			sy = file.get_float()
+			sz = file.get_float()
+			has_scale = true
+		custom_data[i] = Vector4(sx, sy, sz, 0.0)
+
+	file.close()
+
+	# Load the Gaussian splat shader
+	var shader_path := "res://shaders/gaussian_splat.gdshader"
+	var shader := ResourceLoader.load(shader_path)
+	var mat := ShaderMaterial.new()
+	mat.shader = shader
+	if not shader:
+		# Fallback: simple material if shader not found
+		printerr("[MCP-Bridge] Gaussian splat shader not found at %s" % shader_path)
+
+	# Create MultiMesh with instance data
+	var multimesh := MultiMesh.new()
+	multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	multimesh.use_colors = true
+	multimesh.custom_data_format = MultiMesh.CUSTOM_DATA_FLOAT_SIZE_4
+	multimesh.instance_count = n
+
+	# Unit quad — the shader does the billboarding
+	var quad := QuadMesh.new()
+	quad.size = Vector2(2.0, 2.0)  # normalized quad [-1, 1]
+	quad.flip_faces = false
+	quad.material = mat
+	multimesh.mesh = quad
+
+	# Set per-instance data
+	for i in range(n):
+		var t := Transform3D.IDENTITY
+		t.origin = positions[i]
+		multimesh.set_instance_transform(i, t)
+		multimesh.set_instance_color(i, colors[i])
+		multimesh.set_instance_custom_data(i, custom_data[i])
+
+	var mi := MultiMeshInstance3D.new()
+	mi.name = node_name
+	mi.multimesh = multimesh
+
+	var container := _get_or_create_container("Splat_Imports")
+	container.add_child(mi)
+
+	_send_response(request_id, {
+		"imported": true,
+		"name": node_name,
+		"splat_count": n,
+		"shader": shader != null,
+		"scales": has_scale,
+	})
+
+
+func _cmd_validate_meshes(request_id: String):
+	var root := get_tree().get_root() if get_tree() else null
+	if not root:
+		_send_error("No active scene tree", request_id)
+		return
+
+	var results := []
+	var issues := []
+	var total_meshes := 0
+	var corrupt_count := 0
+
+	var all_meshes := _find_all_mesh_instances(root)
+	for mi in all_meshes:
+		total_meshes += 1
+		var mesh := mi.mesh
+		if not mesh:
+			continue
+		var mesh_issues := _validate_single_mesh(mi)
+		if mesh_issues.size() > 0:
+			corrupt_count += 1
+			for issue in mesh_issues:
+				issues.append(issue)
+
+		results.append({
+			"node": mi.name,
+			"path": str(mi.get_path()),
+			"mesh_type": mesh.get_class(),
+			"surface_count": mesh.get_surface_count(),
+			"issues": mesh_issues.size(),
+		})
+
+	_send_response(request_id, {
+		"total_meshes": total_meshes,
+		"corrupt_meshes": corrupt_count,
+		"total_issues": issues.size(),
+		"details": results,
+		"issues": issues,
+	})
+
+
+func _find_all_mesh_instances(node: Node) -> Array:
+	var result := []
+	if node is MeshInstance3D:
+		result.append(node)
+	for child in node.get_children():
+		result.append_array(_find_all_mesh_instances(child))
+	return result
+
+
+func _validate_single_mesh(mi: MeshInstance3D) -> Array:
+	var found := []
+	var mesh := mi.mesh
+	if not mesh:
+		return found
+
+	for surf_idx in mesh.get_surface_count():
+		var arrays := mesh.surface_get_arrays(surf_idx)
+		if arrays.is_empty():
+			found.append({"node": mi.name, "surface": surf_idx, "severity": "error", "detail": "Empty surface arrays"})
+			continue
+
+		var verts = arrays[Mesh.ARRAY_VERTEX] if arrays.size() > Mesh.ARRAY_VERTEX else null
+		var normals = arrays[Mesh.ARRAY_NORMAL] if arrays.size() > Mesh.ARRAY_NORMAL else null
+		var indices = arrays[Mesh.ARRAY_INDEX] if arrays.size() > Mesh.ARRAY_INDEX else null
+
+		# Check for NaN/inf in vertices
+		if verts is PackedVector3Array:
+			for i in verts.size():
+				var v := verts[i]
+				if isnan(v.x) or isnan(v.y) or isnan(v.z) or is_inf(v.x) or is_inf(v.y) or is_inf(v.z):
+					found.append({"node": mi.name, "surface": surf_idx, "severity": "error",
+						"detail": "Vertex %d has NaN/inf: (%s, %s, %s)" % [i, v.x, v.y, v.z]})
+					if found.size() >= 5:
+						return found  # limit per mesh
+
+		# Check for zero-length normals
+		if normals is PackedVector3Array:
+			for i in normals.size():
+				var n := normals[i]
+				if n.length_squared() < 0.0001:
+					found.append({"node": mi.name, "surface": surf_idx, "severity": "warning",
+						"detail": "Normal %d is zero-length" % i})
+					break
+
+		# Check for degenerate triangles (zero-area)
+		if verts is PackedVector3Array and verts.size() >= 3:
+			var step := 3
+			var tri_indices := []
+			if indices is PackedInt32Array:
+				for i in range(0, indices.size(), 3):
+					if i + 2 < indices.size():
+						tri_indices.append([indices[i], indices[i+1], indices[i+2]])
+			else:
+				for i in range(0, verts.size(), 3):
+					if i + 2 < verts.size():
+						tri_indices.append([i, i+1, i+2])
+
+			for tri in tri_indices:
+				var a := verts[tri[0]]
+				var b := verts[tri[1]]
+				var c := verts[tri[2]]
+				var cross = (b - a).cross(c - a)
+				if cross.length_squared() < 0.0000001:
+					found.append({"node": mi.name, "surface": surf_idx, "severity": "warning",
+						"detail": "Degenerate triangle at indices %s" % str(tri)})
+					break
+
+	return found
+
+
+func _cmd_profile_snapshot(request_id: String):
+	var snap := _collect_profile_snapshot()
+	_send_response(request_id, {"snapshot": snap, "enabled": _profile_enabled})
+
+
+func _cmd_profile_enable(request_id: String, params: Dictionary):
+	_profile_enabled = params.get("enabled", true)
+	if not _profile_enabled:
+		_profile_history.clear()
+	_send_response(request_id, {"enabled": _profile_enabled, "history_size": _profile_history.size()})
+
+
+func _cmd_profile_history(request_id: String):
+	var spikes := _detect_spikes(_profile_history)
+	var avg_snap := {}
+	if _profile_history.size() > 0:
+		var keys = _profile_history[0].keys()
+		for key in keys:
+			var total := 0.0
+			for s in _profile_history:
+				if s.has(key):
+					total += s[key]
+			avg_snap[key] = total / _profile_history.size()
+
+	_send_response(request_id, {
+		"enabled": _profile_enabled,
+		"frames": _profile_history.size(),
+		"latest": _profile_history[-1] if _profile_history.size() > 0 else null,
+		"average": avg_snap,
+		"spikes": spikes,
+		"spike_count": spikes.size(),
+	})
+
+
+func _cmd_animation_edit(request_id: String, params: Dictionary):
+	var node_ref: String = params.get("node", "")
+	var operation: String = params.get("operation", "")
+	var anim_name: String = params.get("animation", "")
+	if node_ref.is_empty():
+		_send_error("Missing 'node' param", request_id)
+		return
+	var node := get_tree().get_root().get_node_or_null(NodePath(node_ref))
+	if not node:
+		node = _find_node_by_name(node_ref)
+	if not node:
+		_send_error("AnimationPlayer not found: %s" % node_ref, request_id)
+		return
+	if not node is AnimationPlayer:
+		_send_error("Node '%s' is not an AnimationPlayer" % node.name, request_id)
+		return
+	var ap := node as AnimationPlayer
+	var lib = ap.get_animation_library("")
+	if lib == null and ap.get_animation_library_list().size() > 0:
+		lib = ap.get_animation_library(ap.get_animation_library_list()[0])
+	if not lib:
+		_send_error("No animation library found on '%s'" % node.name, request_id)
+		return
+
+	if operation == "list_animations":
+		var anims := []
+		for name in lib.get_animation_list():
+			anims.append(name)
+		_send_response(request_id, {"node": node.name, "animations": anims, "count": anims.size()})
+
+	elif operation == "list_tracks":
+		if not lib.has_animation(anim_name):
+			_send_error("Animation not found: %s" % anim_name, request_id)
+			return
+		var anim := lib.get_animation(anim_name)
+		var tracks := []
+		for i in anim.get_track_count():
+			var track_info := {
+				"index": i,
+				"type": anim.track_get_type(i),
+				"path": str(anim.track_get_path(i)),
+			}
+			var interp = anim.track_get_interpolation(i)
+			var interp_names = ["NEAREST", "LINEAR", "CUBIC", "LINEAR_ANGLE", "CUBIC_ANGLE"]
+			track_info["interpolation"] = interp_names[interp] if interp < interp_names.size() else str(interp)
+			track_info["key_count"] = anim.track_get_key_count(i)
+			tracks.append(track_info)
+		_send_response(request_id, {"node": node.name, "animation": anim_name, "tracks": tracks, "count": tracks.size()})
+
+	elif operation == "list_keyframes":
+		if not lib.has_animation(anim_name):
+			_send_error("Animation not found: %s" % anim_name, request_id)
+			return
+		var anim := lib.get_animation(anim_name)
+		var track_index: int = params.get("track", 0)
+		if track_index < 0 or track_index >= anim.get_track_count():
+			_send_error("Track index %d out of range (0-%d)" % [track_index, anim.get_track_count() - 1], request_id)
+			return
+		var keys := []
+		for k in anim.track_get_key_count(track_index):
+			var ktime := anim.track_get_key_time(track_index, k)
+			var kval := anim.track_get_key_value(track_index, k)
+			var ktrans := anim.track_get_key_transition(track_index, k)
+			keys.append({"index": k, "time": ktime, "value": str(kval), "transition": ktrans})
+		_send_response(request_id, {
+			"node": node.name, "animation": anim_name, "track": track_index,
+			"keys": keys, "count": keys.size(),
+		})
+
+	elif operation == "insert_keyframe":
+		if not lib.has_animation(anim_name):
+			_send_error("Animation not found: %s" % anim_name, request_id)
+			return
+		var anim := lib.get_animation(anim_name)
+		var track_index: int = params.get("track", -1)
+		var time: float = params.get("time", 0.0)
+		var value = params.get("value", 0)
+		if track_index < 0 or track_index >= anim.get_track_count():
+			_send_error("Invalid track index %d" % track_index, request_id)
+			return
+		var inserted = anim.track_insert_key(track_index, time, value)
+		_send_response(request_id, {
+			"node": node.name, "animation": anim_name, "track": track_index,
+			"time": time, "inserted": inserted,
+		})
+
+	elif operation == "remove_keyframe":
+		if not lib.has_animation(anim_name):
+			_send_error("Animation not found: %s" % anim_name, request_id)
+			return
+		var anim := lib.get_animation(anim_name)
+		var track_index: int = params.get("track", -1)
+		var time: float = params.get("time", 0.0)
+		if track_index < 0 or track_index >= anim.get_track_count():
+			_send_error("Invalid track index %d" % track_index, request_id)
+			return
+		anim.track_remove_key_at_time(track_index, time)
+		_send_response(request_id, {
+			"node": node.name, "animation": anim_name, "track": track_index,
+			"time": time, "removed": true,
+		})
+
+	elif operation == "set_interpolation":
+		if not lib.has_animation(anim_name):
+			_send_error("Animation not found: %s" % anim_name, request_id)
+			return
+		var anim := lib.get_animation(anim_name)
+		var track_index: int = params.get("track", -1)
+		var mode: String = params.get("mode", "linear")
+		var interp_map := {"nearest": 0, "linear": 1, "cubic": 2, "linear_angle": 3, "cubic_angle": 4}
+		var interp_val = interp_map.get(mode.to_lower(), 1)
+		if track_index < 0 or track_index >= anim.get_track_count():
+			_send_error("Invalid track index %d" % track_index, request_id)
+			return
+		anim.track_set_interpolation(track_index, interp_val)
+		_send_response(request_id, {
+			"node": node.name, "animation": anim_name, "track": track_index,
+			"interpolation": mode,
+		})
+
+	else:
+		_send_error("Unknown animation_edit operation: %s" % operation, request_id)
+
+
+func _cmd_tilemap_read(request_id: String, params: Dictionary):
+	var node_ref: String = params.get("node", "")
+	if node_ref.is_empty():
+		_send_error("Missing 'node' param", request_id)
+		return
+	var node := get_tree().get_root().get_node_or_null(NodePath(node_ref))
+	if not node:
+		node = _find_node_by_name(node_ref)
+	if not node:
+		_send_error("Node not found: %s" % node_ref, request_id)
+		return
+
+	if node is TileMapLayer:
+		var tml := node as TileMapLayer
+		var used := tml.get_used_cells()
+		var cells := []
+		for coord in used:
+			cells.append({
+				"x": coord.x, "y": coord.y,
+				"source_id": tml.get_cell_source_id(coord),
+				"atlas_coords": {"x": tml.get_cell_atlas_coords(coord).x, "y": tml.get_cell_atlas_coords(coord).y},
+				"alternative_tile": tml.get_cell_alternative_tile(coord),
+			})
+		_send_response(request_id, {
+			"node": node.name, "type": "TileMapLayer",
+			"cell_count": cells.size(), "cells": cells,
+			"cell_size": {"x": tml.tile_set.tile_size.x, "y": tml.tile_set.tile_size.y} if tml.tile_set else null,
+			"layers": tml.get_layers_count() if tml.has_method("get_layers_count") else 1,
+		})
+
+	elif node is GridMap:
+		var gm := node as GridMap
+		var used := gm.get_used_cells()
+		var cells := []
+		for cell in used:
+			cells.append({
+				"x": cell.x, "y": cell.y, "z": cell.z,
+				"item": gm.get_cell_item(cell),
+				"orientation": gm.get_cell_item_orientation(cell),
+			})
+		_send_response(request_id, {
+			"node": node.name, "type": "GridMap",
+			"cell_count": cells.size(), "cells": cells,
+		})
+
+	else:
+		_send_error("Node '%s' is not a TileMapLayer or GridMap" % node.name, request_id)
+
+
+func _cmd_tilemap_edit(request_id: String, params: Dictionary):
+	var node_ref: String = params.get("node", "")
+	var operation: String = params.get("operation", "set_cell")
+	if node_ref.is_empty():
+		_send_error("Missing 'node' param", request_id)
+		return
+	var node := get_tree().get_root().get_node_or_null(NodePath(node_ref))
+	if not node:
+		node = _find_node_by_name(node_ref)
+	if not node:
+		_send_error("Node not found: %s" % node_ref, request_id)
+		return
+
+	if operation == "set_cell" and node is TileMapLayer:
+		var tml := node as TileMapLayer
+		var cells: Array = params.get("cells", [])
+		var count := 0
+		for c in cells:
+			var coord := Vector2i(c.get("x", 0), c.get("y", 0))
+			var source_id: int = c.get("source_id", 0)
+			var ac := c.get("atlas_coords", {"x": 0, "y": 0})
+			var atlas := Vector2i(ac.get("x", 0), ac.get("y", 0))
+			var alt: int = c.get("alternative_tile", 0)
+			tml.set_cell(coord, source_id, atlas, alt)
+			count += 1
+		_send_response(request_id, {"operation": "set_cell", "node": node.name, "type": "TileMapLayer", "cells_set": count})
+
+	elif operation == "erase_cell" and node is TileMapLayer:
+		var tml := node as TileMapLayer
+		var coords: Array = params.get("coords", [])
+		var count := 0
+		for c in coords:
+			tml.erase_cell(Vector2i(c.get("x", 0), c.get("y", 0)))
+			count += 1
+		_send_response(request_id, {"operation": "erase_cell", "node": node.name, "type": "TileMapLayer", "cells_erased": count})
+
+	elif operation == "clear" and (node is TileMapLayer or node is GridMap):
+		if node is TileMapLayer:
+			(node as TileMapLayer).clear()
+		else:
+			(node as GridMap).clear()
+		_send_response(request_id, {"operation": "clear", "node": node.name, "cleared": true})
+
+	else:
+		_send_error("Unsupported operation '%s' for %s" % [operation, node.get_class()], request_id)
+
+
+func _cmd_read_node(request_id: String, params: Dictionary):
+	var node_ref: String = params.get("node", "")
+	if node_ref.is_empty():
+		_send_error("Missing 'node' param (path or name)", request_id)
+		return
+	var node := get_tree().get_root().get_node_or_null(NodePath(node_ref))
+	if not node:
+		node = _find_node_by_name(node_ref)
+	if not node:
+		_send_error("Node not found: %s" % node_ref, request_id)
+		return
+
+	var result := _collect_node_state(node)
+	result["path"] = str(node.get_path())
+	# List direct children
+	var children := []
+	for child in node.get_children():
+		children.append({"name": child.name, "type": child.get_class()})
+	if children.size() > 0:
+		result["children"] = children
+	_send_response(request_id, {"node": result})
+
+
+func _cmd_state_digest(request_id: String, params: Dictionary):
+	var filter_names: Array = params.get("nodes", [])
+	var root := get_tree().get_root() if get_tree() else null
+	if not root:
+		_send_error("No active scene tree", request_id)
+		return
+
+	var result := {}
+	if filter_names.is_empty():
+		# Collect state for all nodes in mcp_watch group
+		var watched := get_tree().get_nodes_in_group("mcp_watch")
+		for node in watched:
+			result[node.name] = _collect_node_state(node)
+	else:
+		# Collect state for named nodes (found anywhere in tree)
+		for name in filter_names:
+			var node_name := str(name)
+			var node := _find_node_by_name(node_name)
+			if not node:
+				result[node_name] = {"error": "node not found"}
+			else:
+				result[node_name] = _collect_node_state(node)
+
+	_send_response(request_id, {"nodes": result, "count": result.size()})
+
+
+func _cmd_state_watch_add(request_id: String, params: Dictionary):
+	var node_ref: String = params.get("node", "")
+	if node_ref.is_empty():
+		_send_error("Missing 'node' param (path or name)", request_id)
+		return
+	var node := get_tree().get_root().get_node_or_null(NodePath(node_ref))
+	if not node:
+		node = _find_node_by_name(node_ref)
+	if not node:
+		_send_error("Node not found: %s" % node_ref, request_id)
+		return
+	node.add_to_group("mcp_watch")
+	_send_response(request_id, {"added": true, "node": node.name, "group": "mcp_watch"})
+
+
+func _cmd_state_watch_remove(request_id: String, params: Dictionary):
+	var node_ref: String = params.get("node", "")
+	if node_ref.is_empty():
+		_send_error("Missing 'node' param (path or name)", request_id)
+		return
+	var node := get_tree().get_root().get_node_or_null(NodePath(node_ref))
+	if not node:
+		node = _find_node_by_name(node_ref)
+	if not node:
+		_send_error("Node not found: %s" % node_ref, request_id)
+		return
+	node.remove_from_group("mcp_watch")
+	_send_response(request_id, {"removed": true, "node": node.name, "group": "mcp_watch"})
+
+
+func _cmd_game_time_freeze(request_id: String):
+	_playtest_state = PlaytestState.FROZEN
+	Engine.time_scale = 0
+	_send_response(request_id, {"state": "frozen", "time_scale": 0.0})
+
+
+func _cmd_game_time_unfreeze(request_id: String):
+	_playtest_state = PlaytestState.RUNNING
+	Engine.time_scale = 1.0
+	_send_response(request_id, {"state": "running", "time_scale": 1.0})
+
+
+func _cmd_game_time_step(request_id: String, params: Dictionary):
+	var frames: int = params.get("frames", 1)
+	if _playtest_state != PlaytestState.FROZEN:
+		_send_error("Must freeze the game clock before stepping (use game_time_freeze)", request_id)
+		return
+
+	_step_pending = frames
+	_step_until_condition = ""
+	_step_until_request_id = ""
+	_step_until_counter = 0
+	_step_until_timeout = 0
+	_playtest_state = PlaytestState.STEPPING
+	# time_scale will be set to 1.0 in _process during stepping
+
+	_send_response(request_id, {"stepping": true, "frames": frames})
+
+
+func _cmd_game_time_step_until(request_id: String, params: Dictionary):
+	var condition: String = params.get("condition", "")
+	var timeout_frames: int = params.get("timeout_frames", 3600)
+	if condition.is_empty():
+		_send_error("step_until requires a 'condition' GDScript expression", request_id)
+		return
+	if _playtest_state != PlaytestState.FROZEN:
+		_send_error("Must freeze the game clock first (use game_time_freeze)", request_id)
+		return
+
+	_step_until_request_id = request_id
+	_step_until_condition = condition
+	_step_until_counter = 0
+	_step_until_timeout = timeout_frames
+	_step_pending = max(timeout_frames, 1)
+	_playtest_state = PlaytestState.STEPPING
+	# Response is deferred — sent from _process when condition is met or timeout.
+	# The Python side blocks on bridge.send() until the response arrives.
 
 
 func _cmd_generate_procedural_texture(request_id: String, params: Dictionary):
@@ -909,6 +1869,52 @@ func _cmd_capture_viewport(request_id: String, params: Dictionary):
 		"height": img.get_height(),
 		"format": "png",
 	})
+
+
+func _collect_node_state(node: Node) -> Dictionary:
+	var result := {"name": node.name, "type": node.get_class()}
+
+	# Opt-in custom state via _mcp_state() method
+	if node.has_method("_mcp_state"):
+		result["mcp_state"] = true
+		var custom := node._mcp_state()
+		if typeof(custom) == TYPE_DICTIONARY:
+			for key in custom:
+				result[key] = custom[key]
+		return result
+
+	# Default property collection for common node types
+	if node is Node3D:
+		var n := node as Node3D
+		result["position"] = {"x": n.position.x, "y": n.position.y, "z": n.position.z}
+		result["rotation_deg"] = {"x": rad_to_deg(n.rotation.x), "y": rad_to_deg(n.rotation.y), "z": rad_to_deg(n.rotation.z)}
+		result["scale"] = {"x": n.scale.x, "y": n.scale.y, "z": n.scale.z}
+	if node is Node2D:
+		var n := node as Node2D
+		result["position"] = {"x": n.position.x, "y": n.position.y}
+		result["rotation_deg"] = rad_to_deg(n.rotation)
+		result["scale"] = {"x": n.scale.x, "y": n.scale.y}
+	if node is CanvasItem:
+		result["visible"] = (node as CanvasItem).visible
+	if node is CharacterBody3D:
+		var v := (node as CharacterBody3D).velocity
+		result["velocity"] = {"x": v.x, "y": v.y, "z": v.z}
+	if node is RigidBody3D:
+		var v := (node as RigidBody3D).linear_velocity
+		result["velocity"] = {"x": v.x, "y": v.y, "z": v.z}
+	if node is CharacterBody2D:
+		var v := (node as CharacterBody2D).velocity
+		result["velocity"] = {"x": v.x, "y": v.y}
+	if node is RigidBody2D:
+		var v := (node as RigidBody2D).linear_velocity
+		result["velocity"] = {"x": v.x, "y": v.y}
+	if node is AnimationPlayer:
+		var ap := node as AnimationPlayer
+		if ap.is_playing():
+			result["current_animation"] = ap.get_current_animation()
+			result["speed_scale"] = ap.speed_scale
+
+	return result
 
 
 func _build_scene_tree(node: Node) -> Dictionary:

@@ -1,36 +1,47 @@
 # Tool Reference — Godot MCP
 
-**80+ MCP tools** across all modules. Tools are registered via FastMCP 3.4
+**95+ MCP tools** across all modules. Tools are registered via FastMCP 3.4
 with versioning and READ_ONLY/MUTATING annotations.
 
 ---
 
-## Engine Control (core_tools.py — 20 tools)
+## Engine Control (core_tools.py — 31 tools)
 
 All require the Godot TCP bridge (port 9080) to be running.
 
-| Tool | Annotations | Description |
-|------|-------------|-------------|
-| `godot_status` | READ_ONLY | Engine version, FPS, node count, bridge state |
-| `godot_import_stl` | MUTATING | Import binary STL mesh as MeshInstance3D |
-| `godot_import_glb` | MUTATING | Import GLB/GLTF model via GLTFDocument |
-| `godot_import_obj` | MUTATING | Import Wavefront OBJ with MTL support |
-| `godot_play_animation` | MUTATING | List/play GLB animation clips |
-| `godot_load_velocity_field` | MUTATING | Load CSV velocity data (x,y,z,vx,vy,vz) |
-| `godot_spawn_particles` | MUTATING | Create GPUParticles3D with configurable emission |
-| `godot_animate_streamlines` | MUTATING | Animate particles along velocity field vectors |
-| `godot_create_camera` | MUTATING | Create Camera3D with orbit controls |
-| `godot_add_light` | MUTATING | Directional/ambient/omni light |
-| `godot_set_material` | MUTATING | Assign StandardMaterial3D PBR to mesh |
-| `godot_export_web` | MUTATING | HTML5/WebAssembly export via headless or in-editor |
-| `godot_read_scene_tree` | READ_ONLY | Dump scene hierarchy as JSON |
-| `godot_set_config` | MUTATING | Write to project.godot INI-style config |
-| `godot_headless_verify` | READ_ONLY | Check headless mode + CLI command |
-| `godot_capture_viewport` | READ_ONLY | Capture viewport as PNG, returns path + dimensions |
-| `godot_simulate_input` | MUTATING | Send keyboard events for agent playtesting |
-| `godot_scene` | MUTATING | Portmanteau: add/remove/modify nodes, save scene |
-| `godot_generate_procedural_texture` | MUTATING | Create gradient/noise/checker/solid textures at runtime |
-| `start_bridge` | MUTATING | Locate Godot and launch headless with bridge addon |
+| Tool | Annotations | Version | Description |
+|------|-------------|---------|-------------|
+| `godot_status` | READ_ONLY | 0.1.0 | Engine version, FPS, node count, bridge state |
+| `godot_import_stl` | MUTATING | 0.1.0 | Import binary STL mesh as MeshInstance3D |
+| `godot_import_glb` | MUTATING | 0.1.0 | Import GLB/GLTF model via GLTFDocument |
+| `godot_import_obj` | MUTATING | 0.1.0 | Import Wavefront OBJ with MTL support |
+| `godot_play_animation` | MUTATING | 0.1.0 | List/play GLB animation clips |
+| `godot_load_velocity_field` | MUTATING | 0.1.0 | Load CSV velocity data (x,y,z,vx,vy,vz) |
+| `godot_spawn_particles` | MUTATING | 0.1.0 | Create GPUParticles3D with configurable emission |
+| `godot_animate_streamlines` | MUTATING | 0.1.0 | Animate particles along velocity field vectors |
+| `godot_create_camera` | MUTATING | 0.1.0 | Create Camera3D with orbit controls |
+| `godot_add_light` | MUTATING | 0.1.0 | Directional/ambient/omni light |
+| `godot_set_material` | MUTATING | 0.1.0 | Assign StandardMaterial3D PBR to mesh |
+| `godot_export_web` | MUTATING | 0.1.0 | HTML5/WebAssembly export via headless or in-editor |
+| `godot_read_scene_tree` | READ_ONLY | 0.1.0 | Dump scene hierarchy as JSON |
+| `godot_set_config` | MUTATING | 0.1.0 | Write to project.godot INI-style config |
+| `godot_headless_verify` | READ_ONLY | 0.1.0 | Check headless mode + CLI command |
+| `godot_capture_viewport` | READ_ONLY | 0.1.0 | Capture viewport as PNG, returns path + dimensions |
+| `godot_simulate_input` | MUTATING | 0.1.0 | Keyboard/action/joypad/mouse/text input injection |
+| `godot_read_node` | READ_ONLY | 0.1.0 | Read a single node's properties by name/path |
+| `godot_inspect_resource` | READ_ONLY | 0.1.0 | Inspect SpriteFrames, TileSet, Materials, Textures as JSON |
+| `godot_tilemap` | MUTATING | 0.1.0 | Read/edit TileMapLayer and GridMap cells |
+| `godot_animation` | MUTATING | 0.1.0 | Query and author keyframes/tracks on AnimationPlayer |
+| `godot_validate_meshes` | READ_ONLY | 0.1.0 | Detect corrupt mesh data (NaN, degenerate, zero normals) |
+| `godot_profile` | READ_ONLY | 0.1.0 | Performance metrics + frame spike detection |
+| `godot_help` | READ_ONLY | 0.1.0 | Context-aware tool help and examples |
+| `godot_import_splat` | MUTATING | 0.2.0 | Import 3D Gaussian splats (.ply/.spz) with billboarded shader |
+| `godot_state_digest` | READ_ONLY | 0.2.0 | Read structured game state (watch group or named nodes) |
+| `godot_game_time` | MUTATING | 0.3.0 | Freeze/unfreeze/step the game clock deterministically |
+| `godot_step_until` | MUTATING | 0.3.0 | Step frame-by-step until a GDScript condition is true |
+| `godot_scene` | MUTATING | 0.1.0 | Portmanteau: add/remove/modify nodes, save scene |
+| `godot_generate_procedural_texture` | MUTATING | 0.1.0 | Create gradient/noise/checker/solid textures at runtime |
+| `start_bridge` | MUTATING | 0.1.0 | Locate Godot and launch headless with bridge addon |
 
 ---
 
@@ -134,6 +145,14 @@ All require the Godot TCP bridge (port 9080) to be running.
 | `show_viewport_card` | Latest viewport capture |
 
 ---
+
+---
+
+## Documentation (docs_tools.py)
+
+| Tool | Annotations | Description |
+|------|-------------|-------------|
+| `godot_docs` | READ_ONLY | Fetch Godot class reference as markdown from docs.godotengine.org |
 
 ## Prefabs, Prompts, Sampling, Workflows
 

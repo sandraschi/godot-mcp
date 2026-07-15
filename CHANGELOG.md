@@ -5,6 +5,69 @@ All notable changes to **godot-mcp** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0-beta.1] - 2026-07-15
+
+### Added (2026-07-15) — Documentation fetcher, mesh validation, help system, tilemap, animation keyframe editor, profiler, demo scripts and showcase page
+- **`godot_help`** — centralized help with topic-based drill-down (playtesting, scene, import, input, animation, tilemap, publishing, profiling, docs). Returns markdown with examples.
+- **`godot_docs`** — fetches Godot class reference from docs.godotengine.org as clean markdown, version-matched to the running engine.
+- **`godot_validate_meshes`** — scans all MeshInstance3D nodes for geometric corruption: NaN/inf vertices, zero-length normals, degenerate triangles, empty surface arrays.
+- **`godot_read_node`** — READ_ONLY split from scene portmanteau. Reads a single node's properties by name/path. Safer for auto-allow.
+- **`godot_inspect_resource`** — type-aware resource inspection: SpriteFrames (anims/frames), TileSet (sources/tiles), StandardMaterial3D (albedo/roughness), ShaderMaterial (params), Texture2D (size/format).
+- **`godot_tilemap`** — 4 operations: read, set_cell, erase_cell, clear. Works with TileMapLayer and GridMap.
+- **`godot_animation`** — 6 operations: list_animations, list_tracks (type/path/interpolation/key_count), list_keyframes (time/value/transition), insert_keyframe, remove_keyframe, set_interpolation.
+- **`godot_profile`** — 3 operations: snapshot (14 metrics), enable (auto-sample 300-frame rolling window), history (detect spikes >2 stddev from mean).
+- **`demos/`** — 3 demo scripts: `playtesting.py` (freeze→input→step-until→capture), `profile.py` (snapshot→enable→spike detection), `scene_inspect.py` (read_node, tilemap, inspect_resource).
+- **Webapp `/demos` page** — Demo Showcase with tool cards organized by category, example code snippets, and quick-start checklist. Sidebar entry under Agentic.
+- **justfile recipes** — `profile-snapshot`, `profile-enable`, `profile-history`, `anim-list`, `mesh-validate`, `godot-docs`, `demos`, `demo`.
+- **`godot_docs`** — fetches Godot class reference from docs.godotengine.org as clean markdown, version-matched to the running engine. Accepts class name + optional section filter.
+- **`godot_validate_meshes`** — scans all MeshInstance3D nodes for geometric corruption: NaN/inf vertices, zero-length normals, degenerate triangles, empty surface arrays.
+- **`godot_help`** — centralized help with topic-based drill-down (playtesting, scene, import, input, animation, tilemap, publishing, profiling, docs).
+- **`godot_read_node`** — READ_ONLY split from scene portmanteau. Reads a single node's properties by name/path. Safer for auto-allow.
+- **`godot_inspect_resource`** — type-aware resource inspection: SpriteFrames (anims/frames), TileSet (sources/tiles), StandardMaterial3D (albedo/roughness), ShaderMaterial (params), Texture2D (size/format).
+- **`godot_tilemap`** — 4 operations: read, set_cell, erase_cell, clear. Works with TileMapLayer and GridMap. Decodes the base64 cell data that `.tscn` serialises.
+- **`godot_animation`** — 6 operations: list_animations, list_tracks (type/path/interpolation/key_count), list_keyframes (time/value/transition), insert_keyframe, remove_keyframe, set_interpolation.
+- **`godot_profile`** — 3 operations: snapshot (14 metrics), enable (auto-sample 300-frame rolling window), history (detect spikes >2 stddev from mean).
+- **`.opencode/skills/`** — opencode native skill with before-work recall and tool summary.
+- **`opencode.json`** — references the opencode skill for automatic loading.
+
+### Added (2026-07-15) — 3D Gaussian Splat import with custom shader
+- **`godot_import_splat`** — imports `.ply` (raw 3DGS) and `.spz` (gzip-compressed, World Labs format) files into the Godot scene. Pipeline: Python decompresses SPZ → parses PLY (SH DC → RGB, log-scale → linear) → writes compact binary → GDScript bridge reads → renders via `gaussian_splat.gdshader`.
+- **`shaders/gaussian_splat.gdshader`** — custom Godot spatial shader for billboarded Gaussian splat rendering: per-splat scale from `INSTANCE_CUSTOM`, configurable `falloff_strength`, emissive glow, alpha blending.
+- **`src/godot_mcp/services/splat_import.py`** — PLY parser (binary_little_endian 3DGS format), SPZ decompressor, compact binary serializer for bridge transfer.
+- **`demos/splat_import.py`** — end-to-end demo: `uv run python demos/splat_import.py scene.ply`
+- **just `splat-import`** recipe.
+- Updated `TOOLS.md` (31 engine tools, 95+ total), `README.md`, `CHANGELOG.md`.
+
+### Added — Deterministic Playtesting (3 phases, inspired by satelliteoflove/godot-mcp)
+
+**Phase 1 — Rich Game Input:**
+- `godot_simulate_input` now supports 6 input types beyond legacy key press/release:
+  - **Analog actions** — `{"action": "move_left", "strength": 0.5}` via `Input.action_press()`
+  - **Joypad axis** — `{"joypad": {"axis": 0, "value": -0.8}}` via `InputEventJoypadMotion`
+  - **Joypad button** — `{"joypad": {"button": 0, "pressed": true}}` via `InputEventJoypadButton`
+  - **Mouse look** — `{"mouse_look": {"dx": 15, "dy": -3}}` via `InputEventMouseMotion`
+  - **Mouse button** — `{"mouse_button": {"button": 1, "position": {"x": 960, "y": 540}}}` via `InputEventMouseButton`
+  - **Text input** — `{"type": "text", "text": "hello"}` via per-character `InputEventKey`
+- Backward-compatible: legacy `{"key": "Space", "hold_ms": 100}` format unchanged
+- Fixed pre-existing hold_ms bug (was gated on `not pressed` instead of `pressed`)
+
+**Phase 2 — Structured Runtime State:**
+- `godot_state_digest` — read live game state as JSON, cheaper than full scene tree dump
+- `_mcp_state()` convention: nodes define this method to expose custom state dict
+- `mcp_watch` group: nodes added to this group auto-collect position/rotation/scale/velocity
+- `state_watch_add` / `state_watch_remove` commands for runtime watch group management
+
+**Phase 3 — Frozen Clock + Step-Until:**
+- `godot_game_time(action="freeze")` — pauses game loop (`Engine.time_scale = 0`), bridge stays alive
+- `godot_game_time(action="unfreeze")` — resumes normal game speed
+- `godot_game_time(action="step", frames=N)` — advance N frames then re-freeze
+- `godot_step_until(condition=...)` — step frame-by-frame evaluating a GDScript `Expression` each tick until truthy or timeout
+- Full deterministic flow: freeze → inject input → step-until condition → read state → screenshot
+
+### Added — Documentation
+- `docs/SPEC_DETERMINISTIC_PLAYTESTING.md` — implementation plan with architecture, all phases marked done
+- Updated README, AGENTS.md, TOOLS.md, CLAUDE.md
+
 ## [0.4.0-beta.1] - 2026-07-11
 
 ### Added (2026-07-11 web_sota/ -> webapp/ rename)

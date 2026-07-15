@@ -63,6 +63,11 @@ PLUGIN_REGISTRY: dict[str, dict[str, str]] = {
         "path_in_zip": "addons/godot-xr-tools/",
         "description": "AR/VR interaction toolkit — grab, teleport, UI, locomotion for XR games",
     },
+    "vrm": {
+        "repo": "V-Sekai/godot-vrm",
+        "path_in_zip": "addons/",
+        "description": "VRM avatar loader for Godot 4 — import .vrm with humanoid retargeting, spring bones, MToon shader",
+    },
 }
 
 
@@ -180,7 +185,7 @@ def register(mcp: FastMCP):
         plugin_name: Annotated[
             str,
             Field(
-                description="Plugin name from the registry: dialogic, godot-behavior-tree, gut, aseprite-wizard, terrain3d, godot-voxel, godot-xr-tools",
+                description="Plugin name from the registry: dialogic, godot-behavior-tree, gut, aseprite-wizard, terrain3d, godot-voxel, godot-xr-tools, vrm",
             ),
         ],
         project_path: Annotated[

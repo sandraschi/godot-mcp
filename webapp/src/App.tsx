@@ -5,6 +5,7 @@ import AppsHub from "./pages/AppsHub";
 import BundlesPage from "./pages/BundlesPage";
 import ChatPage from "./pages/ChatPage";
 import Dashboard from "./pages/Dashboard";
+import DemoShowcase from "./pages/DemoShowcase";
 import DepotPage from "./pages/DepotPage";
 import FleetPage from "./pages/FleetPage";
 import GameBuilderPage from "./pages/GameBuilderPage";
@@ -33,6 +34,7 @@ export default function App() {
 				<Route path="/apps" element={<AppsHub />} />
 				<Route path="/tools" element={<ToolsTools />} />
 				<Route path="/chat" element={<ChatPage />} />
+				<Route path="/demos" element={<DemoShowcase />} />
 				<Route path="/api-docs" element={<ApiDocsPage />} />
 				<Route path="/marketplace" element={<Marketplace />} />
 				<Route path="/ship" element={<ShipPage />} />

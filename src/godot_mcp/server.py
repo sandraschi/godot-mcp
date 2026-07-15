@@ -16,7 +16,7 @@ import shutil
 import sys
 import time as _time
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import uvicorn
@@ -639,6 +639,23 @@ async def execute_tool(req: ToolRequest):
         "godot_remove_node": (None, "remove_node"),
         "godot_modify_node": (None, "modify_node"),
         "godot_save_scene": (None, "save_scene"),
+        "godot_simulate_input": (None, "simulate_input"),
+        "godot_read_node": (None, "read_node"),
+        "godot_state_digest": (None, "state_digest"),
+        "godot_inspect_resource": (None, "inspect_resource"),
+        "godot_tilemap_read": (None, "tilemap_read"),
+        "godot_tilemap_edit": (None, "tilemap_edit"),
+        "godot_animation_edit": (None, "animation_edit"),
+        "godot_profile_snapshot": (None, "profile_snapshot"),
+        "godot_profile_enable": (None, "profile_enable"),
+        "godot_profile_history": (None, "profile_history"),
+        "godot_validate_meshes": (None, "validate_meshes"),
+        "godot_game_time_freeze": (None, "game_time_freeze"),
+        "godot_game_time_unfreeze": (None, "game_time_unfreeze"),
+        "godot_game_time_step": (None, "game_time_step"),
+        "godot_game_time_step_until": (None, "game_time_step_until"),
+        "godot_state_watch_add": (None, "state_watch_add"),
+        "godot_state_watch_remove": (None, "state_watch_remove"),
     }
     if req.tool in PYTHON_TOOLS:
         try:
@@ -783,6 +800,121 @@ async def simulate_input_endpoint(req: SimulateInputRequest):
         return {"success": False, "error": "Godot bridge not connected. Use POST /api/v1/bridge/start first."}
     result = await asyncio.to_thread(bridge.send, "simulate_input", {"actions": req.actions}, 30)
     return result
+
+
+@dataclass
+class ProfileSnapshotResult:
+    success: bool
+    snapshot: dict = field(default_factory=dict)
+    error: str = ""
+
+
+@app.get("/api/v1/profile/snapshot")
+async def profile_snapshot_endpoint():
+    """Read Godot performance metrics (14 monitors)."""
+    bridge = get_bridge()
+    if not bridge.connected:
+        return ProfileSnapshotResult(success=False, error="Bridge not connected")
+    result = await asyncio.to_thread(bridge.send, "profile_snapshot")
+    if result["success"]:
+        return ProfileSnapshotResult(success=True, snapshot=result["data"].get("snapshot", {}))
+    return ProfileSnapshotResult(success=False, error=result.get("error", "Snapshot failed"))
+
+
+@dataclass
+class ProfileEnableRequest:
+    enabled: bool = True
+
+
+@app.post("/api/v1/profile/enable")
+async def profile_enable_endpoint(req: ProfileEnableRequest):
+    """Enable/disable auto-profiling (300-frame rolling window)."""
+    bridge = get_bridge()
+    if not bridge.connected:
+        return {"success": False, "error": "Bridge not connected"}
+    result = await asyncio.to_thread(bridge.send, "profile_enable", {"enabled": req.enabled})
+    return {"success": result.get("success", False), "data": result.get("data", {})}
+
+
+@app.get("/api/v1/profile/history")
+async def profile_history_endpoint():
+    """Read profiling history with spike detection."""
+    bridge = get_bridge()
+    if not bridge.connected:
+        return {"success": False, "error": "Bridge not connected"}
+    result = await asyncio.to_thread(bridge.send, "profile_history")
+    return {"success": result.get("success", False), "data": result.get("data", {})}
+
+
+@dataclass
+class ReadNodeRequest:
+    node: str
+
+
+@dataclass
+class ReadNodeResult:
+    success: bool
+    node: dict = field(default_factory=dict)
+    error: str = ""
+
+
+@app.post("/api/v1/state/read-node")
+async def read_node_endpoint(req: ReadNodeRequest):
+    """Read a single node's properties by name or path."""
+    bridge = get_bridge()
+    if not bridge.connected:
+        return ReadNodeResult(success=False, error="Bridge not connected")
+    result = await asyncio.to_thread(bridge.send, "read_node", {"node": req.node})
+    if result["success"]:
+        return ReadNodeResult(success=True, node=result["data"].get("node", {}))
+    return ReadNodeResult(success=False, error=result.get("error", "Node not found"))
+
+
+@dataclass
+class StateDigestRequest:
+    node_names: list[str] | None = None
+
+
+@app.post("/api/v1/state/digest")
+async def state_digest_endpoint(req: StateDigestRequest):
+    """Read structured game state (watch group or named nodes)."""
+    bridge = get_bridge()
+    if not bridge.connected:
+        return {"success": False, "error": "Bridge not connected"}
+    params = {}
+    if req.node_names:
+        params["nodes"] = req.node_names
+    result = await asyncio.to_thread(bridge.send, "state_digest", params)
+    return {"success": result.get("success", False), "data": result.get("data", {})}
+
+
+@dataclass
+class ValidateMeshesResult:
+    success: bool
+    total_meshes: int = 0
+    corrupt_meshes: int = 0
+    total_issues: int = 0
+    issues: list = field(default_factory=list)
+    error: str = ""
+
+
+@app.get("/api/v1/validate/meshes")
+async def validate_meshes_endpoint():
+    """Validate all meshes for geometric corruption."""
+    bridge = get_bridge()
+    if not bridge.connected:
+        return ValidateMeshesResult(success=False, error="Bridge not connected")
+    result = await asyncio.to_thread(bridge.send, "validate_meshes")
+    if result["success"]:
+        d = result["data"]
+        return ValidateMeshesResult(
+            success=True,
+            total_meshes=d.get("total_meshes", 0),
+            corrupt_meshes=d.get("corrupt_meshes", 0),
+            total_issues=d.get("total_issues", 0),
+            issues=d.get("issues", []),
+        )
+    return ValidateMeshesResult(success=False, error=result.get("error", "Validation failed"))
 
 
 class ProceduralTextureRequest(BaseModel):
