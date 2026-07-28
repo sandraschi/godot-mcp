@@ -1,35 +1,37 @@
-# start.ps1 - Godot MCP + Webapp
-$WebPort = 10992
-$FleetStartPath = Join-Path $ProjectRoot "scripts\FleetStartMode.ps1"
-if (-not (Test-Path -LiteralPath $FleetStartPath)) {
-    Write-Host "ERROR: Missing vendored launcher helper: $FleetStartPath" -ForegroundColor Red
+﻿# Fleet unified launcher - do not edit logic here.
+# Change fleet-start.config.ps1 at the repo root instead.
+param(
+    [switch]$Headless,
+    [switch]$BackendOnly,
+    [switch]$FrontendOnly,
+    [switch]$NoBrowser,
+    [switch]$ReuseIfRunning
+)
+
+$ErrorActionPreference = 'Stop'
+$ReposRoot = if ($env:FLEET_REPOS_ROOT) { $env:FLEET_REPOS_ROOT } else { 'D:\Dev\repos' }
+$EnginePath = Join-Path $ReposRoot 'mcp-central-docs\scripts\Invoke-FleetWebappStart.ps1'
+if (-not (Test-Path -LiteralPath $EnginePath)) {
+    Write-Host "ERROR: Missing fleet start engine: $EnginePath" -ForegroundColor Red
     exit 1
 }
-. $FleetStartPath
+. $EnginePath
 
-$ApiPort = 10993
-
-# Kill any existing processes on these ports
-Get-NetTCPConnection -LocalPort $ApiPort -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
-Get-NetTCPConnection -LocalPort $WebPort -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
-Start-Sleep -Seconds 1
-
-# Start backend (dual mode: REST + MCP SSE)
-$job = Start-Job -Name "godot-mcp" -ScriptBlock {
-    Set-Location "$using:PWD"
-    uv run python -m godot_mcp.server --mode dual --port $using:ApiPort
+$configCandidates = @(
+    (Join-Path $PSScriptRoot 'fleet-start.config.ps1'),
+    (Join-Path (Split-Path -Parent $PSScriptRoot) 'fleet-start.config.ps1')
+)
+$configPath = $null
+foreach ($candidate in $configCandidates) {
+    if (Test-Path -LiteralPath $candidate) {
+        $configPath = $candidate
+        break
+    }
 }
-Start-Sleep -Seconds 3
+if (-not $configPath) {
+    Write-Host 'ERROR: Missing fleet-start.config.ps1 (repo root or beside start.ps1).' -ForegroundColor Red
+    exit 1
+}
 
-# Start webapp
-Push-Location webapp
-Start-Process cmd -ArgumentList "/c", "bun", "run", "dev"
-Pop-Location
+Start-FleetWebapp @PSBoundParameters -ConfigPath $configPath -LauncherRoot $PSScriptRoot
 
-Start-Sleep -Seconds 5
-Write-Host "Godot MCP:   http://localhost:$ApiPort/api/v1/status" -ForegroundColor Green
-Write-Host "Webapp:      http://localhost:$WebPort" -ForegroundColor Green
-Write-Host "MCP SSE:     http://localhost:$ApiPort/sse" -ForegroundColor Green
-Write-Host ""
-Write-Host "Opening webapp in default browser..." -ForegroundColor Cyan
-Start-Process "http://localhost:$WebPort"

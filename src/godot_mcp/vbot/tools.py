@@ -23,7 +23,9 @@ _MUTATING = {"mutating": True}
 def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=_MUTATING, version="0.1.0")
     async def vbot_connect(
-        url: Annotated[str, Field(description="V-Bot Mind WebSocket bridge URL (default ws://127.0.0.1:11080)")] = "ws://127.0.0.1:11080",
+        url: Annotated[
+            str, Field(description="V-Bot Mind WebSocket bridge URL (default ws://127.0.0.1:11080)")
+        ] = "ws://127.0.0.1:11080",
     ) -> dict[str, Any]:
         """Connect to the V-Bot Mind WebSocket bridge for autonomous NPC behavior.
 
@@ -45,7 +47,9 @@ def register(mcp: FastMCP) -> None:
 
     @mcp.tool(annotations=_MUTATING, version="0.1.0")
     async def vbot_subscribe(
-        bot_ids: Annotated[list[str], Field(description="List of V-Bot IDs to subscribe to (e.g. ['vbot_abc123', 'vbot_def456']).")],
+        bot_ids: Annotated[
+            list[str], Field(description="List of V-Bot IDs to subscribe to (e.g. ['vbot_abc123', 'vbot_def456']).")
+        ],
     ) -> dict[str, Any]:
         """Subscribe to V-Bot updates. Receives actions when bots think in the game loop.
 
@@ -62,8 +66,12 @@ def register(mcp: FastMCP) -> None:
     async def vbot_perceive(
         bot_id: Annotated[str, Field(description="V-Bot ID to send perception to.")],
         observations: Annotated[str, Field(description="What the V-Bot sees/hears/senses in natural language.")],
-        visible_entities: Annotated[list[str] | None, Field(description="List of visible entity names/IDs in the scene.")] = None,
-        world_state: Annotated[str | None, Field(description="Current world context (time of day, weather, danger level, etc.).")] = None,
+        visible_entities: Annotated[
+            list[str] | None, Field(description="List of visible entity names/IDs in the scene.")
+        ] = None,
+        world_state: Annotated[
+            str | None, Field(description="Current world context (time of day, weather, danger level, etc.).")
+        ] = None,
     ) -> dict[str, Any]:
         """Send perception data from the Godot scene to a V-Bot.
 
@@ -82,7 +90,9 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=_MUTATING, version="0.1.0")
     async def vbot_send_state(
         bot_id: Annotated[str, Field(description="V-Bot ID.")],
-        position: Annotated[list[float] | None, Field(description="World position [x, y, z] in Godot coordinates.")] = None,
+        position: Annotated[
+            list[float] | None, Field(description="World position [x, y, z] in Godot coordinates.")
+        ] = None,
         animation: Annotated[str | None, Field(description="Current animation name, e.g. 'idle', 'walk'.")] = None,
     ) -> dict[str, Any]:
         """Send a V-Bot's current position and animation state from Godot to the brain.

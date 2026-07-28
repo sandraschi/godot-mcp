@@ -1,4 +1,4 @@
-set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+set windows-shell := ["powershell.exe", "-NoProfile", "-Command"]
 import 'scripts/just/fleet.just'
 
 export NAME := "Godot MCP"
@@ -34,7 +34,7 @@ install-godot version="4.4":
 
 # Download Godot export templates (required for little-game-export)
 install-export-templates version="4.4":
-    pwsh -NoProfile -ExecutionPolicy Bypass -File '{{justfile_directory()}}\scripts\install-godot-export-templates.ps1' -Version '{{version}}'
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File '{{justfile_directory()}}\scripts\install-godot-export-templates.ps1' -Version '{{version}}'
 
 # Synchronise all dependencies and dev extras (auto-installs Godot)
 bootstrap: install-godot
@@ -224,12 +224,12 @@ demo-run game="heart":
 little-game-export target game="dodge" output="" pack="false":
     $packSwitch = if ('{{pack}}' -eq 'true') { '-Pack' } else { '' }; \
     $outArg = if ('{{output}}') { "-Output '{{output}}'" } else { '' }; \
-    pwsh -NoProfile -ExecutionPolicy Bypass -File '{{justfile_directory()}}\scripts\little-game-export.ps1' -Target '{{target}}' -Game '{{game}}' $outArg $packSwitch
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File '{{justfile_directory()}}\scripts\little-game-export.ps1' -Target '{{target}}' -Game '{{game}}' $outArg $packSwitch
 
 # Zip last export for itch.io upload (runs export with -Pack)
 little-game-pack target game="dodge" output="":
     $outArg = if ('{{output}}') { "-Output '{{output}}'" } else { '' }; \
-    pwsh -NoProfile -ExecutionPolicy Bypass -File '{{justfile_directory()}}\scripts\little-game-export.ps1' -Target '{{target}}' -Game '{{game}}' $outArg -Pack
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File '{{justfile_directory()}}\scripts\little-game-export.ps1' -Target '{{target}}' -Game '{{game}}' $outArg -Pack
 
 # Butler / itch.io status (requires server running for REST, or uses uv inline)
 itch-status:
@@ -358,7 +358,7 @@ gb-smoke:
 
 # Run the full Game Builder demo (design -> GDScript -> validate)
 gb-demo concept="A 2D runner where you collect stars and avoid spikes.":
-    pwsh -NoProfile -File '{{justfile_directory()}}\scripts\gb-demo.ps1' -Concept '{{concept}}'
+    powershell.exe -NoProfile -File '{{justfile_directory()}}\scripts\gb-demo.ps1' -Concept '{{concept}}'
 
 # Run the Game Builder smoke test (design -> logic -> validate)
 gb-test game_plan_json="" project_path="":
@@ -366,7 +366,7 @@ gb-test game_plan_json="" project_path="":
 
 # Serve the latest HTML5 export and preview in browser
 gb-preview build_dir="" port="10994":
-    pwsh -NoProfile -File '{{justfile_directory()}}\scripts\gb-preview.ps1' -BuildDir '{{build_dir}}' -Port {{port}}
+    powershell.exe -NoProfile -File '{{justfile_directory()}}\scripts\gb-preview.ps1' -BuildDir '{{build_dir}}' -Port {{port}}
 
 # Run tests matching a keyword (e.g. just test-match bridge)
 test-match pattern:
@@ -418,15 +418,15 @@ web-add package:
 
 # Build Tauri native desktop app (dev mode — expects webapp dev server on 10992)
 tauri-dev:
-    pwsh -NoProfile -File '{{justfile_directory()}}\native\build.ps1' -Mode dev
+    powershell.exe -NoProfile -File '{{justfile_directory()}}\native\build.ps1' -Mode dev
 
 # Full release: webapp + PyInstaller sidecar + NSIS installer
 tauri-build:
-    pwsh -NoProfile -File '{{justfile_directory()}}\native\build.ps1'
+    powershell.exe -NoProfile -File '{{justfile_directory()}}\native\build.ps1'
 
 # PyInstaller backend only (for Tauri sidecar)
 tauri-sidecar:
-    pwsh -NoProfile -File '{{justfile_directory()}}\native\build-sidecar.ps1'
+    powershell.exe -NoProfile -File '{{justfile_directory()}}\native\build-sidecar.ps1'
 
 # ── Docker ────────────────────────────────────────────────────────────────────
 

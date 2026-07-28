@@ -48,8 +48,12 @@ async def workflow_run(
         ),
     ],
     csv_path: Annotated[str | None, Field(description="CSV path (required for particle_cfd).", default=None)] = None,
-    condition: Annotated[str | None, Field(description="GDScript condition expression (required for playtest workflow).", default=None)] = None,
-    timeout_frames: Annotated[int | None, Field(description="Max frames for step-until (playtest workflow).", default=600)] = None,
+    condition: Annotated[
+        str | None, Field(description="GDScript condition expression (required for playtest workflow).", default=None)
+    ] = None,
+    timeout_frames: Annotated[
+        int | None, Field(description="Max frames for step-until (playtest workflow).", default=600)
+    ] = None,
     game: Annotated[str | None, Field(description="Sample game for ship_web_itch.", default="dodge")] = None,
     itch_target: Annotated[str | None, Field(description="user/game slug for ship_web_itch.", default=None)] = None,
     channel: Annotated[str | None, Field(description="Butler channel for ship_web_itch.", default="html")] = None,

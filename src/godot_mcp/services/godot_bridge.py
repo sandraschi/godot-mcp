@@ -314,7 +314,7 @@ def launch_bridge(project_root: str | None = None) -> dict[str, Any]:
     log_path = log_dir / "godot-bridge.log"
 
     try:
-        proc = subprocess.Popen(  # noqa: S603 — godot comes from PATH or GODOT_PATH, not user input
+        proc = subprocess.Popen(
             [godot, "--path", project_root, "--headless", "--verbose"],
             stdout=open(log_path, "w"),
             stderr=subprocess.STDOUT,

@@ -7,6 +7,7 @@ The 3D Gaussian Splatting PLY format stores per-vertex:
   - scale_0..2 (float32): covariance scaling
   - rot_0..3 (float32): covariance rotation (quaternion)
 """
+
 import gzip
 import logging
 import math
@@ -149,11 +150,13 @@ def parse_splat_ply(
                     sy = vals[prop_names.index("scale_1")]
                     sz = vals[prop_names.index("scale_2")]
                     # Convert log-scale to linear and clamp
-                    scales_3d.append((
-                        max(0.001, math.exp(sx)) * pos_scale,
-                        max(0.001, math.exp(sy)) * pos_scale,
-                        max(0.001, math.exp(sz)) * pos_scale,
-                    ))
+                    scales_3d.append(
+                        (
+                            max(0.001, math.exp(sx)) * pos_scale,
+                            max(0.001, math.exp(sy)) * pos_scale,
+                            max(0.001, math.exp(sz)) * pos_scale,
+                        )
+                    )
                 else:
                     scales_3d.append((0.05, 0.05, 0.05))
 
@@ -227,6 +230,7 @@ def import_splat_file(
             with gzip.open(path, "rb") as f_in:
                 with open(ply_path, "wb") as f_out:
                     import shutil
+
                     shutil.copyfileobj(f_in, f_out)
         except Exception as e:
             return {"success": False, "error": f"SPZ decompression failed: {e}"}

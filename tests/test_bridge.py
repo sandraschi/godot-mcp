@@ -9,20 +9,46 @@ from godot_mcp.services.godot_bridge import GodotBridge
 # All bridge command action names registered in mcp_bridge.gd
 BRIDGE_ACTIONS = {
     # Original
-    "status", "import_stl", "import_glb", "import_obj", "load_velocity_field",
-    "spawn_particles", "animate_streamlines", "create_camera", "add_light",
-    "set_material", "export_web", "read_scene_tree", "set_config",
-    "headless_verify", "add_node", "remove_node", "modify_node", "save_scene",
-    "play_animation", "capture_viewport", "simulate_input",
+    "status",
+    "import_stl",
+    "import_glb",
+    "import_obj",
+    "load_velocity_field",
+    "spawn_particles",
+    "animate_streamlines",
+    "create_camera",
+    "add_light",
+    "set_material",
+    "export_web",
+    "read_scene_tree",
+    "set_config",
+    "headless_verify",
+    "add_node",
+    "remove_node",
+    "modify_node",
+    "save_scene",
+    "play_animation",
+    "capture_viewport",
+    "simulate_input",
     "generate_procedural_texture",
     # Phase 2 — State digest
-    "state_digest", "state_watch_add", "state_watch_remove",
+    "state_digest",
+    "state_watch_add",
+    "state_watch_remove",
     # Phase 3 — Deterministic playtesting
-    "game_time_freeze", "game_time_unfreeze", "game_time_step",
+    "game_time_freeze",
+    "game_time_unfreeze",
+    "game_time_step",
     "game_time_step_until",
     # 2026-07-15 additions
-    "read_node", "inspect_resource", "tilemap_read", "tilemap_edit",
-    "animation_edit", "profile_snapshot", "profile_enable", "profile_history",
+    "read_node",
+    "inspect_resource",
+    "tilemap_read",
+    "tilemap_edit",
+    "animation_edit",
+    "profile_snapshot",
+    "profile_enable",
+    "profile_history",
     "validate_meshes",
 }
 
@@ -53,7 +79,7 @@ def test_all_bridge_actions_have_corresponding_handler():
     handler matching is done at runtime in Godot's _handle_message match block.
     """
     for action in sorted(BRIDGE_ACTIONS):
-        assert action, f"Empty action name in BRIDGE_ACTIONS"
+        assert action, "Empty action name in BRIDGE_ACTIONS"
 
 
 def test_bridge_action_naming_convention():

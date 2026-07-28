@@ -151,7 +151,11 @@ PLAYTEST_WORKFLOW = (
         "Freeze the game clock, inject input, step until a condition is met, capture the result.",
     )
     .add_step("Freeze Clock", "godot_game_time", {"action": "freeze"})
-    .add_step("Step-Until", "godot_step_until", {"condition": "{context.condition}", "timeout_frames": "{context.timeout_frames}"})
+    .add_step(
+        "Step-Until",
+        "godot_step_until",
+        {"condition": "{context.condition}", "timeout_frames": "{context.timeout_frames}"},
+    )
     .add_step("Read State", "godot_state_digest", {})
     .add_step("Capture Viewport", "godot_capture_viewport", {})
 )

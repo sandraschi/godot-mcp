@@ -213,15 +213,15 @@ async def show_profile_card(ctx: Context = None) -> ToolResult:
 
     with PrefabApp(title="Performance") as app:
         Heading("Frame Timing")
-        Row("FPS", f'{snap.get("fps", "N/A"):.1f}' if isinstance(snap.get("fps"), (int, float)) else "N/A")
-        Row("Process", f'{snap.get("process_time", 0):.2f} ms')
-        Row("Physics", f'{snap.get("physics_time", 0):.2f} ms')
+        Row("FPS", f"{snap.get('fps', 'N/A'):.1f}" if isinstance(snap.get("fps"), (int, float)) else "N/A")
+        Row("Process", f"{snap.get('process_time', 0):.2f} ms")
+        Row("Physics", f"{snap.get('physics_time', 0):.2f} ms")
         Heading("Memory")
-        Row("Static", f'{snap.get("memory_static", 0) / 1e6:.1f} MB' if snap.get("memory_static") else "N/A")
-        Row("Dynamic", f'{snap.get("memory_dynamic", 0) / 1e6:.1f} MB' if snap.get("memory_dynamic") else "N/A")
+        Row("Static", f"{snap.get('memory_static', 0) / 1e6:.1f} MB" if snap.get("memory_static") else "N/A")
+        Row("Dynamic", f"{snap.get('memory_dynamic', 0) / 1e6:.1f} MB" if snap.get("memory_dynamic") else "N/A")
         Heading("Render")
         Row("Draw Calls", str(snap.get("render_draw_calls", "N/A")))
-        Row("Video Mem", f'{snap.get("render_video_mem", 0) / 1e6:.1f} MB' if snap.get("render_video_mem") else "N/A")
+        Row("Video Mem", f"{snap.get('render_video_mem', 0) / 1e6:.1f} MB" if snap.get("render_video_mem") else "N/A")
         Heading("Physics")
         Row("Active Objects", str(snap.get("physics_active", "N/A")))
         Row("Collision Pairs", str(snap.get("physics_collisions", "N/A")))
@@ -266,7 +266,9 @@ async def show_validate_meshes_card(ctx: Context = None) -> ToolResult:
 
 
 async def show_state_digest_card(
-    node_names: Annotated[list[str] | None, Field(description="Optional node name filter. Omit for all watched nodes.", default=None)] = None,
+    node_names: Annotated[
+        list[str] | None, Field(description="Optional node name filter. Omit for all watched nodes.", default=None)
+    ] = None,
     ctx: Context = None,
 ) -> ToolResult:
     """Show structured game state as a rich Prefab card.
@@ -294,10 +296,10 @@ async def show_state_digest_card(
             parts = []
             if "position" in state:
                 p = state["position"]
-                parts.append(f"pos({p.get('x',0):.1f},{p.get('y',0):.1f},{p.get('z',0):.1f})")
+                parts.append(f"pos({p.get('x', 0):.1f},{p.get('y', 0):.1f},{p.get('z', 0):.1f})")
             if "velocity" in state:
                 v = state["velocity"]
-                parts.append(f"vel({v.get('x',0):.1f},{v.get('y',0):.1f})")
+                parts.append(f"vel({v.get('x', 0):.1f},{v.get('y', 0):.1f})")
             if "visible" in state:
                 parts.append("visible" if state["visible"] else "hidden")
             if "current_animation" in state:
@@ -305,7 +307,9 @@ async def show_state_digest_card(
             Row(name, " | ".join(parts) if parts else state.get("type", "?"))
 
     count = len(nodes)
-    plain = f"Game State: {count} node{'s' if count != 1 else ''}" + (f" ({', '.join(nodes.keys())})" if count <= 5 else "")
+    plain = f"Game State: {count} node{'s' if count != 1 else ''}" + (
+        f" ({', '.join(nodes.keys())})" if count <= 5 else ""
+    )
     return ToolResult(content=plain, structured_content=app)
 
 
@@ -334,13 +338,13 @@ async def show_read_node_card(
             Heading(node_data.get("type", "Node"))
             if "position" in node_data:
                 p = node_data["position"]
-                Row("Position", f"({p.get('x',0):.2f}, {p.get('y',0):.2f}, {p.get('z',0):.2f})")
+                Row("Position", f"({p.get('x', 0):.2f}, {p.get('y', 0):.2f}, {p.get('z', 0):.2f})")
             if "rotation_deg" in node_data:
                 r = node_data["rotation_deg"]
-                Row("Rotation", f"({r.get('x',0):.1f}, {r.get('y',0):.1f}, {r.get('z',0):.1f}) deg")
+                Row("Rotation", f"({r.get('x', 0):.1f}, {r.get('y', 0):.1f}, {r.get('z', 0):.1f}) deg")
             if "velocity" in node_data:
                 v = node_data["velocity"]
-                Row("Velocity", f"({v.get('x',0):.2f}, {v.get('y',0):.2f}, {v.get('z',0):.2f})")
+                Row("Velocity", f"({v.get('x', 0):.2f}, {v.get('y', 0):.2f}, {v.get('z', 0):.2f})")
             if "visible" in node_data:
                 Row("Visible", "Yes" if node_data["visible"] else "No")
             if "current_animation" in node_data:
@@ -368,4 +372,3 @@ def register(mcp):
     mcp.tool(annotations=_READ_ONLY, name="show_validate_meshes_card", app=True)(show_validate_meshes_card)
     mcp.tool(annotations=_READ_ONLY, name="show_state_digest_card", app=True)(show_state_digest_card)
     mcp.tool(annotations=_READ_ONLY, name="show_read_node_card", app=True)(show_read_node_card)
-
