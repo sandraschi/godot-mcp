@@ -7,7 +7,7 @@ Each is a full Godot project you can open and run.
 
 | Game | Source | Genre | Godot | Description |
 |------|--------|-------|-------|-------------|
-| vibecode-runner | [godot-mcp](https://github.com/sandraschi/godot-mcp) (original) | 2D Endless runner | 4.4 | Fight AI-themed enemies: Hallucinator, PromptInjector, Tokenmaxxer, ClaudeDesktop, Techbro, TheVC, Meeting swarm, LegacyCode, Datacenter. Procedural terminal visuals. 11 GDScript scripts, all gdlint-clean. |
+| vibecode-runner | [godot-mcp](https://github.com/sandraschi/godot-mcp) (original) | 2D Endless runner | 4.4 | Fight the AI underworld as a vibecoder: Hallucinator, PromptInjector, Tokenmaxxer, ContextOverflow, ClaudeDesktop, Techbro, LegacyCode, TheVC, Meeting swarm, TheDatacenter + GEN. BUTLER boss gauntlets. Procedural visuals AND procedural audio, coyote/jump-buffer physics, carbon meter, SHIP IT! ultimate, high scores. 14 gdlint-clean scripts. |
 | godot-demo-projects | godotengine/demo-projects | Mixed (50+) | 4.x | Official 50+ demos covering 2D, 3D, audio, XR, networking, GUI |
 | procedural-generation | gdquest-demos | PCG | 4.x | Procedural generation demos: dungeons, worlds, weapons |
 | heart-platformer | uheartbeast | 2D Platformer | 4.x | Platformer movement template with juice and polish |

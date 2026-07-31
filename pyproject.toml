@@ -14,9 +14,19 @@ dependencies = [
     "websockets>=13.0",
 ]
 
+[project.optional-dependencies]
+# Niantic's official SPZ codec (nanobind/C++ bindings) - needed for real .spz
+# import (both legacy v1-3 gzip-single-stream and v4 NGSP/ZSTD-multi-stream).
+# Not on PyPI; installs from source, needs a C++ toolchain (MSVC Build Tools
+# on Windows). See docs/TROUBLESHOOTING.md for the "SPZ import fails" entry.
+splat = ["spz @ git+https://github.com/nianticlabs/spz.git"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/godot_mcp"]

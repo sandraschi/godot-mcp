@@ -22,6 +22,8 @@ native/resources/*.exe
 *.wasm
 *.pck
 *.zip
+# Little-game web exports are ship artifacts (butler uploads), not source
+build/little-game/
 
 # Coverage
 htmlcov/

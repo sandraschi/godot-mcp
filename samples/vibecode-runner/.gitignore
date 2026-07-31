@@ -1,0 +1,5 @@
+# Godot 4.4 import cache
+.godot/
+
+# Godot 4.4 uid files (fleet convention: not tracked)
+*.uid

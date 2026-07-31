@@ -1,4 +1,5 @@
 extends Area2D
+## Butler projectile — a flying error message.
 
 var _velocity := Vector2(-280, 60)
 var _age := 0.0
