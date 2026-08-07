@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from godot_mcp.itch import export as itch_export
@@ -20,14 +21,19 @@ def _record_ship(payload: dict[str, Any]) -> None:
 
 
 def steam_status() -> dict[str, Any]:
-    try:
-        pub = client.call_steam_publish("status")
-    except Exception as exc:
-        pub = {"error": str(exc)}
-    try:
-        cmd = client.call_steam_tool("steam_system", {"operation": "steamcmd_status"})
-    except Exception as exc:
-        cmd = {"error": str(exc)}
+    # steam-mcp may be down; probes run concurrently with a short timeout
+    # so /api/v1/status never blocks the dashboard (5s frontend budget).
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        pub_fut = pool.submit(client.call_steam_publish, "status")
+        cmd_fut = pool.submit(client.call_steam_tool, "steam_system", {"operation": "steamcmd_status"})
+        try:
+            pub = pub_fut.result(timeout=4)
+        except Exception as exc:
+            pub = {"error": str(exc)}
+        try:
+            cmd = cmd_fut.result(timeout=4)
+        except Exception as exc:
+            cmd = {"error": str(exc)}
 
     return {
         "success": True,

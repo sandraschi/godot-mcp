@@ -37,7 +37,7 @@ function Resolve-LittleGameProject {
     }
 
     if (-not $map.ContainsKey($Name)) {
-        throw "Unknown game '$Name'. Use: heart, platformer, dodge, pong, procedural, skelerealms, vibecode — or pass -Project path."
+        throw "Unknown game '$Name'. Use: heart, platformer, dodge, pong, procedural, skelerealms, vibecode - or pass -Project path."
     }
 
     $proj = $map[$Name]
@@ -80,7 +80,7 @@ function Ensure-Imported {
     Write-Host "First run: importing assets..." -ForegroundColor Yellow
     & (Get-Command godot.exe).Source --path $Proj --import
     if (-not (Test-Path (Join-Path $Proj '.godot\imported'))) {
-        throw "Godot import failed — .godot/imported not created (exit $LASTEXITCODE)"
+        throw "Godot import failed - .godot/imported not created (exit $LASTEXITCODE)"
     }
 }
 

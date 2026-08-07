@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# gb-demo.ps1 — Game Builder demo: runs the full pipeline and reports.
+# gb-demo.ps1 - Game Builder demo: runs the full pipeline and reports.
 param(
     [string]$Concept = "A 2D runner where you collect stars and avoid spikes. Arrow keys to move, space to jump.",
     [string]$OutDir = ""

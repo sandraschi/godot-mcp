@@ -1,4 +1,4 @@
-"""Splat (3D Gaussian) parser — SPZ decompression, PLY parsing, binary conversion for Godot.
+"""Splat (3D Gaussian) parser — SPZ decoding, PLY parsing, binary conversion for Godot.
 
 The 3D Gaussian Splatting PLY format stores per-vertex:
   - x, y, z (float32): position
@@ -6,9 +6,23 @@ The 3D Gaussian Splatting PLY format stores per-vertex:
   - opacity (float32): alpha
   - scale_0..2 (float32): covariance scaling
   - rot_0..3 (float32): covariance rotation (quaternion)
+
+CORRECTION (2026-07-30): .spz files are NOT gzip-compressed PLY. Real Niantic
+SPZ (both legacy v1-3 and current v4) uses its own packed binary attribute
+layout (24-bit fixed-point positions, 8-bit log-encoded scales, quantized
+quaternion rotations, quantized SH) — confirmed against the official format
+spec at github.com/nianticlabs/spz. The previous version of this file did
+`gzip.open(path)` and fed the raw bytes straight into the PLY parser, which
+only works if you happen to be handed a file that's literally gzip(PLY) —
+not a real .spz file from Niantic's spec (Scaniverse, World Labs/Marble,
+etc.). Real .spz now goes through Niantic's official Python library instead
+of a hand-rolled decoder — see `_load_gaussian_cloud_via_spz_lib()` below.
+
+Also: v4 files start with a plaintext "NGSP" magic header and split data
+across parallel ZSTD streams — a single `gzip.open()` call would fail
+outright on these (wrong magic bytes), not just misparse them.
 """
 
-import gzip
 import logging
 import math
 import os
@@ -26,6 +40,99 @@ SH_C0 = 0.28209479177387814
 _STRUCT_HEADER = struct.Struct("<I")
 _STRUCT_SPLAT = struct.Struct("<fffBBBB")
 _STRUCT_SPLAT_FULL = struct.Struct("<fffBBBBfff")
+
+
+def _sh_dc_to_rgb_byte(v: float) -> int:
+    """Convert an SH DC coefficient to a 0-255 RGB byte (shared by PLY and SPZ paths)."""
+    return int(max(0.0, min(1.0, 0.5 + SH_C0 * v)) * 255)
+
+
+def _load_gaussian_cloud_via_spz_lib(path: str) -> dict[str, Any]:
+    """Load a real .spz file via Niantic's official `spz` Python bindings.
+
+    HONESTY NOTE: the exact Python binding function/attribute names could
+    not be independently confirmed in this session — GitHub blocked fetching
+    `src/python/README.md` (not a prior search/fetch result), so only the
+    documented C++ API (`loadSpz` / `GaussianCloud`) and the byte-level
+    format spec were confirmed against the official README. This function
+    tries the conventional nanobind naming and FAILS LOUDLY with the actual
+    installed attribute list if it doesn't match, rather than silently
+    guessing wrong and returning bad data. If this fires, check
+    `import spz; dir(spz)` on the actual installed package and update the
+    attribute names below — don't just suppress the error.
+    """
+    try:
+        import spz  # type: ignore[import-not-found]
+    except ImportError:
+        return {
+            "success": False,
+            "error": (
+                "Python 'spz' package not installed. Install with: "
+                "pip install git+https://github.com/nianticlabs/spz.git "
+                "(requires a C++ toolchain — MSVC Build Tools on Windows — "
+                "since it's a nanobind/C++ extension, not pure Python). "
+                "Or: uv sync --extra splat"
+            ),
+        }
+
+    load_fn = getattr(spz, "load_spz", None) or getattr(spz, "loadSpz", None)
+    if load_fn is None:
+        available = [a for a in dir(spz) if not a.startswith("_")]
+        return {
+            "success": False,
+            "error": (
+                "Installed 'spz' package doesn't expose a load_spz/loadSpz "
+                f"function this code recognizes. Available attributes: {available}. "
+                "Update _load_gaussian_cloud_via_spz_lib() in splat_import.py "
+                "to match the actual installed API — do not guess."
+            ),
+        }
+
+    try:
+        cloud = load_fn(path)
+    except Exception as e:
+        return {"success": False, "error": f"spz library failed to load {path}: {e}"}
+
+    # GaussianCloud fields per the official C++/Swift API: positions (flat
+    # xyz*N), scales (log-scale xyz*N), colors (SH DC xyz*N), alphas (N).
+    # Access defensively — same honesty reasoning as above.
+    positions_flat = getattr(cloud, "positions", None)
+    scales_flat = getattr(cloud, "scales", None)
+    colors_flat = getattr(cloud, "colors", None)
+    if positions_flat is None or colors_flat is None:
+        available = [a for a in dir(cloud) if not a.startswith("_")]
+        return {
+            "success": False,
+            "error": (
+                "Loaded GaussianCloud object is missing expected "
+                f"positions/colors attributes. Available: {available}. "
+                "Update the field names in _load_gaussian_cloud_via_spz_lib()."
+            ),
+        }
+
+    n = len(positions_flat) // 3
+    positions = [tuple(positions_flat[i * 3 : i * 3 + 3]) for i in range(n)]
+    colors = [
+        (
+            _sh_dc_to_rgb_byte(colors_flat[i * 3]),
+            _sh_dc_to_rgb_byte(colors_flat[i * 3 + 1]),
+            _sh_dc_to_rgb_byte(colors_flat[i * 3 + 2]),
+        )
+        for i in range(n)
+    ]
+    if scales_flat is not None and len(scales_flat) == n * 3:
+        scales_3d = [
+            (
+                max(0.001, math.exp(scales_flat[i * 3])),
+                max(0.001, math.exp(scales_flat[i * 3 + 1])),
+                max(0.001, math.exp(scales_flat[i * 3 + 2])),
+            )
+            for i in range(n)
+        ]
+    else:
+        scales_3d = [(0.05, 0.05, 0.05)] * n
+
+    return {"success": True, "count": n, "positions": positions, "colors": colors, "scales_3d": scales_3d}
 
 
 def parse_ply_header(path: str) -> tuple[list[dict], int, str]:
@@ -216,32 +323,35 @@ def import_splat_file(
       success: bool
       count: int (number of splats)
       binary_path: str (path to compact binary for GDScript)
-      ply_path: str (path to decompressed PLY)
+      ply_path: str (path to decompressed PLY, .ply inputs only)
     """
     path = str(Path(path).resolve())
-    ply_path = path
     is_spz = path.lower().endswith(".spz")
 
-    # Decompress SPZ → PLY if needed
     if is_spz:
-        ply_path = str(Path(tempfile.gettempdir()) / f"{output_name}.ply")
-        logger.info("Decompressing SPZ: %s → %s", path, ply_path)
-        try:
-            with gzip.open(path, "rb") as f_in:
-                with open(ply_path, "wb") as f_out:
-                    import shutil
-
-                    shutil.copyfileobj(f_in, f_out)
-        except Exception as e:
-            return {"success": False, "error": f"SPZ decompression failed: {e}"}
-
-    if not os.path.isfile(ply_path):
-        return {"success": False, "error": f"File not found: {ply_path}"}
-
-    # Parse PLY
-    parsed = parse_splat_ply(ply_path, max_splats=max_splats, pos_scale=pos_scale)
-    if not parsed.get("success"):
-        return parsed
+        # CORRECTION (2026-07-30): previously did gzip.open() + fed raw bytes
+        # to the PLY parser — wrong for real Niantic SPZ files (own packed
+        # binary format, not gzip(PLY)), and outright fails on v4 files
+        # (NGSP header, not a gzip stream at all). Now uses the real library.
+        parsed = _load_gaussian_cloud_via_spz_lib(path)
+        if not parsed.get("success"):
+            return parsed
+        if max_splats and parsed["count"] > max_splats:
+            parsed["positions"] = parsed["positions"][:max_splats]
+            parsed["colors"] = parsed["colors"][:max_splats]
+            parsed["scales_3d"] = parsed["scales_3d"][:max_splats]
+            parsed["count"] = max_splats
+        if pos_scale != 1.0:
+            parsed["positions"] = [(x * pos_scale, y * pos_scale, z * pos_scale) for x, y, z in parsed["positions"]]
+            parsed["scales_3d"] = [(sx * pos_scale, sy * pos_scale, sz * pos_scale) for sx, sy, sz in parsed["scales_3d"]]
+        ply_path = None
+    else:
+        if not os.path.isfile(path):
+            return {"success": False, "error": f"File not found: {path}"}
+        parsed = parse_splat_ply(path, max_splats=max_splats, pos_scale=pos_scale)
+        if not parsed.get("success"):
+            return parsed
+        ply_path = path
 
     positions = parsed["positions"]
     colors = parsed["colors"]

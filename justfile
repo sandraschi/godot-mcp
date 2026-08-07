@@ -13,7 +13,7 @@ export HOST := "0.0.0.0"
 default:
     @just --list
 
-# ── Lifecycle ─────────────────────────────────────────────────────────────────
+# --- Lifecycle ---
 
 # Install Godot 4.x engine if not present (headless + editor)
 install-godot version="4.4":
@@ -103,7 +103,7 @@ reset: clean
 setup: clean bootstrap
     Write-Host "Godot MCP ready." -ForegroundColor Green
 
-# ── Server ────────────────────────────────────────────────────────────────────
+# --- Server ---
 
 # Start the Godot MCP server (Unified Gateway, dual mode)
 serve mode="dual" port=PORT:
@@ -145,7 +145,7 @@ install-addon project_path:
     $body = @{project_path="{{project_path}}"} | ConvertTo-Json -Compress; \
     try { $r = Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/addon/install" -Method POST -Body $body -ContentType "application/json" -UseBasicParsing -TimeoutSec 15; ($r.Content | ConvertFrom-Json) | ConvertTo-Json } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
 
-# ── Godot Bridge ──────────────────────────────────────────────────────────────
+# --- Godot Bridge ---
 
 # Launch Godot editor with bridge project
 godot-editor:
@@ -176,7 +176,7 @@ demo-list:
     Write-Host "  pong        Classic Pong" -ForegroundColor White; \
     Write-Host "  procedural  GDQuest procedural generation demos" -ForegroundColor White; \
     Write-Host "  skelerealms Open-world RPG framework (3D)" -ForegroundColor White; \
-    Write-Host "  vibecode    VibeCode Runner — jump IDEs, dodge agent loops (2D)" -ForegroundColor Magenta; \
+    Write-Host "  vibecode    VibeCode Runner - jump IDEs, dodge agent loops (2D)" -ForegroundColor Magenta; \
     Write-Host "  demos       Open godot-demo-projects folder (50+ mini-demos)" -ForegroundColor Gray
 
 # Import sample assets once (required before first run if .godot/ is missing)
@@ -218,7 +218,7 @@ demo-run game="heart":
     Write-Host "Launching {{game}} -> $proj" -ForegroundColor Cyan; \
     Start-Process -FilePath (Get-Command godot.exe).Source -ArgumentList '--path', $proj
 
-# ── Little game export (itch.io / desktop) ───────────────────────────────────
+# --- Little game export  itch io  desktop ---
 
 # Export sample game: web (HTML5) or windows (.exe). Usage: just little-game-export web dodge
 little-game-export target game="dodge" output="" pack="false":
@@ -297,7 +297,7 @@ godot-export path="user://export/web/index.html":
     $body = @{tool="godot_export_web"; arguments=@{output_path="{{path}}"}} | ConvertTo-Json -Compress; \
     try { Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/control/tool" -Method POST -Body $body -ContentType "application/json" -UseBasicParsing -TimeoutSec 30 } catch { Write-Host "Export failed: $_" }
 
-# ── Quality ───────────────────────────────────────────────────────────────────
+# --- Quality ---
 
 # Execute linting (ruff + biome)
 lint:
@@ -342,7 +342,7 @@ gdscript-format-check:
 # Full CI check (all quality gates)
 ci-check: lint typecheck format-check test
 
-# ── Testing ───────────────────────────────────────────────────────────────────
+# --- Testing ---
 
 # Run the complete test suite
 test:
@@ -352,7 +352,7 @@ test:
 test-cov:
     uv run pytest --cov=godot_mcp --cov-report=term-missing --cov-report=html
 
-# Game Builder E2E smoke test (design → logic → validate; needs Ollama/LLM)
+# --- Game Builder E2E smoke test  design  logic  validate needs Ollama LLM ---
 gb-smoke:
     uv run python scripts/gb-smoke.py
 
@@ -392,7 +392,7 @@ test-html: test-cov
 test-seq:
     uv run pytest -v -p no:anyio --tb=short -x
 
-# ── Webapp ────────────────────────────────────────────────────────────────────
+# --- Webapp ---
 
 # Build webapp for production
 web-build:
@@ -414,9 +414,9 @@ web-add package:
     Set-Location '{{justfile_directory()}}\webapp'
     bun add {{package}}
 
-# ── Tauri Native ──────────────────────────────────────────────────────────────
+# --- Tauri Native ---
 
-# Build Tauri native desktop app (dev mode — expects webapp dev server on 10992)
+# --- Build Tauri native desktop app  dev mode  expects webapp dev server on 10992 ---
 tauri-dev:
     powershell.exe -NoProfile -File '{{justfile_directory()}}\native\build.ps1' -Mode dev
 
@@ -428,7 +428,7 @@ tauri-build:
 tauri-sidecar:
     powershell.exe -NoProfile -File '{{justfile_directory()}}\native\build-sidecar.ps1'
 
-# ── Docker ────────────────────────────────────────────────────────────────────
+# --- Docker ---
 
 # Build Docker image
 docker-build:
@@ -438,12 +438,12 @@ docker-build:
 docker-run port=PORT:
     docker run -p {{port}}:{{port}} -e GODOT_HOST=host.docker.internal godot-mcp:{{VER}}
 
-# ── MCPB Pack ──────────────────────────────────────────────────────────────────
+# --- MCPB Pack ---
 
 # MCPB packing: use the fleet-standard recipe `just mcpb-pack` (scripts/just/fleet.just).
 # It packs the REPO ROOT (real godot_mcp package + root manifest.json) via the mcpb CLI.
 
-# ── Diagnostics ───────────────────────────────────────────────────────────────
+# --- Diagnostics ---
 
 # Check Godot MCP health endpoint
 health:
@@ -484,7 +484,7 @@ depot-export output="D:/Dev/repos/_exchange/models/godot_export":
     $body = @{tool="godot_export_web"; arguments=@{output_path="{{output}}"}} | ConvertTo-Json -Compress; \
     try { Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/control/tool" -Method POST -Body $body -ContentType "application/json" -UseBasicParsing -TimeoutSec 300 | ForEach-Object { ($_.Content | ConvertFrom-Json) | ConvertTo-Json } } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
 
-# ── Fleet Exchange ─────────────────────────────────────────────────────────────
+# --- Fleet Exchange ---
 
 # Show available files in the fleet exchange depot for godot import
 depot-ls:
@@ -530,7 +530,7 @@ git-diff:
 # Show recent commits
 git-log count="10":
     git log --oneline -{{count}}
-# ── Playwright E2E ─────────────────────────────────────────────────────
+# --- Playwright E2E ---
 
 # Install Playwright browsers (one-time)
 e2e-install:
@@ -542,7 +542,7 @@ e2e:
 	Set-Location '{{justfile_directory()}}\webapp'
 	bunx playwright test
 
-# ── Profiling ───────────────────────────────────────────────────────
+# --- Profiling ---
 
 # Snapshot Godot performance metrics
 profile-snapshot:
@@ -559,21 +559,21 @@ profile-history:
 	$body = '{"tool":"godot_profile","arguments":{"operation":"history"}}'; \
 	try { $r = Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/control/tool" -Method POST -Body $body -ContentType "application/json" -UseBasicParsing -TimeoutSec 10; ($r.Content | ConvertFrom-Json) | ConvertTo-Json -Depth 10 } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
 
-# ── Animation ───────────────────────────────────────────────────────
+# --- Animation ---
 
 # List animations on an AnimationPlayer node
 anim-list node="AnimationPlayer":
 	$body = (@{tool="godot_animation"; arguments=@{operation="list_animations"; node="{{node}}"}} | ConvertTo-Json -Compress); \
 	try { $r = Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/control/tool" -Method POST -Body $body -ContentType "application/json" -UseBasicParsing -TimeoutSec 10; ($r.Content | ConvertFrom-Json).data | ConvertTo-Json -Depth 10 } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
 
-# ── Mesh Validation ─────────────────────────────────────────────────
+# --- Mesh Validation ---
 
 # Validate all meshes in the scene for geometric corruption
 mesh-validate:
 	$body = '{"tool":"godot_validate_meshes","arguments":{}}'; \
 	try { $r = Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/control/tool" -Method POST -Body $body -ContentType "application/json" -UseBasicParsing -TimeoutSec 30; ($r.Content | ConvertFrom-Json) | ConvertTo-Json -Depth 10 } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
 
-# ── Documentation ───────────────────────────────────────────────────
+# --- Documentation ---
 
 # Import a 3D Gaussian splat file into Godot (usage: just splat-import path/to/scene.ply)
 splat-import path max_splats="200000":
@@ -585,7 +585,7 @@ godot-docs class="Node3D":
 	$body = (@{tool="godot_docs"; arguments=@{query="{{class}}"}} | ConvertTo-Json -Compress); \
 	try { $r = Invoke-WebRequest -Uri "http://localhost:{{PORT}}/api/v1/control/tool" -Method POST -Body $body -ContentType "application/json" -UseBasicParsing -TimeoutSec 20; ($r.Content | ConvertFrom-Json).data | Select-Object -ExpandProperty content | Write-Host } catch { Write-Host "FAIL: $_" -ForegroundColor Red }
 
-# ── Demo Scripts ────────────────────────────────────────────────────
+# --- Demo Scripts ---
 
 # List available demo scripts
 demos:
@@ -596,3 +596,5 @@ demo name="playtesting":
 	Set-Location '{{justfile_directory()}}'
 	uv run python demos/{{name}}.py
 
+
+# Bootstrap: install dev deps + pre-commit hook

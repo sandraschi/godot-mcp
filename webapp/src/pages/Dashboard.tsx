@@ -134,8 +134,11 @@ export default function Dashboard() {
   const { tauriAvailable } = useAppStore();
 
   const refresh = useCallback(() => {
-    apiFetch<StatusData>("/api/v1/status")
-      .then(setStatus)
+    apiFetch<StatusData>("/api/v1/status", { timeoutMs: 10000 })
+      .then((data) => {
+        setStatus(data);
+        setError(null);
+      })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to reach backend"));
     apiFetch<{ tool_count: number }>("/api/v1/health")
       .then((d) => setToolCount(d.tool_count))

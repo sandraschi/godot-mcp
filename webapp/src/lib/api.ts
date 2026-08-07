@@ -21,7 +21,10 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const { timeoutMs = DEFAULT_TIMEOUT, ...fetchOptions } = options ?? {};
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const timeout = setTimeout(
+    () => controller.abort(new DOMException(`Request timed out after ${timeoutMs}ms`, "TimeoutError")),
+    timeoutMs,
+  );
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       ...fetchOptions,
@@ -29,6 +32,11 @@ export async function apiFetch<T>(
     });
     if (!res.ok) throw new ApiError(`HTTP ${res.status}`, res.status);
     return res.json();
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "TimeoutError") {
+      throw new ApiError(`Request timed out after ${timeoutMs}ms — backend may be busy`);
+    }
+    throw e;
   } finally {
     clearTimeout(timeout);
   }

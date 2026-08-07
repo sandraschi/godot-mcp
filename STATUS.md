@@ -87,7 +87,43 @@ Workflows: `ship_windows_steam_beta`, `ship_windows_steam_release`. Env: `STEAM_
 
 REST: `/api/v1/fleet/*`. Assessment: `docs/FLEET_ASSESSMENT.md`. Just: `fleet-status`, `fleet-import`, `fleet-worldlabs-*`.
 
-**Splat gap:** Gaussian splats (SPZ/RAD) are not rendered in Godot 4 via godot-mcp — use Spark viewer URL or Unity handoff. Multiple Godot 4 gaussian-splat GDExtensions exist (e.g. `Zylann/godot-gaussian-splat`) but none are stable enough for the pipeline. Decision: **document Spark viewer as the official handoff** and revisit when a GDExtension reaches 1.0. GLB collision mesh import works today.
+**Splat gap: RESOLVED (2026-07-30).** This note was stale — `godot_import_splat`
+(with a custom billboarded Gaussian shader, per-splat scale, SH DC color) now
+ships and is documented in `README.md`. The Spark-viewer/Unity-handoff
+guidance above predates that tool. See the SPZ decode fix below for the one
+real remaining gap in this path.
+
+### SPZ import decode bug — fixed 2026-07-30
+
+`services/splat_import.py`'s `.spz` handling previously did `gzip.open(path)`
+and fed the decompressed bytes straight into the PLY parser. This was wrong
+for real Niantic-format `.spz` files at two levels, not just the
+already-known "doesn't support v4" gap:
+
+1. Real `.spz` (legacy v1-3 *and* v4) is **not** gzip-compressed PLY — it's
+   Niantic's own packed binary layout (24-bit fixed-point positions, 8-bit
+   log-encoded scales, quantized quaternion rotations, quantized SH),
+   confirmed against the official spec at github.com/nianticlabs/spz. Feeding
+   that layout to a PLY-header parser was always going to misparse or error
+   on a genuine `.spz` file, v1-3 or v4.
+2. v4 files start with a plaintext 32-byte `NGSP` magic header and split
+   data across parallel ZSTD streams — `gzip.open()` fails outright on these
+   (wrong magic bytes), it doesn't just misparse.
+
+**Fix**: now uses Niantic's official `spz` Python library (nanobind/C++
+bindings, `pip install git+https://github.com/nianticlabs/spz.git`, optional
+dependency group `splat` in `pyproject.toml`) instead of hand-decoding.
+
+**Known unknown**: the exact Python binding function/attribute names
+(`load_spz` vs `loadSpz`, `GaussianCloud.positions` etc.) could not be
+independently confirmed this session — GitHub blocked fetching
+`src/python/README.md` (wasn't a prior search/fetch result in that session).
+The new code in `_load_gaussian_cloud_via_spz_lib()` tries the conventional
+nanobind naming but fails loudly with the actual installed attribute list if
+it's wrong, rather than silently guessing. **First real test of this fix
+against an actual installed `spz` package and a real `.spz` file is still
+needed** — treat as implemented-but-unverified until that happens, same
+honesty bar as `overte-mcp`'s equivalent fix.
 
 **Game Builder gap:** REST + UI + scene/script sync done. Live E2E still manual.
 

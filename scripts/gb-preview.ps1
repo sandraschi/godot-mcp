@@ -29,7 +29,7 @@ if (-not $BuildDir -or -not (Test-Path $BuildDir)) {
 }
 
 if (-not (Test-Path (Join-Path $BuildDir "index.html"))) {
-    Write-Host "No index.html found in $BuildDir — not a valid web export." -ForegroundColor Red
+    Write-Host "No index.html found in $BuildDir - not a valid web export." -ForegroundColor Red
     exit 1
 }
 
