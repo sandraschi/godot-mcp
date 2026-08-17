@@ -1,0 +1,18 @@
+2026-08-01 03:16:04,800 - godot-mcp - INFO - Skills provider registered
+2026-08-01 03:16:05,056 - godot-mcp - INFO - MCP HTTP transport mounted at /mcp
+2026-08-01 03:16:05,078 - godot-mcp - INFO - Starting Godot MCP on 0.0.0.0:10993
+INFO:     Started server process [115476]
+INFO:     Waiting for application startup.
+2026-08-01 03:16:05,124 - godot-mcp - INFO - Godot MCP startup — engine found at C:\Users\sandr\.local\bin\godot.EXE
+2026-08-01 03:16:05,125 - godot-mcp - INFO - Godot MCP TCP bridge: 127.0.0.1:9080
+2026-08-01 03:16:07,162 - godot-mcp - WARNING - Godot bridge not available at startup: Connection refused at 127.0.0.1:9080. Is Godot running with the MCP bridge addon?
+2026-08-01 03:16:07,163 - godot-mcp.ws-gateway - INFO - WS gateway background tasks started
+2026-08-01 03:16:07,164 - godot-mcp - INFO - Mobile gateway: ws://0.0.0.0:10993/mobile/v1 | REST: POST /mobile/v1/command | Help: GET /mobile/v1/help
+2026-08-01 03:16:07,168 - mcp.server.streamable_http_manager - INFO - StreamableHTTP session manager started
+INFO:     Application startup complete.
+ERROR:    [Errno 10048] error while attempting to bind on address ('0.0.0.0', 10993): [winerror 10048] only one usage of each socket address (protocol/network address/port) is normally permitted
+INFO:     Waiting for application shutdown.
+2026-08-01 03:16:07,171 - mcp.server.streamable_http_manager - INFO - StreamableHTTP session manager shutting down
+2026-08-01 03:16:07,172 - godot-mcp.ws-gateway - INFO - WS gateway background tasks stopped
+2026-08-01 03:16:07,172 - godot-mcp - INFO - Godot MCP shutdown — bridge disconnected
+INFO:     Application shutdown complete.
