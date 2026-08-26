@@ -100,13 +100,13 @@ async def lifespan(app: FastAPI):
     _state["godot_port"] = GODOT_PORT
 
     if godot_exe:
-        logger.info("Godot MCP startup — engine found at %s", godot_exe)
+        logger.info("Godot MCP startup - engine found at %s", godot_exe)
     else:
-        logger.warning("Godot MCP startup — godot.exe not found in PATH or GODOT_PATH. Set GODOT_PATH env var.")
+        logger.warning("Godot MCP startup - godot.exe not found in PATH or GODOT_PATH. Set GODOT_PATH env var.")
 
     logger.info("Godot MCP TCP bridge: %s:%s", GODOT_HOST, GODOT_PORT)
 
-    # Attempt bridge connection at startup (blocking socket — off the event loop)
+    # Attempt bridge connection at startup (blocking socket - off the event loop)
     result = await asyncio.to_thread(_bridge.connect)
     if result["success"]:
         logger.info("Godot bridge connected: %s", result.get("data", {}))
@@ -129,7 +129,7 @@ async def lifespan(app: FastAPI):
     finally:
         stop_background_tasks()
         _bridge.disconnect()
-        logger.info("Godot MCP shutdown — bridge disconnected")
+        logger.info("Godot MCP shutdown - bridge disconnected")
 
 
 # ── FastAPI App ──────────────────────────────────────────────────────────────
@@ -200,21 +200,21 @@ for url in bridge_urls.split(","):
 # ── MCP Tools ────────────────────────────────────────────────────────────────
 
 # 15 engine-control tools registered via core_tools.register():
-#   godot_status            (READ_ONLY)  — engine version, node count, FPS
-#   godot_import_stl        (MUTATING)   — import STL mesh from uploads
-#   godot_import_glb        (MUTATING)   — import GLB/GLTF via GLTFDocument
-#   godot_import_obj        (MUTATING)   — import Wavefront OBJ
-#   godot_play_animation    (MUTATING)   — play/list GLB AnimationPlayer clips
-#   godot_load_velocity_field (MUTATING) — load CSV velocity data into scene
-#   godot_spawn_particles   (MUTATING)   — create GPU particle system
-#   godot_animate_streamlines (MUTATING) — animate particles along velocity field
-#   godot_create_camera     (MUTATING)   — create camera with orbit controls
-#   godot_add_light         (MUTATING)   — add directional/ambient/omni light
-#   godot_set_material      (MUTATING)   — set PBR material on mesh node
-#   godot_export_web        (MUTATING)   — export scene to HTML5
-#   godot_read_scene_tree   (READ_ONLY)  — dump scene hierarchy as JSON
-#   godot_set_config        (MUTATING)   — write to project.godot config
-#   godot_headless_verify   (READ_ONLY)  — check headless mode + CLI command
+#   godot_status            (READ_ONLY)  - engine version, node count, FPS
+#   godot_import_stl        (MUTATING)   - import STL mesh from uploads
+#   godot_import_glb        (MUTATING)   - import GLB/GLTF via GLTFDocument
+#   godot_import_obj        (MUTATING)   - import Wavefront OBJ
+#   godot_play_animation    (MUTATING)   - play/list GLB AnimationPlayer clips
+#   godot_load_velocity_field (MUTATING) - load CSV velocity data into scene
+#   godot_spawn_particles   (MUTATING)   - create GPU particle system
+#   godot_animate_streamlines (MUTATING) - animate particles along velocity field
+#   godot_create_camera     (MUTATING)   - create camera with orbit controls
+#   godot_add_light         (MUTATING)   - add directional/ambient/omni light
+#   godot_set_material      (MUTATING)   - set PBR material on mesh node
+#   godot_export_web        (MUTATING)   - export scene to HTML5
+#   godot_read_scene_tree   (READ_ONLY)  - dump scene hierarchy as JSON
+#   godot_set_config        (MUTATING)   - write to project.godot config
+#   godot_headless_verify   (READ_ONLY)  - check headless mode + CLI command
 
 register_all(mcp)
 
@@ -432,7 +432,7 @@ async def download_file(file_name: str):
     raise HTTPException(404, "File not found")
 
 
-# ── REST API — Tool Bridge ────────────────────────────────────────────────────
+# ── REST API - Tool Bridge ────────────────────────────────────────────────────
 
 
 class ToolRequest(BaseModel):
@@ -1103,7 +1103,7 @@ async def mobile_websocket(websocket: WebSocket):
 
 @app.get("/mobile/v1/help")
 async def mobile_help():
-    """Full protocol reference for iOS mobile clients — machine-readable JSON."""
+    """Full protocol reference for iOS mobile clients - machine-readable JSON."""
     return generate_help_dict()
 
 
@@ -1168,7 +1168,7 @@ async def install_addon(req: AddonInstallRequest):
 
 @app.post("/api/llm/chat/stream")
 async def llm_chat_stream(request: Request):
-    """POST /api/llm/chat/stream — streaming chat via Ollama/OpenAI-compatible."""
+    """POST /api/llm/chat/stream - streaming chat via Ollama/OpenAI-compatible."""
     import httpx
 
     body = await request.json()
@@ -1249,7 +1249,7 @@ async def llm_chat_stream(request: Request):
 
 @app.post("/api/llm/chat")
 async def llm_chat(request: Request):
-    """POST /api/llm/chat — non-streaming chat."""
+    """POST /api/llm/chat - non-streaming chat."""
     import httpx
 
     body = await request.json()
@@ -1361,6 +1361,12 @@ def main():
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--agentic", action="store_true", help="Enable CodeMode BM25 discovery")
     args = parser.parse_args()
+
+    import os as _os
+    if _os.getenv("GODOT_TAURI") == "1":
+        args.mode = "http"
+        args.port = int(_os.getenv("MCP_PORT", args.port))
+        args.host = _os.getenv("MCP_HOST", args.host)
 
     if args.agentic and CodeMode is not None:
         mcp._transforms.append(CodeMode())
