@@ -1,7 +1,7 @@
 [project]
 name = "godot-mcp"
 version = "0.5.0-beta.1"
-description = "Godot MCP server â€” Godot 4.x engine control via TCP bridge, STL/GLB/OBJ import, GPU particles, animation, HTML5 export, itch.io/Steam shipping, AI game builder through MCP tools and REST API"
+description = "Godot 4 automation via MCP: scene/mesh/PBR/particles, STL import, HTML5 export"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -60,4 +60,5 @@ dev = [
     "pytest-asyncio>=0.24",
     "ruff>=0.16.0,<0.17",
     "gdtoolkit>=4.5,<5",
+    "pywin32>=311",
 ]

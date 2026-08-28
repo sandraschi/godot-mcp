@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.sandraschi/godot-mcp",
-  "description": "Godot MCP server - Godot 4.x engine control via TCP bridge, STL/GLB/OBJ import, GPU particles, an...",
+  "description": "Godot 4 automation via MCP: scene/mesh/PBR/particles, STL import, HTML5 export",
   "version": "0.5.0-beta.1",
   "repository": {
     "url": "https://github.com/sandraschi/godot-mcp",
