@@ -1,19 +1,25 @@
+﻿import sys, os
+site_pkgs = os.path.abspath('.venv/Lib/site-packages')
+if site_pkgs not in sys.path:
+    sys.path.insert(0, site_pkgs)
+
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import copy_metadata
 
 datas = [("src/godot_mcp", "godot_mcp")]
 for pkg in ("fastmcp", "fastapi", "uvicorn", "pydantic", "starlette", "httpx"):
-    datas += copy_metadata(pkg)
+    try:
+        datas += copy_metadata(pkg)
+    except Exception:
+        pass
 
 a = Analysis(
     ['run_server.py'],
-    pathex=["src"],
+    pathex=["src", site_pkgs],
     binaries=[],
-    
     datas=datas,
     hiddenimports=[
-
-    "_datetime",
+        "_datetime",
         "uvicorn.logging",
         "uvicorn.loops",
         "uvicorn.loops.asyncio",
@@ -27,10 +33,9 @@ a = Analysis(
         "godot_mcp.tools.core_tools",
         "godot_mcp.services.godot_bridge",
         "godot_mcp.artifacts.routes",
-    "_strptime",
-],
+        "_strptime",
+    ],
     hookspath=[],
-    
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
@@ -45,7 +50,6 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    
     name="godot-mcp-backend",
     debug=False,
     bootloader_ignore_signals=False,
@@ -60,6 +64,14 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
 )
+
+
+
+
+
+
+
+
 
 
 
