@@ -5,6 +5,72 @@ All notable changes to **godot-mcp** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-09-03
+
+### Added (backport from overte-mcp/resonite-mcp/unity3d-mcp: animate + fixture spawner + real depot)
+- `mcp_bridge.gd`: `animate_node`/`stop_animation` actions - loop-animate a Node3D in place
+  (spin/bob/bounce) via a new `_active_animations` dict ticked from `_process(delta)`. Uses
+  the already-scaled `delta` rather than an absolute clock, so animations correctly pause
+  during a frozen/stepping playtest state for free - unlike the other three ports, which read
+  an absolute editor/session timestamp and needed no such consideration (or, for Unity, get it
+  for free from a different mechanism). `bounce` mode is a direct GDScript port of the
+  identical closed-form drop-physics function already shipped in overte-mcp, resonite-mcp, and
+  unity3d-mcp (fourth platform, same math). `spin` speed is **radians/second** (GDScript's
+  native convention, matching overte-mcp/resonite-mcp) - NOT degrees/second like unity3d-mcp's
+  port, which uses Unity's own native convention instead.
+- `_cmd_add_node` gained `position`/`rotation`/`mesh_type`/`dimensions`/`color` (Node3D
+  subtypes only) - additive/backward-compatible, needed for `fixture_spawn` below. `mesh_type`
+  ("Box"/"Sphere") attaches a `BoxMesh`/`SphereMesh` to a `MeshInstance3D`.
+- `godot_scene(operation="fixture_spawn", fixture=..., position=..., ...)`: preset test
+  fixtures (box/cup/ball/table/chair), same dimensions as the other three ports, built from
+  Godot's native `BoxMesh`/`SphereMesh` via repeated `add_node` calls - no custom mesh
+  generation needed. No avatar-relative default placement - the Godot Editor has no "the
+  user's viewpoint" concept, so `position` defaults to the world origin if omitted.
+- `godot_scene(operation="animate_node"/"stop_animation", ...)`: Python-side wiring for the
+  new bridge actions.
+
+### Fixed
+- **Real, pre-existing bug found while extending `godot_scene`**: `modify_node` and
+  `remove_node` sent `params["node_path"]`/`params["name"]`/`params["property_name"]`, but
+  `mcp_bridge.gd`'s `_cmd_modify_node`/`_cmd_remove_node` only ever read
+  `params["node"]`/`params["path"]`/`params["property"]` - every call to either operation was
+  silently getting empty strings, guaranteed to error (or, for `remove_node`, resolve an
+  empty-string `NodePath`). This was not something this session broke; it predates this
+  change and was caught by writing an offline test against the fix, which reproduced the
+  original broken parameter passthrough before correcting it.
+
+### Added (depot: real CRUD + backup/restore, was metadata-registry-only before this)
+- `ArtifactType` gained `TEXTURE` - no image asset type existed before this.
+- `artifact_register` gained `source_path` - `ArtifactDepot.put()` already supported copying
+  a file in, but no MCP tool exposed that parameter, so it was unreachable; every artifact
+  registered through the tool layer was metadata-only regardless of intent.
+- `artifact_update` (new): edit name/description/tags/author after registration - no
+  metadata-edit tool existed before this, only register+delete.
+- `artifact_backup`/`artifact_list_backups`/`artifact_restore_backup` (new): zip-snapshot
+  `files/`+`thumbs/`+`index.json`, same pattern as overte-mcp/resonite-mcp's depot backup.
+  Matching REST routes added to `routes.py` too (`POST /backup`, `GET /backups`, `POST
+  /backups/{name}/restore`) - registered *before* the existing `GET /{artifact_id}` catch-all,
+  since Starlette matches routes in registration order and a literal `/backups` path would
+  otherwise be captured as `artifact_id="backups"`.
+- **Bug found and fixed while writing `ArtifactDepot.update()`**: the class already has a
+  method named `list` (predates this change); an unquoted `tags: list[str] | None` annotation
+  on a method defined textually after it resolves `list` to that method object at
+  class-definition time, not the builtin, raising `TypeError: 'function' object is not
+  subscriptable` on import. Fixed by quoting the two affected annotations
+  (`tags: "list[str] | None"`, `-> "list[dict]"`) as forward references - caught immediately
+  by the offline verification script below, not shipped broken.
+- **Verification**: no live Godot instance was running (confirmed: no Godot process, and
+  `mcp_bridge.gd` is a resource copied into a separate Godot project, same as unity3d-mcp's
+  `MCPBridge.cs`). GDScript reviewed carefully (brace-balance checked for Dictionary/string
+  literals: 122/122) but not compiled - GDScript has no standalone compiler outside the Godot
+  engine itself. Python composition logic (fixed `remove_node`/`modify_node`, new
+  `animate_node`/`stop_animation`/`fixture_spawn`) verified offline against a mocked bridge -
+  every case including the bug-fix regression checks passed. The depot's `update`/`backup`/
+  `list_backups`/`restore_backup` were verified offline against a real scratch directory (a
+  full register-with-file → update → backup → delete → restore round-trip confirmed both
+  metadata and the file itself came back correctly). Existing test suite unaffected: 79
+  passed (same as before this change). First real in-Editor test is still pending.
+
 ## [0.5.0-beta.1] - 2026-07-15
 
 ### Added (2026-07-15) — Documentation fetcher, mesh validation, help system, tilemap, animation keyframe editor, profiler, demo scripts and showcase page

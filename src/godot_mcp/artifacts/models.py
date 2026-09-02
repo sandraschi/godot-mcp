@@ -11,6 +11,7 @@ class ArtifactType(StrEnum):
     SCRIPT = "script"
     PROJECT = "project"
     PREFAB = "prefab"
+    TEXTURE = "texture"  # added 2026-09-03 - no image asset type existed before this
 
 
 class Artifact(BaseModel):
