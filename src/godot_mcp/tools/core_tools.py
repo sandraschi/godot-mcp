@@ -1,4 +1,4 @@
-"""Godot MCP core tools — engine control, STL/velocity import, particles, animation, export."""
+"""Godot MCP core tools - engine control, STL/velocity import, particles, animation, export."""
 
 import asyncio
 import logging
@@ -33,7 +33,7 @@ async def godot_status(ctx: Context = None) -> dict:
             godot = await asyncio.to_thread(find_godot)
             hint = ""
             if godot:
-                hint = " Godot found — try start_bridge() or just godot-bridge."
+                hint = " Godot found - try start_bridge() or just godot-bridge."
             else:
                 hint = " Install Godot 4.x (just install-godot) then start the bridge."
             return {
@@ -719,7 +719,7 @@ async def godot_simulate_input(
     ],
     ctx: Context = None,
 ) -> dict:
-    """Simulate input in the Godot engine — keyboard, action, joypad, mouse, and text.
+    """Simulate input in the Godot engine - keyboard, action, joypad, mouse, and text.
 
     Dispatches each action dict by its key signature. Legacy ``{"key": ...}``
     entries use ``InputEventKey`` with optional hold-timed release. New formats
@@ -862,7 +862,7 @@ async def godot_tilemap(
     For TileMapLayer: reads cell source IDs, atlas coordinates, and alternative
     tiles. For GridMap: reads cell item IDs and orientations. The ``set_cell``
     operation writes cells that would otherwise be base64-encoded in the ``.tscn``
-    file — this is the only practical way for agents to edit tilemap data.
+    file - this is the only practical way for agents to edit tilemap data.
 
     ## Return Format
     {"success": bool, "data": {"node": str, "type": str, "cells": [...], "cell_count": int}}
@@ -1304,7 +1304,7 @@ async def godot_validate_meshes(
     - **Empty surface arrays** (missing vertex data)
 
     Catches silently corrupt procedural mesh data that masquerades as lighting
-    bugs or invisible geometry — the kind of issue that wastes hours of
+    bugs or invisible geometry - the kind of issue that wastes hours of
     debugging because there's no visible error.
 
     ## Return Format
@@ -1342,7 +1342,7 @@ async def godot_state_digest(
     - **Named lookup** (provide ``node_names``): finds each node by name anywhere in
       the tree and returns its state, regardless of watch group membership.
 
-    Cheaper than ``read_scene_tree`` — returns structured JSON without full hierarchy.
+    Cheaper than ``read_scene_tree`` - returns structured JSON without full hierarchy.
 
     ## Return Format
     {"success": bool, "data": {"nodes": {name: state_dict, ...}, "count": int}}
@@ -1383,12 +1383,12 @@ async def godot_game_time(
 ) -> dict:
     """Control the game clock for deterministic playtesting.
 
-    **freeze** — pauses the game loop (``Engine.time_scale = 0``). The bridge
+    **freeze** - pauses the game loop (``Engine.time_scale = 0``). The bridge
     keeps running so you can send input, read state, or set up scenarios.
 
-    **unfreeze** — resumes normal game speed.
+    **unfreeze** - resumes normal game speed.
 
-    **step** — advances the game by *frames* frames with real time-scale, then
+    **step** - advances the game by *frames* frames with real time-scale, then
     automatically re-freezes. Use after a freeze to tick the game forward
     deterministically.
 
@@ -1466,11 +1466,52 @@ async def godot_step_until(
     )
 
 
+_FIXTURE_PRESETS: dict[str, list[dict[str, Any]]] = {
+    # Same real-world (meter) dimensions as overte-mcp/resonite-mcp/unity3d-mcp's fixture
+    # presets, so a fixture is the same size regardless of which engine it's spawned in.
+    "box": [
+        {"mesh": "Box", "offset": (0.0, 0.05, 0.0), "dims": (0.1, 0.1, 0.1)},
+    ],
+    "cup": [
+        {"mesh": "Box", "offset": (0.0, 0.05, 0.0), "dims": (0.08, 0.10, 0.08)},
+    ],
+    "ball": [
+        {"mesh": "Sphere", "offset": (0.0, 0.035, 0.0), "dims": (0.07, 0.07, 0.07)},
+    ],
+    "table": [
+        {"mesh": "Box", "offset": (0.0, 0.715, 0.0), "dims": (1.2, 0.05, 0.6)},
+        {"mesh": "Box", "offset": (0.0, 0.35, 0.0), "dims": (0.08, 0.70, 0.08)},
+    ],
+    "chair": [
+        {"mesh": "Box", "offset": (0.0, 0.45, 0.0), "dims": (0.4, 0.05, 0.4)},
+        {"mesh": "Box", "offset": (0.0, 0.70, -0.18), "dims": (0.4, 0.5, 0.05)},
+        {"mesh": "Box", "offset": (0.0, 0.225, 0.0), "dims": (0.35, 0.45, 0.35)},
+    ],
+}
+
+
 async def godot_scene(
     operation: Annotated[
-        Literal["add_node", "remove_node", "modify_node", "save_scene"],
+        Literal[
+            "add_node",
+            "remove_node",
+            "modify_node",
+            "save_scene",
+            "animate_node",
+            "stop_animation",
+            "fixture_spawn",
+        ],
         Field(
-            description="Scene operation: add_node (create a node), remove_node (delete by name/path), modify_node (set property by path), save_scene (persist the current scene)."
+            description=(
+                "Scene operation: add_node (create a node), remove_node (delete by name/path), "
+                "modify_node (set property by path), save_scene (persist the current scene), "
+                "animate_node (loop-animate a node in place: spin/bob/bounce - fire-and-forget, "
+                "keeps running after this call returns until stop_animation or duration_s "
+                "elapses; 2026-09-03, needs mcp_bridge.gd 2026-09-03+), stop_animation (stop an "
+                "in-progress animate_node animation), fixture_spawn (preset box/cup/ball/table/"
+                "chair test fixture built from Godot's native BoxMesh/SphereMesh - no avatar-"
+                "relative default placement, position defaults to the world origin)."
+            )
         ),
     ],
     parent: Annotated[
@@ -1484,21 +1525,111 @@ async def godot_scene(
         ),
     ] = None,
     name: Annotated[
-        str | None, Field(description="Node name. Used by: add_node, remove_node, modify_node.", default=None)
+        str | None,
+        Field(
+            description=(
+                "Node name. Used by: add_node (new node's name), remove_node/modify_node/"
+                "animate_node/stop_animation (target - resolved by absolute path first, then "
+                "by plain name if that fails), fixture_spawn (base name for the new fixture, "
+                "defaults to the fixture name)."
+            ),
+            default=None,
+        ),
     ] = None,
     node_path: Annotated[
-        str | None, Field(description="Full path to the node. Used by: modify_node, remove_node.", default=None)
+        str | None,
+        Field(
+            description=(
+                "Full path to the target node - takes priority over `name` when both are "
+                "given. Used by: remove_node, modify_node, animate_node, stop_animation."
+            ),
+            default=None,
+        ),
     ] = None,
     property_name: Annotated[
         str | None, Field(description="Property name (e.g. 'position', 'scale'). Used by: modify_node.", default=None)
     ] = None,
     value: Annotated[Any, Field(description="New value for the property. Used by: modify_node.", default=None)] = None,
+    position: Annotated[
+        list[float] | None,
+        Field(
+            description=(
+                "[x, y, z] world position. Used by: add_node (Node3D subtypes only), "
+                "fixture_spawn (where to place it - defaults to the world origin if omitted; "
+                "Godot has no 'the user's viewpoint' concept to default to instead)."
+            ),
+            default=None,
+        ),
+    ] = None,
+    rotation: Annotated[
+        list[float] | None,
+        Field(description="[x, y, z] Euler rotation in radians. Used by: add_node (Node3D subtypes only).", default=None),
+    ] = None,
+    dimensions: Annotated[
+        list[float] | None,
+        Field(
+            description=(
+                "[x, y, z] size in meters. Used by: add_node (with mesh_type, sets a "
+                "BoxMesh.size or SphereMesh diameter=dimensions[0])."
+            ),
+            default=None,
+        ),
+    ] = None,
+    mesh_type: Annotated[
+        str | None,
+        Field(description="'Box' or 'Sphere' - attaches a primitive mesh. Used by: add_node (MeshInstance3D only).", default=None),
+    ] = None,
+    color: Annotated[
+        dict[str, float] | None,
+        Field(
+            description=(
+                "{'r','g','b','a'} 0.0-1.0. Used by: add_node (MeshInstance3D with mesh_type - "
+                "applies a StandardMaterial3D), fixture_spawn (applied uniformly to every part)."
+            ),
+            default=None,
+        ),
+    ] = None,
+    mode: Annotated[
+        str, Field(description="animate_node mode: 'spin', 'bob', or 'bounce'.", default="spin")
+    ] = "spin",
+    axis: Annotated[
+        list[float] | None, Field(description="[x, y, z] rotation axis for animate_node's 'spin' mode.", default=None)
+    ] = None,
+    speed: Annotated[
+        float,
+        Field(
+            description=(
+                "animate_node speed: 'spin' is radians/second (GDScript's native convention - "
+                "NOT degrees/second like unity3d-mcp's port), 'bob' is oscillations/second, "
+                "'bounce' scales effective gravity."
+            ),
+            default=1.0,
+        ),
+    ] = 1.0,
+    amplitude: Annotated[
+        float, Field(description="animate_node 'bob'/'bounce': peak height above rest, in meters.", default=0.1)
+    ] = 0.1,
+    damping: Annotated[
+        float, Field(description="animate_node 'bounce' only: energy retained per bounce, 0-1.", default=0.6)
+    ] = 0.6,
+    duration_s: Annotated[
+        float,
+        Field(
+            description="animate_node duration in seconds; <=0 (default) means run until stop_animation is called.",
+            default=0.0,
+        ),
+    ] = 0.0,
+    fixture: Annotated[
+        str | None, Field(description="fixture_spawn preset name: 'box', 'cup', 'ball', 'table', or 'chair'.", default=None)
+    ] = None,
     ctx: Context = None,
 ) -> dict:
-    """Manage the Godot scene tree: add, remove, modify nodes, or save the scene.
+    """Manage the Godot scene tree: add, remove, modify, animate nodes, spawn a test fixture,
+    or save the scene.
 
-    Portmanteau for 4 bridge-only REST actions: add_node, remove_node,
-    modify_node, save_scene.
+    Portmanteau for 7 bridge actions: add_node, remove_node, modify_node, save_scene,
+    animate_node, stop_animation, fixture_spawn (the last three backported 2026-09-03 from
+    overte-mcp/resonite-mcp/unity3d-mcp's identical features).
 
     ## Return Format
     {"success": bool, "data": {...}}
@@ -1508,12 +1639,93 @@ async def godot_scene(
     await godot_scene(operation="remove_node", name="OldNode")
     await godot_scene(operation="modify_node", node_path="Player/Camera", property_name="current", value=True)
     await godot_scene(operation="save_scene")
+    await godot_scene(operation="animate_node", name="Cube1", mode="bounce", amplitude=0.3, damping=0.6, duration_s=6)
+    await godot_scene(operation="stop_animation", name="Cube1")
+    await godot_scene(operation="fixture_spawn", fixture="ball", position=[1, 0, 2])
     """
     bridge = get_bridge()
     if not bridge.connected:
         result = await asyncio.to_thread(bridge.connect)
         if not result["success"]:
             return {"success": False, "error": result.get("error", "Cannot connect to Godot")}
+
+    if operation == "remove_node":
+        # Bug fixed 2026-09-03: this used to send params["name"]/["node_path"], but
+        # mcp_bridge.gd's _cmd_remove_node only ever reads params["path"] - every call was
+        # silently getting an empty path and erroring. node_path takes priority over name.
+        target = node_path or name
+        if not target:
+            return {"success": False, "error": "remove_node requires 'name' or 'node_path'"}
+        return await asyncio.to_thread(bridge.send, "remove_node", {"path": target}, timeout=15)
+
+    if operation == "modify_node":
+        # Bug fixed 2026-09-03: this used to send params["node_path"]/["property_name"], but
+        # mcp_bridge.gd's _cmd_modify_node reads params["node"]/["property"] - every call was
+        # silently getting empty strings and erroring (only "value" happened to align).
+        target = node_path or name
+        if not target or not property_name:
+            return {"success": False, "error": "modify_node requires ('name' or 'node_path') and 'property_name'"}
+        return await asyncio.to_thread(
+            bridge.send, "modify_node", {"node": target, "property": property_name, "value": value}, timeout=15
+        )
+
+    if operation in ("animate_node", "stop_animation"):
+        target = node_path or name
+        if not target:
+            return {"success": False, "error": f"{operation} requires 'name' or 'node_path'"}
+        if operation == "stop_animation":
+            return await asyncio.to_thread(bridge.send, "stop_animation", {"node": target}, timeout=15)
+        if mode not in ("spin", "bob", "bounce"):
+            return {"success": False, "error": "mode must be 'spin', 'bob', or 'bounce'"}
+        bridge_params: dict[str, Any] = {
+            "node": target,
+            "mode": mode,
+            "speed": speed,
+            "amplitude": amplitude,
+            "damping": damping,
+            "duration": duration_s,
+        }
+        if axis is not None and len(axis) == 3:
+            bridge_params["axis"] = {"x": axis[0], "y": axis[1], "z": axis[2]}
+        return await asyncio.to_thread(bridge.send, "animate_node", bridge_params, timeout=15)
+
+    if operation == "fixture_spawn":
+        if not fixture or fixture not in _FIXTURE_PRESETS:
+            return {"success": False, "error": f"Unknown fixture {fixture!r}. Known: {sorted(_FIXTURE_PRESETS)}"}
+        parts = _FIXTURE_PRESETS[fixture]
+        base = position if position and len(position) == 3 else [0.0, 0.0, 0.0]
+        base_name = name or fixture
+
+        node_paths = []
+        for i, part in enumerate(parts):
+            ox, oy, oz = part["offset"]
+            dx, dy, dz = part["dims"]
+            add_params: dict[str, Any] = {
+                "parent": ".",
+                "type": "MeshInstance3D",
+                "name": f"{base_name}_{i}" if len(parts) > 1 else base_name,
+                "mesh_type": part["mesh"],
+                "position": {"x": base[0] + ox, "y": base[1] + oy, "z": base[2] + oz},
+                "dimensions": {"x": dx, "y": dy, "z": dz},
+            }
+            if color is not None:
+                add_params["color"] = color
+            result = await asyncio.to_thread(bridge.send, "add_node", add_params, timeout=15)
+            if not result.get("success"):
+                return {
+                    "success": False,
+                    "error": f"Fixture part {i} failed: {result.get('error', 'unknown error')}",
+                    "fixture": fixture,
+                    "node_paths": node_paths,
+                }
+            node_paths.append(result.get("data", {}).get("path"))
+
+        return {
+            "success": True,
+            "fixture": fixture,
+            "node_paths": node_paths,
+            "position": {"x": base[0], "y": base[1], "z": base[2]},
+        }
 
     params = {}
     if parent is not None:
@@ -1522,12 +1734,16 @@ async def godot_scene(
         params["type"] = node_type
     if name is not None:
         params["name"] = name
-    if node_path is not None:
-        params["node_path"] = node_path
-    if property_name is not None:
-        params["property_name"] = property_name
-    if value is not None:
-        params["value"] = value
+    if position is not None and len(position) == 3:
+        params["position"] = {"x": position[0], "y": position[1], "z": position[2]}
+    if rotation is not None and len(rotation) == 3:
+        params["rotation"] = {"x": rotation[0], "y": rotation[1], "z": rotation[2]}
+    if dimensions is not None and len(dimensions) == 3:
+        params["dimensions"] = {"x": dimensions[0], "y": dimensions[1], "z": dimensions[2]}
+    if mesh_type is not None:
+        params["mesh_type"] = mesh_type
+    if color is not None:
+        params["color"] = color
 
     return await asyncio.to_thread(bridge.send, operation, params, timeout=15)
 
@@ -1592,7 +1808,7 @@ async def godot_generate_procedural_texture(
 
 async def start_bridge(
     project_root: Annotated[
-        str | None, Field(description="Godot project root path (optional — auto-detected).", default=None)
+        str | None, Field(description="Godot project root path (optional - auto-detected).", default=None)
     ] = None,
     ctx: Context = None,
 ) -> dict:

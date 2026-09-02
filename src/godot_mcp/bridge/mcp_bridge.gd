@@ -26,6 +26,10 @@ var _step_until_condition := ""
 var _step_until_counter := 0
 var _step_until_timeout := 0
 
+# Active in-place animations (spin/bob/bounce), keyed by NodePath string - same tick-loop
+# pattern as unity3d-mcp's MCPBridge.cs _activeAnimations (backported 2026-09-03).
+var _active_animations: Dictionary = {}
+
 func _ready():
 	print("[MCP-Bridge] Initializing Godot MCP bridge v0.1.0...")
 	start_server(_port)
@@ -48,9 +52,11 @@ func stop_server():
 		_peer = null
 	print("[MCP-Bridge] Server stopped")
 
-func _process(_delta: float):
+func _process(delta: float):
 	if not _running:
 		return
+
+	_tick_animations(delta)
 
 	# Accept new connections
 	if not _peer or _peer.get_status() == StreamPeerTCP.STATUS_NONE:
@@ -128,6 +134,142 @@ func _process(_delta: float):
 	elif _playtest_state == PlaytestState.FROZEN:
 		Engine.time_scale = 0
 
+# ─── Loop animation (spin/bob/bounce) ──────────────────────────────────────────
+# Backported 2026-09-03 from overte-mcp/resonite-mcp/unity3d-mcp's identical feature. Uses
+# `delta` (already scaled by Engine.time_scale) rather than an absolute wall-clock timestamp,
+# so animations correctly pause during a frozen/stepping playtest state for free - no special
+# casing needed, unlike the other three ports which read an absolute editor/session clock.
+func _tick_animations(delta: float):
+	if _active_animations.is_empty():
+		return
+
+	var finished: Array = []
+	for path_str in _active_animations.keys():
+		var state: Dictionary = _active_animations[path_str]
+		var node: Node3D = state["node"]
+		if not is_instance_valid(node):
+			finished.append(path_str)
+			continue
+
+		state["elapsed"] += delta
+		var t: float = state["elapsed"]
+
+		match state["mode"]:
+			"spin":
+				# Radians/second (GDScript's native rotation convention), matching
+				# overte-mcp/resonite-mcp - NOT degrees/second like unity3d-mcp's port, which
+				# uses Unity's own native Quaternion.AngleAxis(degrees, axis) convention. A
+				# real, deliberate unit difference between engines, not an oversight.
+				var delta_rot := Quaternion(state["axis"], state["speed"] * t)
+				node.quaternion = state["rest_rotation"] * delta_rot
+			"bob":
+				var offset: float = state["amplitude"] * sin(2.0 * PI * state["speed"] * t)
+				node.position = state["rest_position"] + Vector3.UP * offset
+			"bounce":
+				var offset: float = _bounce_height(t, state["amplitude"], state["damping"], state["speed"])
+				node.position = state["rest_position"] + Vector3.UP * offset
+
+		if state["duration"] > 0.0 and t >= state["duration"]:
+			finished.append(path_str)
+
+	for path_str in finished:
+		_active_animations.erase(path_str)
+
+## Real drop-and-rebound physics, not a repeating sine wave - direct GDScript port of the
+## identical closed-form function already shipped in overte-mcp's http_server.py,
+## resonite-mcp's tools/resonite_link.py, and unity3d-mcp's MCPBridge.cs (fourth platform,
+## same math, so behavior is provably consistent across every port rather than an independent
+## guess). t=0 starts on the ground with upward velocity, rises to `amplitude`, falls under
+## effective gravity g=9.8*speed, and each landing's velocity *= sqrt(damping) so bounces
+## visibly shorten and settle to 0 instead of repeating forever.
+func _bounce_height(t: float, amplitude: float, damping: float, speed: float) -> float:
+	var g: float = 9.8 * max(speed, 0.05)
+	var v: float = sqrt(2.0 * g * amplitude) if amplitude > 0.0 else 0.0
+	var remaining: float = t
+	var clamped_damping: float = clamp(damping, 0.0, 1.0)
+	while v > 1e-4:
+		var duration: float = 2.0 * v / g
+		if remaining <= duration:
+			return max(v * remaining - 0.5 * g * remaining * remaining, 0.0)
+		remaining -= duration
+		v *= sqrt(clamped_damping)
+	return 0.0
+
+func _resolve_node(node_ref: String) -> Node:
+	var node: Node = get_tree().get_root().get_node_or_null(NodePath(node_ref))
+	if not node:
+		node = _find_node_by_name(node_ref)
+	return node
+
+func _cmd_animate_node(request_id: String, params: Dictionary):
+	var node_ref: String = params.get("node", "")
+	if node_ref.is_empty():
+		_send_error("animate_node requires a 'node' param", request_id)
+		return
+	var node := _resolve_node(node_ref)
+	if not node:
+		_send_error("Node '%s' not found (tried path and name lookup)" % node_ref, request_id)
+		return
+	if not (node is Node3D):
+		_send_error("animate_node only supports Node3D and subclasses - got %s" % node.get_class(), request_id)
+		return
+
+	var mode: String = params.get("mode", "spin")
+	if mode != "spin" and mode != "bob" and mode != "bounce":
+		_send_error("mode must be 'spin', 'bob', or 'bounce'", request_id)
+		return
+
+	var axis := Vector3.UP
+	if params.has("axis"):
+		var a: Dictionary = params.get("axis", {})
+		var raw_axis := Vector3(a.get("x", 0.0), a.get("y", 1.0), a.get("z", 0.0))
+		if raw_axis.length() > 0.0001:
+			axis = raw_axis.normalized()
+
+	var n3d := node as Node3D
+	var path_str := str(node.get_path())
+	_active_animations[path_str] = {
+		"node": n3d,
+		"mode": mode,
+		"axis": axis,
+		"speed": float(params.get("speed", 1.0)),
+		"amplitude": float(params.get("amplitude", 0.1)),
+		"damping": float(params.get("damping", 0.6)),
+		"elapsed": 0.0,
+		"duration": float(params.get("duration", 0.0)),
+		"rest_position": n3d.position,
+		"rest_rotation": n3d.quaternion,
+	}
+
+	var response := {"status": "started", "node": path_str, "mode": mode}
+	if float(params.get("duration", 0.0)) <= 0.0:
+		response["note"] = "duration<=0: runs until stop_animation is called"
+	_send_response(request_id, response)
+
+func _cmd_stop_animation(request_id: String, params: Dictionary):
+	var node_ref: String = params.get("node", "")
+	if node_ref.is_empty():
+		_send_error("stop_animation requires a 'node' param", request_id)
+		return
+	var node := _resolve_node(node_ref)
+	if not node:
+		_send_error("Node '%s' not found (tried path and name lookup)" % node_ref, request_id)
+		return
+
+	var path_str := str(node.get_path())
+	if not _active_animations.has(path_str):
+		_send_response(request_id, {"status": "not_animating", "node": path_str})
+		return
+
+	_active_animations.erase(path_str)
+	var n3d := node as Node3D
+	var final_pos: Vector3 = n3d.position if n3d else Vector3.ZERO
+	_send_response(request_id, {
+		"status": "stopped",
+		"node": path_str,
+		"final_position": {"x": final_pos.x, "y": final_pos.y, "z": final_pos.z},
+	})
+
 func _handle_message(raw: String):
 	var json := JSON.new()
 	var err := json.parse(raw)
@@ -183,6 +325,10 @@ func _handle_message(raw: String):
 			_cmd_remove_node(request_id, params)
 		"modify_node":
 			_cmd_modify_node(request_id, params)
+		"animate_node":
+			_cmd_animate_node(request_id, params)
+		"stop_animation":
+			_cmd_stop_animation(request_id, params)
 		"save_scene":
 			_cmd_save_scene(request_id, params)
 		"play_animation":
@@ -748,6 +894,39 @@ func _cmd_add_node(request_id: String, params: Dictionary):
 
 	node.name = node_name
 	parent.add_child(node)
+
+	# Position/rotation/mesh_type/dimensions/color — additive, backported 2026-09-03 for the
+	# fixture spawner (mirrors unity3d-mcp's CreateObject extension). Only meaningful for
+	# Node3D and subtypes; silently skipped for Node2D/Control/CanvasLayer.
+	if node is Node3D:
+		var n3d := node as Node3D
+		if params.has("position"):
+			var p: Dictionary = params.get("position", {})
+			n3d.position = Vector3(p.get("x", 0.0), p.get("y", 0.0), p.get("z", 0.0))
+		if params.has("rotation"):
+			var r: Dictionary = params.get("rotation", {})
+			n3d.rotation = Vector3(r.get("x", 0.0), r.get("y", 0.0), r.get("z", 0.0))
+
+		var mesh_type: String = params.get("mesh_type", "")
+		if node is MeshInstance3D and mesh_type != "":
+			var mi := node as MeshInstance3D
+			var dims: Dictionary = params.get("dimensions", {})
+			if mesh_type == "Box":
+				var box := BoxMesh.new()
+				box.size = Vector3(dims.get("x", 1.0), dims.get("y", 1.0), dims.get("z", 1.0))
+				mi.mesh = box
+			elif mesh_type == "Sphere":
+				var sph := SphereMesh.new()
+				var diameter: float = dims.get("x", 1.0)
+				sph.radius = diameter / 2.0
+				sph.height = diameter
+				mi.mesh = sph
+
+			if params.has("color"):
+				var c: Dictionary = params.get("color", {})
+				var mat := StandardMaterial3D.new()
+				mat.albedo_color = Color(c.get("r", 1.0), c.get("g", 1.0), c.get("b", 1.0), c.get("a", 1.0))
+				mi.material_override = mat
 
 	_send_response(request_id, {"added": true, "path": str(node.get_path()), "type": node_type, "name": node_name})
 
