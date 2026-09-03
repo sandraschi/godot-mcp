@@ -1,17 +1,25 @@
-.git/
-.gitignore
-__pycache__/
-*.pyc
+# Logic/Dev Bloat
 .venv/
 node_modules/
-webapp/node_modules/
-webapp/dist/
-docs/
+__pycache__/
+.ruff_cache/
+.pytest_cache/
 tests/
+
+# Discovery & Fleet Metadata
+glama.json
+llms.txt
+llms-full.txt
+.git/
+.github/
+.vscode/
+
+# Build Artifacts
+dist/
+build/
+*.mcpb
+
+# Non-MCP components (webapp, native, scripts)
 native/
-*.ps1
-*.bat
-justfile
-uv.lock
-Dockerfile
-docker-compose.yml
+web_sota/
+scripts/
