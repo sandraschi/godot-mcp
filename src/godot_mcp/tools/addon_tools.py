@@ -1,5 +1,6 @@
-"""Godot MCP addon installation tools — bridge addon + community plugin registry."""
+"""Godot MCP addon installation tools - bridge addon + community plugin registry."""
 
+import asyncio
 import io
 import logging
 import shutil
@@ -26,22 +27,22 @@ _READ_ONLY = {"readonly": True}
 _MUTATING = {}
 
 # Community plugin registry: {name: {repo, path_in_zip, description}}
-# Add new plugins here — the install tool discovers them automatically.
+# Add new plugins here - the install tool discovers them automatically.
 PLUGIN_REGISTRY: dict[str, dict[str, str]] = {
     "dialogic": {
         "repo": "dialogic-godot/dialogic",
         "path_in_zip": "addons/dialogic/",
-        "description": "Visual dialogue system for Godot — branching conversations, timelines, characters",
+        "description": "Visual dialogue system for Godot - branching conversations, timelines, characters",
     },
     "godot-behavior-tree": {
         "repo": "viniciusgerevini/godot-behavior-tree",
         "path_in_zip": "addons/godot-behavior-tree/",
-        "description": "Behavior tree AI for NPCs — composite, decorator, leaf nodes with GDScript API",
+        "description": "Behavior tree AI for NPCs - composite, decorator, leaf nodes with GDScript API",
     },
     "gut": {
         "repo": "bitwes/Gut",
         "path_in_zip": "addons/gut/",
-        "description": "GDScript unit testing framework — test runner, asserts, mocking, CI-friendly",
+        "description": "GDScript unit testing framework - test runner, asserts, mocking, CI-friendly",
     },
     "aseprite-wizard": {
         "repo": "viniciusgerevini/godot-aseprite-wizard",
@@ -51,22 +52,22 @@ PLUGIN_REGISTRY: dict[str, dict[str, str]] = {
     "terrain3d": {
         "repo": "TokisanGames/Terrain3D",
         "path_in_zip": "addons/terrain3d/",
-        "description": "High-performance 3D terrain system for Godot 4 — painting, holes, LOD",
+        "description": "High-performance 3D terrain system for Godot 4 - painting, holes, LOD",
     },
     "godot-voxel": {
         "repo": "Zylann/godot_voxel",
         "path_in_zip": "addons/voxel/",
-        "description": "Voxel terrain engine — infinite worlds, editable, Minecraft-like block games",
+        "description": "Voxel terrain engine - infinite worlds, editable, Minecraft-like block games",
     },
     "godot-xr-tools": {
         "repo": "GodotVR/godot-xr-tools",
         "path_in_zip": "addons/godot-xr-tools/",
-        "description": "AR/VR interaction toolkit — grab, teleport, UI, locomotion for XR games",
+        "description": "AR/VR interaction toolkit - grab, teleport, UI, locomotion for XR games",
     },
     "vrm": {
         "repo": "V-Sekai/godot-vrm",
         "path_in_zip": "addons/",
-        "description": "VRM avatar loader for Godot 4 — import .vrm with humanoid retargeting, spring bones, MToon shader",
+        "description": "VRM avatar loader for Godot 4 - import .vrm with humanoid retargeting, spring bones, MToon shader",
     },
 }
 
@@ -174,7 +175,7 @@ def register(mcp: FastMCP):
             return {"success": False, "error": f"Bridge GDScript not found at {BRIDGE_GD}", "addon_path": ""}
 
         addon_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(str(BRIDGE_GD), str(addon_dir / "mcp_bridge.gd"))
+        await asyncio.to_thread(shutil.copy2, str(BRIDGE_GD), str(addon_dir / "mcp_bridge.gd"))
         (addon_dir / "plugin.cfg").write_text(PLUGIN_CFG, encoding="utf-8")
 
         msg = f"Addon installed to {addon_dir}. Add as Autoload in Project > Project Settings > Autoload."

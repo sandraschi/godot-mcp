@@ -1152,7 +1152,7 @@ async def install_addon(req: AddonInstallRequest):
 
     import shutil
 
-    shutil.copy2(str(BRIDGE_GD_PATH), str(addon_dir / "mcp_bridge.gd"))
+    await asyncio.to_thread(shutil.copy2, str(BRIDGE_GD_PATH), str(addon_dir / "mcp_bridge.gd"))
     (addon_dir / "plugin.cfg").write_text(PLUGIN_CFG_CONTENT, encoding="utf-8")
 
     log_activity("addon_install", f"Addon installed to {addon_dir}", level="INFO")
