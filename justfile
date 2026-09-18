@@ -44,10 +44,7 @@ bootstrap: install-godot
 
 # Pin all deps to exact versions and freeze lockfiles
 freeze:
-    uv sync --all-extras
-    uv lock --upgrade
-    Set-Location '{{justfile_directory()}}\webapp'
-    bun install --frozen-lockfile
+    uv sync --all-extras; uv lock --upgrade; Set-Location '{{justfile_directory()}}\webapp'; bun install --frozen-lockfile
 
 # Upgrade all Python deps to latest compatible
 upgrade:
@@ -123,8 +120,7 @@ dev port=PORT:
 
 # Start the Vite dashboard
 web:
-    Set-Location '{{justfile_directory()}}\webapp'
-    bun run dev
+    Set-Location '{{justfile_directory()}}\webapp'; bun run dev
 
 # Start everything (backed + webapp) via start script
 start:
@@ -312,8 +308,7 @@ fix:
 
 # TypeScript type checking (biome check already covers, add explicit tsc)
 typecheck:
-    Set-Location '{{justfile_directory()}}\webapp'
-    bunx tsc --noEmit
+    Set-Location '{{justfile_directory()}}\webapp'; bunx tsc --noEmit
 
 # Full format check (CI style)
 format-check:
@@ -396,23 +391,19 @@ test-seq:
 
 # Build webapp for production
 web-build:
-    Set-Location '{{justfile_directory()}}\webapp'
-    bun run build
+    Set-Location '{{justfile_directory()}}\webapp'; bun run build
 
 # Preview production build
 web-preview:
-    Set-Location '{{justfile_directory()}}\webapp'
-    bun run preview
+    Set-Location '{{justfile_directory()}}\webapp'; bun run preview
 
 # Install webapp deps only
 web-install:
-    Set-Location '{{justfile_directory()}}\webapp'
-    bun install
+    Set-Location '{{justfile_directory()}}\webapp'; bun install
 
 # Add a webapp dependency (usage: just web-add <package>)
 web-add package:
-    Set-Location '{{justfile_directory()}}\webapp'
-    bun add {{package}}
+    Set-Location '{{justfile_directory()}}\webapp'; bun add {{package}}
 
 # --- Tauri Native ---
 
@@ -534,13 +525,11 @@ git-log count="10":
 
 # Install Playwright browsers (one-time)
 e2e-install:
-    Set-Location '{{justfile_directory()}}\webapp'
-    bunx playwright install chromium
+    Set-Location '{{justfile_directory()}}\webapp'; bunx playwright install chromium
 
 # Run Playwright E2E smoke tests (start backend first: just serve)
 e2e:
-	Set-Location '{{justfile_directory()}}\webapp'
-	bunx playwright test
+	Set-Location '{{justfile_directory()}}\webapp'; bunx playwright test
 
 # --- Profiling ---
 
