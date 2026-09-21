@@ -1,0 +1,64 @@
+[project]
+name = "godot-mcp"
+version = "0.5.0-beta.1"
+description = "Godot MCP server - Godot 4.x engine control via TCP bridge, STL/GLB/OBJ import, GPU particles, animation, HTML5 export, itch.io/Steam shipping, AI game builder through MCP tools and REST API"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastmcp>=3.4.4,<4",
+    "fastapi>=0.104",
+    "uvicorn[standard]>=0.23",
+    "httpx>=0.27",
+    "pydantic>=2.0",
+    "prefab-ui>=0.14.0",
+    "websockets>=13.0",
+]
+
+[project.optional-dependencies]
+# Niantic's official SPZ codec (nanobind/C++ bindings) - needed for real .spz
+# import (both legacy v1-3 gzip-single-stream and v4 NGSP/ZSTD-multi-stream).
+# Not on PyPI; installs from source, needs a C++ toolchain (MSVC Build Tools
+# on Windows). See docs/TROUBLESHOOTING.md for the "SPZ import fails" entry.
+splat = ["spz @ git+https://github.com/nianticlabs/spz.git"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/godot_mcp"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+markers = ["slow: marks tests as slow (network-dependent, opt-in with -k 'not slow')"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "S", "UP", "RUF"]
+ignore = ["S101", "S106", "S110", "S112", "S101", "S106", "S110", "S112", "RUF012", "S603", "S607", "S324", "E402"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/**/*.py" = ["E501"]
+"src/godot_mcp/server.py" = ["E501", "S110", "S603", "E402"]
+"src/godot_mcp/services/llm_detect.py" = ["S607", "S310"]
+"scripts/*.py" = ["E501", "S310", "S603", "S607", "E402", "F841", "S110", "E741", "F401"]
+"tests/**/*.py" = ["E501", "S101"]
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.21.0",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.16.0,<0.17",
+    "gdtoolkit>=4.5,<5",
+    "pywin32>=311",
+]
