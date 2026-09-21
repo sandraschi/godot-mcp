@@ -40,3 +40,22 @@
 - Prefab UI card tools for list/status/stats (requires new `@mcp.tool(app=True)` implementations)
 - `.mcpbignore` could exclude `samples/godot-demo-projects/` (31+ MB of demo data)
 - `backend.rs` constants are unused (main.rs has its own spawn logic) — pre-existing architectural duplication
+
+## Build Failure - 2026-08-26 14:39:53
+
+### Build FAILED (exit 1)
+```njust.exe : error: Justfile does not contain recipe `build-native`
+At C:\Users\sandr\.gemini\antigravity\brain\be84629a-7705-4f3a-898a-e5f3e12f7306\scratch\build_15_repos.ps1:127 char:20
++     $buildOutput = & just build-native 2>&1
++                    ~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: Justfile... `build-native`:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+```
+
+## Build Failure - 2026-08-26 14:55:21
+
+### Build FAILED
+exit 1
+

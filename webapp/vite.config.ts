@@ -3,6 +3,13 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: { output: { manualChunks: { react: ["react", "react-dom", "react-router-dom"], vendor: ["framer-motion", "zustand", "lucide-react"] } } },
+  },
+  define: {
+    "import.meta.env.VITE_API_BASE": JSON.stringify(process.env.VITE_API_BASE || ""),
+  },
   server: {
     allowedHosts: ['goliath'],
     port: 10992,
@@ -17,3 +24,4 @@ export default defineConfig({
     },
   },
 });
+
