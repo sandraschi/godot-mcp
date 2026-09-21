@@ -100,7 +100,7 @@ async def steam_ops(
     ] = "prerelease",
     ctx: Context = None,
 ) -> dict:
-    """Steam publishing via steam-mcp — consolidated portmanteau.
+    """Steam publishing via steam-mcp - consolidated portmanteau.
 
     ## Return Format
     {"success": bool, ...}

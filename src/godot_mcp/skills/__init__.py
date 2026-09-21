@@ -1,4 +1,4 @@
-"""Skills provider — exposes SKILL.md resources for FastMCP clients.
+"""Skills provider - exposes SKILL.md resources for FastMCP clients.
 
 When the MCP client lists resources, this provider returns skill URIs
 that tell LLMs how to use this server's tools effectively.

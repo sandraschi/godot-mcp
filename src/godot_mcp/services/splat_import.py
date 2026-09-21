@@ -1,4 +1,4 @@
-"""Splat (3D Gaussian) parser — SPZ decoding, PLY parsing, binary conversion for Godot.
+"""Splat (3D Gaussian) parser - SPZ decoding, PLY parsing, binary conversion for Godot.
 
 The 3D Gaussian Splatting PLY format stores per-vertex:
   - x, y, z (float32): position
@@ -10,16 +10,16 @@ The 3D Gaussian Splatting PLY format stores per-vertex:
 CORRECTION (2026-07-30): .spz files are NOT gzip-compressed PLY. Real Niantic
 SPZ (both legacy v1-3 and current v4) uses its own packed binary attribute
 layout (24-bit fixed-point positions, 8-bit log-encoded scales, quantized
-quaternion rotations, quantized SH) — confirmed against the official format
+quaternion rotations, quantized SH) - confirmed against the official format
 spec at github.com/nianticlabs/spz. The previous version of this file did
 `gzip.open(path)` and fed the raw bytes straight into the PLY parser, which
-only works if you happen to be handed a file that's literally gzip(PLY) —
+only works if you happen to be handed a file that's literally gzip(PLY) -
 not a real .spz file from Niantic's spec (Scaniverse, World Labs/Marble,
 etc.). Real .spz now goes through Niantic's official Python library instead
-of a hand-rolled decoder — see `_load_gaussian_cloud_via_spz_lib()` below.
+of a hand-rolled decoder - see `_load_gaussian_cloud_via_spz_lib()` below.
 
 Also: v4 files start with a plaintext "NGSP" magic header and split data
-across parallel ZSTD streams — a single `gzip.open()` call would fail
+across parallel ZSTD streams - a single `gzip.open()` call would fail
 outright on these (wrong magic bytes), not just misparse them.
 """
 
@@ -51,7 +51,7 @@ def _load_gaussian_cloud_via_spz_lib(path: str) -> dict[str, Any]:
     """Load a real .spz file via Niantic's official `spz` Python bindings.
 
     HONESTY NOTE: the exact Python binding function/attribute names could
-    not be independently confirmed in this session — GitHub blocked fetching
+    not be independently confirmed in this session - GitHub blocked fetching
     `src/python/README.md` (not a prior search/fetch result), so only the
     documented C++ API (`loadSpz` / `GaussianCloud`) and the byte-level
     format spec were confirmed against the official README. This function
@@ -59,7 +59,7 @@ def _load_gaussian_cloud_via_spz_lib(path: str) -> dict[str, Any]:
     installed attribute list if it doesn't match, rather than silently
     guessing wrong and returning bad data. If this fires, check
     `import spz; dir(spz)` on the actual installed package and update the
-    attribute names below — don't just suppress the error.
+    attribute names below - don't just suppress the error.
     """
     try:
         import spz  # type: ignore[import-not-found]
@@ -69,7 +69,7 @@ def _load_gaussian_cloud_via_spz_lib(path: str) -> dict[str, Any]:
             "error": (
                 "Python 'spz' package not installed. Install with: "
                 "pip install git+https://github.com/nianticlabs/spz.git "
-                "(requires a C++ toolchain — MSVC Build Tools on Windows — "
+                "(requires a C++ toolchain - MSVC Build Tools on Windows - "
                 "since it's a nanobind/C++ extension, not pure Python). "
                 "Or: uv sync --extra splat"
             ),
@@ -84,7 +84,7 @@ def _load_gaussian_cloud_via_spz_lib(path: str) -> dict[str, Any]:
                 "Installed 'spz' package doesn't expose a load_spz/loadSpz "
                 f"function this code recognizes. Available attributes: {available}. "
                 "Update _load_gaussian_cloud_via_spz_lib() in splat_import.py "
-                "to match the actual installed API — do not guess."
+                "to match the actual installed API - do not guess."
             ),
         }
 
@@ -95,7 +95,7 @@ def _load_gaussian_cloud_via_spz_lib(path: str) -> dict[str, Any]:
 
     # GaussianCloud fields per the official C++/Swift API: positions (flat
     # xyz*N), scales (log-scale xyz*N), colors (SH DC xyz*N), alphas (N).
-    # Access defensively — same honesty reasoning as above.
+    # Access defensively - same honesty reasoning as above.
     positions_flat = getattr(cloud, "positions", None)
     scales_flat = getattr(cloud, "scales", None)
     colors_flat = getattr(cloud, "colors", None)
@@ -330,7 +330,7 @@ def import_splat_file(
 
     if is_spz:
         # CORRECTION (2026-07-30): previously did gzip.open() + fed raw bytes
-        # to the PLY parser — wrong for real Niantic SPZ files (own packed
+        # to the PLY parser - wrong for real Niantic SPZ files (own packed
         # binary format, not gzip(PLY)), and outright fails on v4 files
         # (NGSP header, not a gzip stream at all). Now uses the real library.
         parsed = _load_gaussian_cloud_via_spz_lib(path)
@@ -343,7 +343,9 @@ def import_splat_file(
             parsed["count"] = max_splats
         if pos_scale != 1.0:
             parsed["positions"] = [(x * pos_scale, y * pos_scale, z * pos_scale) for x, y, z in parsed["positions"]]
-            parsed["scales_3d"] = [(sx * pos_scale, sy * pos_scale, sz * pos_scale) for sx, sy, sz in parsed["scales_3d"]]
+            parsed["scales_3d"] = [
+                (sx * pos_scale, sy * pos_scale, sz * pos_scale) for sx, sy, sz in parsed["scales_3d"]
+            ]
         ply_path = None
     else:
         if not os.path.isfile(path):

@@ -1,4 +1,4 @@
-"""WebSocket gateway for iOS mobile clients — real-time bidirectional bridge.
+"""WebSocket gateway for iOS mobile clients - real-time bidirectional bridge.
 
 Architecture:
   iOS App (WebSocket) ← → WS Gateway (FastAPI) ← → Godot TCP Bridge (port 9080)
@@ -244,7 +244,7 @@ async def _dispatch_command(client: WSClient, msg: dict) -> dict:
 
 
 async def _dispatch_intent(client: WSClient, msg: dict) -> dict:
-    """Route an 'intent' message — high-level semantic command with spatial/voice data.
+    """Route an 'intent' message - high-level semantic command with spatial/voice data.
 
     The intent is parsed and decomposed into tool chains based on the app type.
     """
