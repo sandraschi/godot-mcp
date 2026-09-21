@@ -1,4 +1,4 @@
-"""MCPB — Godot MCP Bundle packaging format.
+"""MCPB - Godot MCP Bundle packaging format.
 
 .mcpb is a tar.gz archive containing:
   manifest.json  - Metadata and tool sequence

@@ -48,7 +48,7 @@ async def show_godot_status_card(ctx: Context = None) -> ToolResult:
             Row("Nodes", str(data.get("node_count", 0)))
             Row("Bridge", "Connected" if bridge.connected else "Disconnected")
         else:
-            Row("Bridge", "Not connected — start Godot with the bridge addon")
+            Row("Bridge", "Not connected - start Godot with the bridge addon")
 
     plain = (
         f"Godot {data.get('godot_version', 'N/A')} | {data.get('fps', 'N/A')} FPS | {data.get('node_count', 0)} nodes"

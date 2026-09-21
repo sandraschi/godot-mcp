@@ -1,4 +1,4 @@
-"""Prefab catalog — reusable Godot component templates."""
+"""Prefab catalog - reusable Godot component templates."""
 
 from pydantic import BaseModel
 

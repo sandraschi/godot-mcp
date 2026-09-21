@@ -1,4 +1,4 @@
-"""MCP Bridge — cross-server MCP communication.
+"""MCP Bridge - cross-server MCP communication.
 
 Allows godot-mcp to connect to other MCP servers and execute
 their tools remotely. Uses the MCP HTTP/SSE transport.

@@ -148,7 +148,7 @@ async def itch_ops(
     ] = None,
     ctx: Context = None,
 ) -> dict:
-    """itch.io publishing — consolidated portmanteau for Butler operations.
+    """itch.io publishing - consolidated portmanteau for Butler operations.
 
     ## Return Format
     {"success": bool, ...}
