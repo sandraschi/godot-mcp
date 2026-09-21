@@ -1,7 +1,7 @@
 """GPU detection, VRAM tiering, and model recommendation for local LLM onboarding.
 
 Canonical implementation. Mirrored in mcp-central-docs/templates/llm-detect/
-for fleet reuse — update both when changing the tier table.
+for fleet reuse - update both when changing the tier table.
 """
 
 from __future__ import annotations
@@ -67,7 +67,10 @@ class GpuInfo:
 @dataclass
 class OllamaInfo:
     available: bool = False
-    url: str = "http://localhost:11434"
+    # 127.0.0.1, not localhost: localhost can resolve to ::1 where nothing
+    # listens (measured 2026-09-21: LM Studio 404s localhost:1234 while
+    # 127.0.0.1:1234 works). Mirrored in mcp-central-docs templates.
+    url: str = "http://127.0.0.1:11434"
     models: list[str] = field(default_factory=list)
     error: str = ""
 
@@ -112,14 +115,15 @@ def detect_gpu() -> GpuInfo:
             driver=parts[2] if len(parts) > 2 else "",
         )
     except FileNotFoundError:
-        logger.debug("nvidia-smi not found — no NVIDIA driver")
+        logger.debug("nvidia-smi not found - no NVIDIA driver")
         return GpuInfo()
     except (ValueError, IndexError, subprocess.TimeoutExpired) as e:
         logger.debug("GPU detection failed: %s", e)
         return GpuInfo()
 
 
-def check_ollama(url: str = "http://localhost:11434") -> OllamaInfo:
+def check_ollama(url: str = "http://127.0.0.1:11434") -> OllamaInfo:
+    """Check if Ollama is running and list installed models."""
     """Check if Ollama is running and list installed models."""
     import json as _json
     import urllib.request
@@ -176,7 +180,7 @@ def recommend(result: DetectResult | None = None) -> RecommendResult:
                     out.message = f"Using installed model {m} ({label})"
                     return out
 
-    # GPU detected but no matching model installed — recommend the best fit
+    # GPU detected but no matching model installed - recommend the best fit
     if result.gpu.available:
         for min_vram, tier_num, label, models in TIERS:
             if result.gpu.vram_mb >= min_vram:
@@ -188,7 +192,7 @@ def recommend(result: DetectResult | None = None) -> RecommendResult:
                 out.message = f"GPU {result.gpu.name} ({result.gpu.vram_gb} GB). Pull model: {install_cmd}"
                 return out
 
-    # Ollama available but no GPU detected — pick smallest model
+    # Ollama available but no GPU detected - pick smallest model
     if result.ollama.available:
         models = TIERS[-1][3]  # lowest tier
         for m in models:
