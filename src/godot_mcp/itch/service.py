@@ -82,7 +82,7 @@ def itch_push_preview(
     try:
         target_slug = validate_itch_target(itch_target or default_itch_target())
         if not target_slug:
-            raise ValueError("itch_target required — set ITCH_TARGET or pass itch_target")
+            raise ValueError("itch_target required - set ITCH_TARGET or pass itch_target")
         ch = validate_channel(channel or "html")
         directory = validate_upload_dir(__import__("pathlib").Path(upload_dir))
         ref = f"{target_slug}:{ch}"
@@ -110,7 +110,7 @@ def itch_push(
     try:
         target_slug = validate_itch_target(itch_target or default_itch_target())
         if not target_slug:
-            raise ValueError("itch_target required — set ITCH_TARGET or pass itch_target")
+            raise ValueError("itch_target required - set ITCH_TARGET or pass itch_target")
         ch = validate_channel(channel or "html")
         directory = validate_upload_dir(__import__("pathlib").Path(upload_dir))
         ref = f"{target_slug}:{ch}"

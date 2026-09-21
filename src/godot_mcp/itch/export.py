@@ -27,7 +27,7 @@ def _find_godot() -> Path:
     for candidate in candidates:
         if candidate.is_file():
             return candidate
-    raise RuntimeError("godot executable not found — set GODOT_PATH or install Godot")
+    raise RuntimeError("godot executable not found - set GODOT_PATH or install Godot")
 
 
 def ensure_export_presets(project: Path) -> bool:
@@ -58,7 +58,7 @@ def ensure_imported(project: Path, godot: Path) -> None:
         timeout=600,
     )
     if not (project / ".godot" / "imported").is_dir():
-        raise RuntimeError("Godot import failed — .godot/imported not created")
+        raise RuntimeError("Godot import failed - .godot/imported not created")
 
 
 def export_release(

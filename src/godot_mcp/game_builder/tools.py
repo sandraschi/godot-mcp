@@ -1,4 +1,4 @@
-"""MCP tools for the Game Builder pipeline — design, generate, compose, ship."""
+"""MCP tools for the Game Builder pipeline - design, generate, compose, ship."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ async def design_game(
             "success": True,
             "plan": json.loads(plan.to_json()),
             "summary": (
-                f"Game: {plan.title} — {plan.genre or 'arcade'}. "
+                f"Game: {plan.title} - {plan.genre or 'arcade'}. "
                 f"{len(plan.worlds)} worlds, {len(plan.scenes)} scenes, {len(plan.scripts)} scripts."
             ),
         }
@@ -65,7 +65,7 @@ async def compose_game_scene(
         ),
     ] = "",
 ) -> dict:
-    """Assemble the Godot scene — imports staged Marble GLBs via fleet + bridge."""
+    """Assemble the Godot scene - imports staged Marble GLBs via fleet + bridge."""
     try:
         data = json.loads(game_plan_json) if isinstance(game_plan_json, str) else game_plan_json
         plan = GamePlan.model_validate(data)

@@ -20,7 +20,7 @@ async def service_design_game(game_concept: str) -> dict[str, Any]:
         return {
             "success": True,
             "plan": json.loads(plan.to_json()),
-            "summary": f"{plan.title} — {len(plan.worlds)} worlds",
+            "summary": f"{plan.title} - {len(plan.worlds)} worlds",
         }
     except Exception as exc:
         return {"success": False, "error": str(exc)}

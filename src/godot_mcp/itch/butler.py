@@ -68,7 +68,7 @@ def run_butler(args: list[str], *, cwd: Path | None = None, timeout: int = 900) 
             success=False,
             command=["butler", *args],
             stdout="",
-            stderr="butler not found — install from https://itchio.itch.io/butler or set BUTLER_PATH",
+            stderr="butler not found - install from https://itchio.itch.io/butler or set BUTLER_PATH",
             returncode=127,
         )
     env = os.environ.copy()
