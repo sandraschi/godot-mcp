@@ -1,4 +1,4 @@
-"""V-Bot Mind bridge for Godot — WebSocket client to vbot-mind-mcp (port 11080).
+"""V-Bot Mind bridge for Godot - WebSocket client to vbot-mind-mcp (port 11080).
 
 Connects to the V-Bot Mind WebSocket bridge, subscribes to bot IDs,
 sends perception data from the Godot scene, and receives action commands

@@ -15,7 +15,7 @@ def _ensure_bridge():
     if not bridge.connected:
         result = bridge.connect()
         if not result.get("success"):
-            raise RuntimeError(result.get("error", "Godot bridge not connected — run just godot-bridge"))
+            raise RuntimeError(result.get("error", "Godot bridge not connected - run just godot-bridge"))
     return bridge
 
 
@@ -97,7 +97,7 @@ def stage_worldlabs_splat(world_id: str, resolution: str = "500k") -> dict[str, 
         "splat_path": str(dest),
         "resolution": key,
         "spark_viewer_url": info.get("spark_viewer_url"),
-        "godot_import": "not_supported — use spark_viewer_url or Unity splat path",
+        "godot_import": "not_supported - use spark_viewer_url or Unity splat path",
     }
 
 

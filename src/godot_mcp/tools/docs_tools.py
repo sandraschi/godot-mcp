@@ -1,4 +1,4 @@
-"""Godot documentation tools — fetch version-matched docs as markdown."""
+"""Godot documentation tools - fetch version-matched docs as markdown."""
 
 import html.parser
 import logging

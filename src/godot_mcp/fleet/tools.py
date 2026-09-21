@@ -49,7 +49,7 @@ async def fleet_worldlabs_stage_splat(
     resolution: Annotated[str, Field(description="100k, 500k, or full", default="500k")] = "500k",
     ctx: Context = None,
 ) -> dict:
-    """Download SPZ splat to exchange for Spark/Unity — not imported to Godot yet."""
+    """Download SPZ splat to exchange for Spark/Unity - not imported to Godot yet."""
     return service.fleet_worldlabs_stage_splat(world_id, resolution=resolution)
 
 
@@ -88,7 +88,7 @@ async def fleet_ops(
     ] = "500k",
     ctx: Context = None,
 ) -> dict:
-    """Fleet exchange pipeline — consolidated portmanteau.
+    """Fleet exchange pipeline - consolidated portmanteau.
 
     ## Return Format
     {"success": bool, ...}
