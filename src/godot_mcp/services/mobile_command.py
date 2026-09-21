@@ -1,4 +1,4 @@
-"""MobileCommand — Pydantic models for iOS mobile intent normalization.
+"""MobileCommand - Pydantic models for iOS mobile intent normalization.
 
 Defines the canonical message types for all three iOS apps. Every command
 from the mobile gateway is validated here before dispatch.
@@ -151,7 +151,7 @@ class SpatialIntentPayload(BaseModel):
 class InterventionPayload(BaseModel):
     """Hot-fix intervention for the State-Surveiller app.
 
-    Used to modify a running agent test — adjusting physics parameters,
+    Used to modify a running agent test - adjusting physics parameters,
     reparenting nodes, or restarting stuck agents without restarting
     the Godot engine.
     """
@@ -197,12 +197,12 @@ class CommandPayload(BaseModel):
 
 
 class MobileCommand(BaseModel):
-    """Canonical mobile command envelope — every iOS message is validated here.
+    """Canonical mobile command envelope - every iOS message is validated here.
 
     This is the single point of entry validation for all mobile gateway traffic.
     The ``type`` field determines which payload schema is validated against:
 
-    - ``command`` → :class:`CommandPayload` — direct tool invocation
+    - ``command`` → :class:`CommandPayload` - direct tool invocation
     - ``intent`` → :class:`SpatialIntentPayload` / :class:`InterventionPayload` / :class:`GenerationIntentPayload`
     - ``subscribe`` / ``unsubscribe`` → :class:`SubscriptionPayload`
 
@@ -303,7 +303,7 @@ class MobileDispatcher:
 
     Three dispatch paths:
 
-    - ``command`` → :meth:`_handle_command` — direct tool by name
+    - ``command`` → :meth:`_handle_command` - direct tool by name
     - ``intent`` → :meth:`_handle_intent` → app-specific handler
       - ``spatial-vibe`` → :meth:`_dispatch_spatial`
       - ``state-surveiller`` → :meth:`_dispatch_intervention`

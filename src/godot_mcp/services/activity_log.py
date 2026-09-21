@@ -1,4 +1,4 @@
-"""Fleet-standard in-memory activity log — tail, filter, export, rotation."""
+"""Fleet-standard in-memory activity log - tail, filter, export, rotation."""
 
 from __future__ import annotations
 

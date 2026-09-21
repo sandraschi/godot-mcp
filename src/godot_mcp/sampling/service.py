@@ -1,17 +1,17 @@
-"""LLM sampling for godot-mcp — ctx.sample() with real fallbacks.
+"""LLM sampling for godot-mcp - ctx.sample() with real fallbacks.
 
 Provider chain (first available wins):
 
-1. **MCP client sampling** — ``ctx.sample()`` when an MCP client that
+1. **MCP client sampling** - ``ctx.sample()`` when an MCP client that
    supports sampling is connected (FastMCP 3.x).
-2. **OpenAI-compatible HTTP API** — set ``GODOT_MCP_LLM_BASE_URL`` (e.g.
+2. **OpenAI-compatible HTTP API** - set ``GODOT_MCP_LLM_BASE_URL`` (e.g.
    ``https://api.deepseek.com/v1`` or ``https://openrouter.ai/api/v1``),
    ``GODOT_MCP_LLM_API_KEY``, and ``GODOT_MCP_LLM_MODEL``.
-3. **Local Ollama** — ``GODOT_MCP_OLLAMA_URL`` (default
+3. **Local Ollama** - ``GODOT_MCP_OLLAMA_URL`` (default
    ``http://127.0.0.1:11434``) with ``GODOT_MCP_OLLAMA_MODEL`` (default
-   ``gemma4:12b`` — fast, fits on RTX 4090, multimodal).
+   ``gemma4:12b`` - fast, fits on RTX 4090, multimodal).
 
-If every provider fails, ``SamplingUnavailableError`` is raised — callers get
+If every provider fails, ``SamplingUnavailableError`` is raised - callers get
 an honest exception instead of a fake-success placeholder string.
 """
 

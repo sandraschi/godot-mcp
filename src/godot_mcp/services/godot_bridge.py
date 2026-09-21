@@ -1,11 +1,11 @@
-"""Godot TCP bridge client — connects to the GDScript TCPServer bridge in Godot 4.x.
+"""Godot TCP bridge client - connects to the GDScript TCPServer bridge in Godot 4.x.
 
 Protocol: newline-delimited JSON over a plain TCP socket (not WebSocket).
 Requests carry a ``request_id``; responses are correlated against it so that
 concurrent callers (e.g. the mobile status pusher and a tool call) can never
 consume each other's replies.
 
-Thread-safety: a single socket is shared behind a ``threading.Lock`` — one
+Thread-safety: a single socket is shared behind a ``threading.Lock`` - one
 request/response exchange in flight at a time. Callers on the asyncio side
 should wrap ``connect``/``send`` in ``asyncio.to_thread`` (blocking I/O).
 
@@ -155,7 +155,7 @@ class GodotBridge:
     ) -> dict[str, Any]:
         """Send one request and return its correlated response.
 
-        Holds the bridge lock for the full exchange — only one request is in
+        Holds the bridge lock for the full exchange - only one request is in
         flight at a time. Responses whose request_id does not match are drained
         (logged and skipped) so a stale reply can never be returned to the
         wrong caller.
@@ -241,7 +241,7 @@ class GodotBridge:
         return line.decode("utf-8")
 
 
-# Module-level singleton — the ONE bridge instance for the whole process.
+# Module-level singleton - the ONE bridge instance for the whole process.
 _bridge = GodotBridge()
 
 
@@ -266,7 +266,7 @@ def is_installed() -> bool:
 
 
 def find_godot() -> str | None:
-    """Locate godot.exe — checks GODOT_PATH, PATH, then common install dirs."""
+    """Locate godot.exe - checks GODOT_PATH, PATH, then common install dirs."""
     cfg = resolve_config()
     if cfg["godot_path"] and Path(cfg["godot_path"]).is_file():
         return cfg["godot_path"]
@@ -327,7 +327,7 @@ def launch_bridge(project_root: str | None = None) -> dict[str, Any]:
             "godot": godot,
             "project": project_root,
             "log": str(log_path),
-            "message": "Godot bridge launched. It takes ~5s to start — try godot_status or connect().",
+            "message": "Godot bridge launched. It takes ~5s to start - try godot_status or connect().",
         }
     except FileNotFoundError:
         return {"success": False, "error": f"Godot not found at {godot}"}
