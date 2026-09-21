@@ -47,7 +47,7 @@ Return ONLY valid JSON (no markdown, no explanation) matching this schema:
 6. Player types: "runner" (auto-scrolls right), "platformer" (free movement), "topdown" (WASD), "fps" (WASD+mouse).
 7. Use score_type "distance" for runner games, "score" for shmups, "time" for survival.
 8. For 2D games without a specific background goal, generate 0-1 Marble worlds. For 3D games, generate 1-3 worlds.
-9. Keep the game SIMPLE — ideally 3-5 scripts, 0-3 worlds. This is a rapid prototype, not a AAA title.
+9. Keep the game SIMPLE - ideally 3-5 scripts, 0-3 worlds. This is a rapid prototype, not a AAA title.
 10. All positional coordinates should be in Godot 4's coordinate system (Y-up for 2D, Y-up for 3D).
 11. Include "plugins" for narrative games: "dialogic" for dialogue/story, "godot-behavior-tree" for AI enemies. Only include plugins the game actually needs.
 12. For story-driven games, include "narrative" (premise, acts, tone) and "npcs" with dialogue lines. Each NPC should have 2-4 dialogue lines that reveal the story.
@@ -74,7 +74,7 @@ Write complete GDScript code for Godot 4.4 for this specific functionality:
   - `ColorRect` with `color` for blocks, backgrounds, UI elements
   - `Polygon2D` with `polygon` + `color` for triangles, arrows, stars
   - `GradientTexture2D` for gradient backgrounds: `GradientTexture2D.new()` with `Gradient.new()` and `add_point()`
-  - Procedural circle: `load("res://icons/circle.svg")` does NOT exist — draw with `draw_circle()` in `_draw()` instead
+  - Procedural circle: `load("res://icons/circle.svg")` does NOT exist - draw with `draw_circle()` in `_draw()` instead
   - Example star polygon: `PackedVector2Array([Vector2(0,-20), Vector2(5,-5), Vector2(20,-5), Vector2(8,5), Vector2(12,20), Vector2(0,10), Vector2(-12,20), Vector2(-8,5), Vector2(-20,-5), Vector2(-5,-5)])`
   - Health bars: use `ColorRect` as fill with `.size.x` tween, parent `ColorRect` as border/bg
 - Use `@export var` for tunable parameters.

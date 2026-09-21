@@ -1,4 +1,4 @@
-"""GamePlan schema — what the LLM outputs from a natural-language game concept."""
+"""GamePlan schema - what the LLM outputs from a natural-language game concept."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ class SceneSpec(BaseModel):
     name: str = Field(description="Node name (e.g. 'Player', 'Camera', 'HUD').")
     type: str = Field(default="Node2D", description="Node type: Node2D, Node3D, Control, CharacterBody2D, etc.")
     scripts: list[str] = Field(default_factory=list, description="GDScript filenames attached to this node.")
-    children: list[SceneSpec] = Field(default_factory=list, description="Child nodes — nested scene hierarchy.")
+    children: list[SceneSpec] = Field(default_factory=list, description="Child nodes - nested scene hierarchy.")
 
 
 # Resolve forward ref for recursive SceneSpec.children

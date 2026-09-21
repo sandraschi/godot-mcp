@@ -1,4 +1,4 @@
-"""Pipeline orchestration — chains worldlabs-mcp + godot-mcp for game-from-prompt."""
+"""Pipeline orchestration - chains worldlabs-mcp + godot-mcp for game-from-prompt."""
 
 from __future__ import annotations
 
@@ -439,7 +439,7 @@ async def compose_game_scene(
             else:
                 world_imports[plan_slug] = {
                     "imported": False,
-                    "error": "No marble_world_id or mesh_path — run generate_game_worlds first",
+                    "error": "No marble_world_id or mesh_path - run generate_game_worlds first",
                 }
         except Exception as exc:
             logger.warning("World import failed for %s: %s", plan_slug, exc)
@@ -582,7 +582,7 @@ async def build_game(
         result["plan"] = plan.model_dump()
         result["summary"] = f"Game: {plan.title} ({plan.genre})"
         if plan.narrative:
-            result["summary"] += f" | Story: {plan.narrative.tone} — {plan.narrative.premise[:60]}"
+            result["summary"] += f" | Story: {plan.narrative.tone} - {plan.narrative.premise[:60]}"
         if plan.npcs:
             result["summary"] += f" | {len(plan.npcs)} NPCs"
 
