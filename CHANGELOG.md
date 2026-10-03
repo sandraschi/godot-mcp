@@ -5,6 +5,13 @@ All notable changes to **godot-mcp** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] (assfix 2026-10-02, first full pass)
+- `godot_shutdown` tool (confirm-gated) + standard annotation hint shapes fleet-wide (16 modules)
+- Fixed Prefab cards for prefab-ui 0.20 (positional API removed) + canonical ToolResult import (BUG-059)
+- Revived `--agentic` CodeMode (correct import path); fixed dispatcher wrong names + missing await
+- `Context | None` + vbot/WorkflowStep/splat narrowing (pyright 156 → 0); added pyright to dev deps
+- Frontend: biome clean (button types, labels, keys, typed skills fetch, nullable-preset guard)
+
 ## [Unreleased] - 2026-09-03
 
 ### Added (backport from overte-mcp/resonite-mcp/unity3d-mcp: animate + fixture spawner + real depot)

@@ -59,6 +59,7 @@ dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
     "ruff>=0.16.0,<0.17",
+    "pyright>=1.1.390",
     "gdtoolkit>=4.5,<5",
     "pywin32>=311",
 ]

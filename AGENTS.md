@@ -41,7 +41,7 @@ All tools register via `src/godot_mcp/tools/__init__.py` → `register_all(mcp)`
 
 ## Conventions
 
-- Annotations: `_READ_ONLY = {"readonly": True}`, `_MUTATING = {"mutating": True}` per module
+- Annotations: standard MCP hint shapes — `_READ_ONLY = {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}`, `_MUTATING` with all-False hints (+ `_DESTRUCTIVE` with `destructiveHint: True` for shutdown-class tools) per module. (2026-10-02: replaced legacy `{"readonly": True}` / `{"mutating": True}` dicts, which clients silently ignore.)
 - Docstrings: Args in `Annotated[T, Field(...)]`, return format in docstring body
 - Types: Pydantic v2 (`model_dump`, `model_validate`), no legacy `dict()`/`parse_obj()`
 - Linting: Ruff (Python), Biome (web)
