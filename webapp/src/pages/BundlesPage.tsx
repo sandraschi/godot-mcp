@@ -1,12 +1,14 @@
-import { Archive, Loader2, PackagePlus, Search, X } from "lucide-react";
 import { motion } from "framer-motion";
+import { Archive, Loader2, PackagePlus, Search, X } from "lucide-react";
 import { useState } from "react";
 import { apiFetch } from "../lib/api";
 
 export default function BundlesPage() {
 	const [name, setName] = useState("");
 	const [description, setDescription] = useState("");
-	const [toolSequence, setToolSequence] = useState("[\n  {\n    \"tool\": \"godot_create_camera\",\n    \"arguments\": {}\n  }\n]");
+	const [toolSequence, setToolSequence] = useState(
+		'[\n  {\n    "tool": "godot_create_camera",\n    "arguments": {}\n  }\n]',
+	);
 	const [buildResult, setBuildResult] = useState<string | null>(null);
 	const [building, setBuilding] = useState(false);
 
@@ -28,7 +30,7 @@ export default function BundlesPage() {
 			const j = await apiFetch("/api/v1/control/tool", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
+				body: JSON.stringify({
 					tool: "mcpb_build",
 					arguments: { name, description, tool_sequence: sequence },
 				}),
@@ -62,11 +64,7 @@ export default function BundlesPage() {
 	};
 
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 20 }}
-			animate={{ opacity: 1, y: 0 }}
-			className="space-y-6 max-w-6xl"
-		>
+		<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-6xl">
 			<h1 className="text-2xl font-bold text-white flex items-center gap-3">
 				<Archive className="text-amber-500" size={24} /> MCPB Bundles
 			</h1>
@@ -90,7 +88,9 @@ export default function BundlesPage() {
 						className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-sm text-slate-200 placeholder-slate-600 outline-none"
 					/>
 					<div>
-						<label htmlFor="tool-sequence" className="text-xs text-slate-500 block mb-1">Tool Sequence (JSON)</label>
+						<label htmlFor="tool-sequence" className="text-xs text-slate-500 block mb-1">
+							Tool Sequence (JSON)
+						</label>
 						<textarea
 							id="tool-sequence"
 							rows={8}
@@ -110,11 +110,7 @@ export default function BundlesPage() {
 					</button>
 					{buildResult && (
 						<div className="relative">
-							<button
-								type="button"
-								onClick={() => setBuildResult(null)}
-								className="absolute top-2 right-2"
-							>
+							<button type="button" onClick={() => setBuildResult(null)} className="absolute top-2 right-2">
 								<X size={12} className="text-slate-400" />
 							</button>
 							<pre className="p-3 rounded-xl bg-black/40 text-xs text-slate-300 overflow-auto max-h-40 border border-white/10">
@@ -145,11 +141,7 @@ export default function BundlesPage() {
 					</button>
 					{inspectResult && (
 						<div className="relative">
-							<button
-								type="button"
-								onClick={() => setInspectResult(null)}
-								className="absolute top-2 right-2"
-							>
+							<button type="button" onClick={() => setInspectResult(null)} className="absolute top-2 right-2">
 								<X size={12} className="text-slate-400" />
 							</button>
 							<pre className="p-3 rounded-xl bg-black/40 text-xs text-slate-300 overflow-auto max-h-60 border border-white/10">

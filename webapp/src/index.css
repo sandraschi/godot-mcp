@@ -16,7 +16,9 @@ body,
 	-moz-osx-font-smoothing: grayscale;
 }
 
-select, input, textarea {
+select,
+input,
+textarea {
 	color-scheme: dark;
 }
 
@@ -24,12 +26,12 @@ select, input, textarea {
    Toggling .dark off <html> inverts the whole UI. Remove this block to
    revert to permanently-dark. */
 html:not(.dark) {
-  filter: invert(1) hue-rotate(180deg);
-  background: #f4f4f5;
+	filter: invert(1) hue-rotate(180deg);
+	background: #f4f4f5;
 }
 html:not(.dark) img,
 html:not(.dark) video,
 html:not(.dark) canvas,
 html:not(.dark) iframe {
-  filter: invert(1) hue-rotate(180deg);
+	filter: invert(1) hue-rotate(180deg);
 }

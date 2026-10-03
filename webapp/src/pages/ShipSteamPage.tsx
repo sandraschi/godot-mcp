@@ -1,5 +1,5 @@
-import { ExternalLink, Loader2, Package, Rocket, Upload } from "lucide-react";
 import { motion } from "framer-motion";
+import { ExternalLink, Loader2, Package, Rocket, Upload } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "../lib/api";
 
@@ -73,15 +73,9 @@ export default function ShipSteamPage() {
 			"upload",
 		);
 
-	const shipAll = () =>
-		runTool(
-			"ship_to_steam",
-			{ game, phase, dry_run: dryRun },
-			"ship",
-		);
+	const shipAll = () => runTool("ship_to_steam", { game, phase, dry_run: dryRun }, "ship");
 
-	const checklist = () =>
-		runTool("steam_checklist", { content_root: contentRoot || undefined }, "checklist");
+	const checklist = () => runTool("steam_checklist", { content_root: contentRoot || undefined }, "checklist");
 
 	const appOk = (status?.app_id ?? 0) > 0;
 	const depotOk = (status?.depot_id ?? 0) > 0;
@@ -91,21 +85,15 @@ export default function ShipSteamPage() {
 	);
 
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 20 }}
-			animate={{ opacity: 1, y: 0 }}
-			className="space-y-6 max-w-4xl"
-		>
+		<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-4xl">
 			<h1 className="text-2xl font-bold text-white flex items-center gap-3">
 				<Rocket className="text-sky-400" size={24} /> Ship to Steam
 			</h1>
 			<p className="text-sm text-slate-400">
 				Export Windows build, stage to fleet exchange, generate VDF, upload via steam-mcp. Set{" "}
-				<code className="text-sky-300">STEAM_APP_ID</code>,{" "}
-				<code className="text-sky-300">STEAM_DEPOT_ID</code>,{" "}
-				<code className="text-sky-300">STEAM_USERNAME</code>, and{" "}
-				<code className="text-sky-300">STEAMCMD_PATH</code> in your environment. Uploads default to{" "}
-				<strong className="text-amber-400">dry run</strong>.
+				<code className="text-sky-300">STEAM_APP_ID</code>, <code className="text-sky-300">STEAM_DEPOT_ID</code>,{" "}
+				<code className="text-sky-300">STEAM_USERNAME</code>, and <code className="text-sky-300">STEAMCMD_PATH</code> in
+				your environment. Uploads default to <strong className="text-amber-400">dry run</strong>.
 			</p>
 
 			<div className="grid grid-cols-1 md:grid-cols-3 gap-4">

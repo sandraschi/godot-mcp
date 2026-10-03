@@ -1,9 +1,9 @@
 import { Loader2, Moon, Sun, Wifi, WifiOff } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import Sidebar from "./Sidebar";
-import { useAppStore } from "../store";
-import { API_BASE } from "../lib/api";
 import useZoom from "../hooks/useZoom";
+import { API_BASE } from "../lib/api";
+import { useAppStore } from "../store";
+import Sidebar from "./Sidebar";
 
 // EXPERIMENTAL light mode (invert hack). Not fleet standard — see index.css.
 // Toggling `.dark` off the root flips the invert filter; persisted so the
@@ -69,10 +69,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 						setConn("disconnected");
 					}
 				});
-			} catch {
-			}
+			} catch {}
 		})();
-		return () => { if (unlisten) unlisten(); };
+		return () => {
+			if (unlisten) unlisten();
+		};
 	}, [tauri, setConn]);
 
 	const refresh = useCallback(async () => {
@@ -113,17 +114,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 							{light ? <Moon size={14} /> : <Sun size={14} />}
 						</button>
 						<div className="flex items-center gap-2 text-sm">
-						{connected === null ? (
-							<Loader2 size={12} className="animate-spin text-slate-300" />
-						) : connected ? (
-							<Wifi size={12} className="text-emerald-400" />
-						) : (
-							<WifiOff size={12} className="text-red-400" />
-						)}
-						<span className={connected === true ? "text-emerald-400" : "text-slate-300"}>
-							{connected === null ? "Connecting..." : connected ? "Server Ready" : "Server Offline"}
-						</span>
-					</div>
+							{connected === null ? (
+								<Loader2 size={12} className="animate-spin text-slate-300" />
+							) : connected ? (
+								<Wifi size={12} className="text-emerald-400" />
+							) : (
+								<WifiOff size={12} className="text-red-400" />
+							)}
+							<span className={connected === true ? "text-emerald-400" : "text-slate-300"}>
+								{connected === null ? "Connecting..." : connected ? "Server Ready" : "Server Offline"}
+							</span>
+						</div>
 					</div>
 				</header>
 				<main className="flex-1 overflow-y-auto p-6">{children}</main>

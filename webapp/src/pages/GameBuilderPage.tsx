@@ -32,14 +32,22 @@ function PipelineViz({ steps }: { steps: Record<string, "idle" | "running" | "do
 								status === "done"
 									? "bg-emerald-500/20 text-emerald-400"
 									: status === "running"
-									? "bg-amber-500/20 text-amber-400 animate-pulse"
-									: status === "failed"
-									? "bg-red-500/20 text-red-400"
-									: "bg-zinc-800/50 text-zinc-500"
+										? "bg-amber-500/20 text-amber-400 animate-pulse"
+										: status === "failed"
+											? "bg-red-500/20 text-red-400"
+											: "bg-zinc-800/50 text-zinc-500"
 							}`}
 							title={step.desc}
 						>
-							{status === "done" ? <CheckCircle2 size={12} /> : status === "running" ? <Loader2 size={12} className="animate-spin" /> : status === "failed" ? <XCircle size={12} /> : <Play size={12} />}
+							{status === "done" ? (
+								<CheckCircle2 size={12} />
+							) : status === "running" ? (
+								<Loader2 size={12} className="animate-spin" />
+							) : status === "failed" ? (
+								<XCircle size={12} />
+							) : (
+								<Play size={12} />
+							)}
 							<span className="hidden md:inline">{step.label}</span>
 						</div>
 						{!isLast && <div className="h-px flex-1 bg-white/10 min-w-[8px]" />}
@@ -91,7 +99,14 @@ export default function GameBuilderPage() {
 	};
 
 	const buildAll = async () => {
-		setPipelineStatus({ design: "running", worlds: "idle", compose: "idle", logic: "idle", export: "idle", ship: "idle" });
+		setPipelineStatus({
+			design: "running",
+			worlds: "idle",
+			compose: "idle",
+			logic: "idle",
+			export: "idle",
+			ship: "idle",
+		});
 		setResult(null);
 		try {
 			const j = await apiFetch<StepResult & { summary?: string }>("/api/v1/game-builder/build", {
@@ -102,7 +117,14 @@ export default function GameBuilderPage() {
 			});
 			setResult(JSON.stringify(j, null, 2));
 			if (j.project_path) setProjectPath(j.project_path as string);
-			setPipelineStatus({ design: "done", worlds: "done", compose: "done", logic: "done", export: "done", ship: "idle" });
+			setPipelineStatus({
+				design: "done",
+				worlds: "done",
+				compose: "done",
+				logic: "done",
+				export: "done",
+				ship: "idle",
+			});
 		} catch (e) {
 			setResult(`Error: ${e}`);
 			setPipelineStatus((s) => ({ ...s, design: "failed" }));
@@ -131,10 +153,22 @@ export default function GameBuilderPage() {
 							setPipelineStatus((s) => ({ ...s, [step.key]: "running" }));
 							const body: Record<string, unknown> = {};
 							if (step.key === "design") body.game_concept = concept;
-							if (step.key === "worlds") { body.game_plan_json = planJson; body.worldlabs_url = worldlabsUrl; }
-							if (step.key === "compose") { body.game_plan_json = planJson; body.worlds_result_json = worldsJson; }
-							if (step.key === "logic") { body.game_plan_json = planJson; body.game_project_path = projectPath; }
-							if (step.key === "export") { body.game_plan_json = planJson; body.game_project_path = projectPath; }
+							if (step.key === "worlds") {
+								body.game_plan_json = planJson;
+								body.worldlabs_url = worldlabsUrl;
+							}
+							if (step.key === "compose") {
+								body.game_plan_json = planJson;
+								body.worlds_result_json = worldsJson;
+							}
+							if (step.key === "logic") {
+								body.game_plan_json = planJson;
+								body.game_project_path = projectPath;
+							}
+							if (step.key === "export") {
+								body.game_plan_json = planJson;
+								body.game_project_path = projectPath;
+							}
 							post(`/api/v1/game-builder/${step.key}`, body, step.label);
 						}}
 						className={`flex items-center gap-3 p-4 rounded-2xl border transition-all text-left ${
@@ -144,14 +178,20 @@ export default function GameBuilderPage() {
 						} ${busy !== null ? "opacity-50" : "cursor-pointer"}`}
 					>
 						<div className={`p-2 rounded-xl ${step.key === "ship" ? "bg-pink-500/20" : "bg-amber-500/20"}`}>
-							{step.key === "ship" ? <Sparkles size={16} className="text-pink-400" /> : <Play size={16} className="text-amber-400" />}
+							{step.key === "ship" ? (
+								<Sparkles size={16} className="text-pink-400" />
+							) : (
+								<Play size={16} className="text-amber-400" />
+							)}
 						</div>
 						<div className="flex-1 min-w-0">
 							<p className="text-sm font-bold text-white">{step.label}</p>
 							<p className="text-xs text-slate-400">{step.desc}</p>
 						</div>
 						{pipelineStatus[step.key] === "done" && <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />}
-						{pipelineStatus[step.key] === "running" && <Loader2 size={16} className="text-amber-400 animate-spin shrink-0" />}
+						{pipelineStatus[step.key] === "running" && (
+							<Loader2 size={16} className="text-amber-400 animate-spin shrink-0" />
+						)}
 					</button>
 				))}
 			</div>
@@ -167,7 +207,9 @@ export default function GameBuilderPage() {
 			</button>
 
 			<div className="rounded-xl border border-white/10 bg-fleet-900 p-4 space-y-3">
-				<label htmlFor="game-concept" className="block text-sm text-slate-300">Game concept</label>
+				<label htmlFor="game-concept" className="block text-sm text-slate-300">
+					Game concept
+				</label>
 				<textarea
 					id="game-concept"
 					value={concept}
@@ -177,12 +219,26 @@ export default function GameBuilderPage() {
 				/>
 				<div className="grid md:grid-cols-2 gap-3">
 					<div>
-						<label className="text-xs text-slate-500">World Labs URL</label>
-						<input value={worldlabsUrl} onChange={(e) => setWorldlabsUrl(e.target.value)} className="w-full rounded-lg border border-white/10 bg-[#0a0a0c] px-3 py-2 text-sm text-slate-200" />
+						<label htmlFor="worldlabs-url" className="text-xs text-slate-500">
+							World Labs URL
+						</label>
+						<input
+							id="worldlabs-url"
+							value={worldlabsUrl}
+							onChange={(e) => setWorldlabsUrl(e.target.value)}
+							className="w-full rounded-lg border border-white/10 bg-[#0a0a0c] px-3 py-2 text-sm text-slate-200"
+						/>
 					</div>
 					<div>
-						<label className="text-xs text-slate-500">Project path (auto)</label>
-						<input value={projectPath} readOnly className="w-full rounded-lg border border-white/10 bg-[#0a0a0c] px-3 py-2 text-sm text-slate-500" />
+						<label htmlFor="project-path" className="text-xs text-slate-500">
+							Project path (auto)
+						</label>
+						<input
+							id="project-path"
+							value={projectPath}
+							readOnly
+							className="w-full rounded-lg border border-white/10 bg-[#0a0a0c] px-3 py-2 text-sm text-slate-500"
+						/>
 					</div>
 				</div>
 			</div>
@@ -190,7 +246,9 @@ export default function GameBuilderPage() {
 			{result && (
 				<details open className="rounded-xl border border-white/10 bg-fleet-900 p-4">
 					<summary className="text-sm font-bold text-slate-300 cursor-pointer">Result JSON</summary>
-					<pre className="mt-3 text-xs text-slate-400 overflow-auto max-h-96 whitespace-pre-wrap font-mono">{result}</pre>
+					<pre className="mt-3 text-xs text-slate-400 overflow-auto max-h-96 whitespace-pre-wrap font-mono">
+						{result}
+					</pre>
 				</details>
 			)}
 		</div>

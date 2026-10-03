@@ -1,12 +1,4 @@
-import {
-	BookOpen,
-	Box,
-	ExternalLink,
-	HelpCircle,
-	Network,
-	Package,
-	Wrench,
-} from "lucide-react";
+import { BookOpen, Box, ExternalLink, HelpCircle, Network, Package, Wrench } from "lucide-react";
 import { useState } from "react";
 
 const sections = [
@@ -43,11 +35,20 @@ export default function HelpPage() {
 			<div className="bg-[#1e1e26] border border-white/10 rounded-2xl p-6 text-sm text-slate-400 leading-relaxed space-y-4">
 				{tab === "intro" && (
 					<>
-						<p><strong className="text-slate-200">Godot MCP</strong> is a FastMCP 3.4 server with 80+ tools for Godot 4 engine control, AI-powered game generation, and cross-repo publishing pipelines.</p>
+						<p>
+							<strong className="text-slate-200">Godot MCP</strong> is a FastMCP 3.4 server with 80+ tools for Godot 4
+							engine control, AI-powered game generation, and cross-repo publishing pipelines.
+						</p>
 						<div className="grid grid-cols-2 gap-3 mt-3">
 							{[
-								["Engine Control", "20 bridge tools: scene, import, particles, cameras, materials, viewport capture, input simulation, procedural textures"],
-								["Game Builder", "design_game -> GamePlan -> GDScript -> validate -> test -> dialogue -> export. Full pipeline from prompt to HTML5."],
+								[
+									"Engine Control",
+									"20 bridge tools: scene, import, particles, cameras, materials, viewport capture, input simulation, procedural textures",
+								],
+								[
+									"Game Builder",
+									"design_game -> GamePlan -> GDScript -> validate -> test -> dialogue -> export. Full pipeline from prompt to HTML5.",
+								],
 								["Publishing", "itch.io + Steam via portmanteau tools. Fleet exchange for cross-repo assets."],
 								["LLM Detection", "Auto GPU detection, model recommendation by VRAM tier. Default gemma4:12b."],
 							].map(([title, desc]) => (
@@ -62,7 +63,9 @@ export default function HelpPage() {
 
 				{tab === "tools" && (
 					<>
-						<p><strong className="text-slate-200">80+ MCP tools</strong> across all modules. Key categories:</p>
+						<p>
+							<strong className="text-slate-200">80+ MCP tools</strong> across all modules. Key categories:
+						</p>
 						<div className="space-y-2 mt-3">
 							<h4 className="text-blue-400 font-bold text-sm">Engine Control (20)</h4>
 							{[
@@ -101,11 +104,17 @@ export default function HelpPage() {
 
 				{tab === "game-builder" && (
 					<>
-						<p><strong className="text-slate-200">Game Builder</strong> — turn a natural language concept into a Godot game.</p>
+						<p>
+							<strong className="text-slate-200">Game Builder</strong> — turn a natural language concept into a Godot
+							game.
+						</p>
 						<div className="space-y-2 mt-3">
 							{[
 								["design_game", "LLM creates a GamePlan (title, scenes, scripts, hazards, scoring, NPCs, narrative)"],
-								["generate_game_logic", "GDScript generation validated by gdlint + godot --check-only, auto-repaired by LLM"],
+								[
+									"generate_game_logic",
+									"GDScript generation validated by gdlint + godot --check-only, auto-repaired by LLM",
+								],
 								["generate_game_tests", "GUT unit test generation, run via Godot headless"],
 								["generate_dialogue", "Creates DialogueManager.gd from NPC data + Dialogic .dtl timelines"],
 								["godot_generate_procedural_texture", "Procedural textures for backgrounds, UI, effects"],
@@ -117,19 +126,33 @@ export default function HelpPage() {
 								</div>
 							))}
 						</div>
-						<p className="mt-3 text-xs text-slate-500">Try: <code className="text-blue-400">just gb-smoke</code> or <code className="text-blue-400">just gb-demo "A 2D platformer"</code></p>
+						<p className="mt-3 text-xs text-slate-500">
+							Try: <code className="text-blue-400">just gb-smoke</code> or{" "}
+							<code className="text-blue-400">just gb-demo "A 2D platformer"</code>
+						</p>
 					</>
 				)}
 
 				{tab === "plugins" && (
 					<>
-						<p><strong className="text-slate-200">Community Plugins</strong> — 7 curated Godot plugins installable from the dashboard.</p>
+						<p>
+							<strong className="text-slate-200">Community Plugins</strong> — 7 curated Godot plugins installable from
+							the dashboard.
+						</p>
 						<div className="space-y-2 mt-3">
 							{[
 								["Dialogic", "dialogic-godot/dialogic", "Branching dialogue system with timelines and characters"],
-								["Godot Behavior Tree", "viniciusgerevini/godot-behavior-tree", "BT-based NPC AI with composite/decorator/leaf nodes"],
+								[
+									"Godot Behavior Tree",
+									"viniciusgerevini/godot-behavior-tree",
+									"BT-based NPC AI with composite/decorator/leaf nodes",
+								],
 								["GUT", "bitwes/Gut", "GDScript unit testing framework with CI support"],
-								["Aseprite Wizard", "viniciusgerevini/godot-aseprite-wizard", "Aseprite sprite sheet importer with auto-reimport"],
+								[
+									"Aseprite Wizard",
+									"viniciusgerevini/godot-aseprite-wizard",
+									"Aseprite sprite sheet importer with auto-reimport",
+								],
 								["Terrain3D", "TokisanGames/Terrain3D", "High-performance 3D terrain with painting and LOD"],
 								["Godot Voxel", "Zylann/godot_voxel", "Voxel terrain engine for block-style worlds"],
 								["Godot XR Tools", "GodotVR/godot-xr-tools", "AR/VR interaction toolkit"],
@@ -141,14 +164,22 @@ export default function HelpPage() {
 								</div>
 							))}
 						</div>
-						<p className="mt-3 text-xs text-slate-500">Install via <code className="text-blue-400">/plugins</code> page or <code className="text-blue-400">POST /api/v1/plugins/install</code></p>
+						<p className="mt-3 text-xs text-slate-500">
+							Install via <code className="text-blue-400">/plugins</code> page or{" "}
+							<code className="text-blue-400">POST /api/v1/plugins/install</code>
+						</p>
 					</>
 				)}
 
 				{tab === "llm" && (
 					<>
-						<p><strong className="text-slate-200">LLM Setup</strong> — auto-detects your GPU and recommends the best model.</p>
-						<p className="text-xs text-slate-500 mt-1">The server probes NVIDIA GPU via nvidia-smi and checks Ollama for installed models.</p>
+						<p>
+							<strong className="text-slate-200">LLM Setup</strong> — auto-detects your GPU and recommends the best
+							model.
+						</p>
+						<p className="text-xs text-slate-500 mt-1">
+							The server probes NVIDIA GPU via nvidia-smi and checks Ollama for installed models.
+						</p>
 						<div className="space-y-2 mt-3">
 							<h4 className="text-green-400 font-bold text-xs">VRAM-based model recommendations</h4>
 							{[
@@ -165,7 +196,10 @@ export default function HelpPage() {
 								</div>
 							))}
 						</div>
-						<p className="mt-3 text-xs text-slate-500">See <code className="text-blue-400">/settings</code> for your GPU detection card. Set cloud API keys there too.</p>
+						<p className="mt-3 text-xs text-slate-500">
+							See <code className="text-blue-400">/settings</code> for your GPU detection card. Set cloud API keys there
+							too.
+						</p>
 					</>
 				)}
 
@@ -246,9 +280,7 @@ export default function HelpPage() {
 									<div className="flex items-center gap-2 mb-1">
 										<code className="text-blue-400 font-bold text-sm">{repo}</code>
 										<span className="text-xs text-slate-500">:{port}</span>
-										<span className="text-xs px-2 py-0.5 rounded bg-white/10 text-slate-400">
-											{fmt}
-										</span>
+										<span className="text-xs px-2 py-0.5 rounded bg-white/10 text-slate-400">{fmt}</span>
 									</div>
 									<p className="text-sm text-slate-300">{desc}</p>
 								</div>
@@ -260,10 +292,9 @@ export default function HelpPage() {
 				{tab === "godot" && (
 					<>
 						<p>
-							<strong className="text-slate-200">Godot MCP Addon</strong> — a GDScript plugin
-							must be loaded in the Godot project for MCP to accept commands.
-							The addon runs a <strong className="text-slate-200">TCP server</strong> on port 9080
-							inside the Godot engine.
+							<strong className="text-slate-200">Godot MCP Addon</strong> — a GDScript plugin must be loaded in the
+							Godot project for MCP to accept commands. The addon runs a{" "}
+							<strong className="text-slate-200">TCP server</strong> on port 9080 inside the Godot engine.
 						</p>
 						<h3 className="text-base font-bold text-white mt-4 mb-2">Auto-install (recommended)</h3>
 						<div className="bg-fleet-800 rounded-xl p-4 font-mono text-sm space-y-1 overflow-x-auto">
@@ -277,8 +308,8 @@ export default function HelpPage() {
 							<div className="flex gap-3 bg-white/10 rounded-lg p-2.5">
 								<span className="text-amber-400 font-bold text-sm shrink-0 w-24">1. Copy file</span>
 								<span className="text-sm text-slate-300">
-									Copy <code className="text-blue-400">src/godot_mcp/bridge/mcp_bridge.gd</code> to
-									your Godot project at <code className="text-blue-400">res://addons/mcp_bridge/mcp_bridge.gd</code>
+									Copy <code className="text-blue-400">src/godot_mcp/bridge/mcp_bridge.gd</code> to your Godot project
+									at <code className="text-blue-400">res://addons/mcp_bridge/mcp_bridge.gd</code>
 								</span>
 							</div>
 							<div className="flex gap-3 bg-white/10 rounded-lg p-2.5">
@@ -299,10 +330,12 @@ export default function HelpPage() {
 							<div>{"\n"}</div>
 							<div className="text-slate-400"># Protocol: JSON-RPC over TCP</div>
 							<div>{'{"action": "import_stl", "params": {"path": "model.stl"}, "request_id": "1"}'}</div>
-							<div>{'{"action": "result", "data": {"node": "/root/MeshInstance3D", "vertices": 15234}, "request_id": "1"}'}</div>
+							<div>
+								{'{"action": "result", "data": {"node": "/root/MeshInstance3D", "vertices": 15234}, "request_id": "1"}'}
+							</div>
 						</div>
 						<p className="text-sm text-slate-400 mt-2">
-							3. In Godot, go to Project {'>'} Project Settings {'>'} Autoload and add
+							3. In Godot, go to Project {">"} Project Settings {">"} Autoload and add
 							<code className="text-blue-400"> addons/mcp_bridge/mcp_bridge.gd</code> as a singleton.
 						</p>
 					</>
@@ -313,11 +346,27 @@ export default function HelpPage() {
 						{[
 							["godotengine.org", "Official Godot Engine website (download + docs)", "https://godotengine.org"],
 							["docs.godotengine.org", "Godot 4.0 documentation (stable)", "https://docs.godotengine.org/en/stable/"],
-							["docs.godotengine.org/classes", "Godot 4.0 class reference", "https://docs.godotengine.org/en/stable/classes/"],
-							["FluidX3D", "Computational Fluid Dynamics on GPU (velocity fields)", "https://github.com/ProjectPhysX/FluidX3D"],
+							[
+								"docs.godotengine.org/classes",
+								"Godot 4.0 class reference",
+								"https://docs.godotengine.org/en/stable/classes/",
+							],
+							[
+								"FluidX3D",
+								"Computational Fluid Dynamics on GPU (velocity fields)",
+								"https://github.com/ProjectPhysX/FluidX3D",
+							],
 							["qcad-mcp", "DXF/DWG floor plans → STL extrusion (upstream)", "https://github.com/sandraschi/qcad-mcp"],
-							["resonite-mcp", "Social XR platform for world imports (downstream)", "https://github.com/sandraschi/resonite-mcp"],
-							["freecad-mcp", "STL → solid → BIM → IFC (upstream/downstream)", "https://github.com/sandraschi/freecad-mcp"],
+							[
+								"resonite-mcp",
+								"Social XR platform for world imports (downstream)",
+								"https://github.com/sandraschi/resonite-mcp",
+							],
+							[
+								"freecad-mcp",
+								"STL → solid → BIM → IFC (upstream/downstream)",
+								"https://github.com/sandraschi/freecad-mcp",
+							],
 						].map(([label, desc, url]) => (
 							<a
 								key={url}
@@ -327,9 +376,7 @@ export default function HelpPage() {
 								className="flex items-center justify-between p-3 rounded-xl bg-white/10 hover:bg-white/10 transition-all group"
 							>
 								<div>
-									<span className="text-blue-400 font-bold text-sm group-hover:text-blue-300">
-										{label}
-									</span>
+									<span className="text-blue-400 font-bold text-sm group-hover:text-blue-300">{label}</span>
 									<p className="text-sm text-slate-300">{desc}</p>
 								</div>
 								<ExternalLink size={14} className="text-slate-400 group-hover:text-slate-400" />

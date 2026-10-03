@@ -23,29 +23,34 @@ export default function PluginsPage() {
 			.finally(() => setLoading(false));
 	}, []);
 
-	useEffect(() => { refresh(); }, [refresh]);
-
-	const install = useCallback(async (name: string) => {
-		setInstalling(name);
-		setMessage(null);
-		try {
-			const r = await apiFetch<{ success: boolean; error?: string }>("/api/v1/plugins/install", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ plugin_name: name, project_path: "" }),
-				timeoutMs: 120000,
-			});
-			if (r.success) {
-				setMessage({ text: `"${name}" installed. Enable it in Project > Project Settings > Plugins.`, ok: true });
-				refresh();
-			} else {
-				setMessage({ text: r.error || "Install failed", ok: false });
-			}
-		} catch (e) {
-			setMessage({ text: e instanceof Error ? e.message : "Install failed", ok: false });
-		}
-		setInstalling(null);
+	useEffect(() => {
+		refresh();
 	}, [refresh]);
+
+	const install = useCallback(
+		async (name: string) => {
+			setInstalling(name);
+			setMessage(null);
+			try {
+				const r = await apiFetch<{ success: boolean; error?: string }>("/api/v1/plugins/install", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ plugin_name: name, project_path: "" }),
+					timeoutMs: 120000,
+				});
+				if (r.success) {
+					setMessage({ text: `"${name}" installed. Enable it in Project > Project Settings > Plugins.`, ok: true });
+					refresh();
+				} else {
+					setMessage({ text: r.error || "Install failed", ok: false });
+				}
+			} catch (e) {
+				setMessage({ text: e instanceof Error ? e.message : "Install failed", ok: false });
+			}
+			setInstalling(null);
+		},
+		[refresh],
+	);
 
 	return (
 		<div className="space-y-6" data-testid="plugins-page">
@@ -58,7 +63,9 @@ export default function PluginsPage() {
 			</div>
 
 			{message && (
-				<div className={`flex items-center gap-3 p-4 rounded-2xl text-sm ${message.ok ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400" : "bg-red-500/10 border border-red-500/20 text-red-400"}`}>
+				<div
+					className={`flex items-center gap-3 p-4 rounded-2xl text-sm ${message.ok ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400" : "bg-red-500/10 border border-red-500/20 text-red-400"}`}
+				>
 					{message.ok ? <CheckCircle size={16} /> : <XCircle size={16} />}
 					<span>{message.text}</span>
 				</div>
@@ -89,7 +96,7 @@ export default function PluginsPage() {
 								<a
 									href={`https://github.com/${p.repo}`}
 									target="_blank"
-									rel="noopener"
+									rel="noreferrer noopener"
 									className="flex items-center gap-1 text-xs text-blue-400 hover:underline"
 								>
 									<ExternalLink size={12} /> {p.repo}
@@ -117,7 +124,13 @@ export default function PluginsPage() {
 
 			<div className="p-4 rounded-2xl bg-zinc-800/50 border border-zinc-700/50 text-sm text-slate-400">
 				<p className="font-bold text-slate-300 mb-1">How plugins work</p>
-				<p>Plugins are downloaded from GitHub (latest release or main branch) and extracted to <code className="text-xs bg-black/30 px-1.5 py-0.5 rounded">addons/&lt;name&gt;/</code> in your Godot project. After installation, enable the plugin in Project &gt; Project Settings &gt; Plugins. See <code className="text-xs bg-black/30 px-1.5 py-0.5 rounded">docs/godot-ecosystem.md</code> for the full catalog.</p>
+				<p>
+					Plugins are downloaded from GitHub (latest release or main branch) and extracted to{" "}
+					<code className="text-xs bg-black/30 px-1.5 py-0.5 rounded">addons/&lt;name&gt;/</code> in your Godot project.
+					After installation, enable the plugin in Project &gt; Project Settings &gt; Plugins. See{" "}
+					<code className="text-xs bg-black/30 px-1.5 py-0.5 rounded">docs/godot-ecosystem.md</code> for the full
+					catalog.
+				</p>
 			</div>
 		</div>
 	);

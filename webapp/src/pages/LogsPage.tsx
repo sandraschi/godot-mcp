@@ -1,12 +1,4 @@
-import {
-	ChevronLeft,
-	ChevronRight,
-	Download,
-	Pause,
-	Play,
-	ScrollText,
-	Trash2,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Pause, Play, ScrollText, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "../lib/api";
 
@@ -74,55 +66,60 @@ export default function LogsPage() {
 		return () => clearTimeout(t);
 	}, [search]);
 
-	const load = useCallback(async (mode: "page" | "tail" = "page") => {
-		try {
-			const params = new URLSearchParams();
-			params.set("limit", String(limit));
-			params.set("sort", sort);
-			if (level) params.set("level", level);
-			if (kind) params.set("kind", kind);
-			if (debouncedSearch.trim()) params.set("search", debouncedSearch.trim());
+	const load = useCallback(
+		async (mode: "page" | "tail" = "page") => {
+			try {
+				const params = new URLSearchParams();
+				params.set("limit", String(limit));
+				params.set("sort", sort);
+				if (level) params.set("level", level);
+				if (kind) params.set("kind", kind);
+				if (debouncedSearch.trim()) params.set("search", debouncedSearch.trim());
 
-			if (mode === "tail" && tail && !pauseTail && newestIdRef.current) {
-				params.set("after_id", newestIdRef.current);
-				params.set("sort", "asc");
-				params.set("limit", "100");
-			} else {
-				params.set("offset", String(offset));
+				if (mode === "tail" && tail && !pauseTail && newestIdRef.current) {
+					params.set("after_id", newestIdRef.current);
+					params.set("sort", "asc");
+					params.set("limit", "100");
+				} else {
+					params.set("offset", String(offset));
+				}
+
+				const [logs, statsRes] = await Promise.all([
+					apiFetch<LogsResponse>(`/api/logs?${params.toString()}`),
+					apiFetch<LogStats>("/api/logs/stats"),
+				]);
+
+				if (mode === "tail" && tail && !pauseTail && newestIdRef.current && logs.entries.length) {
+					setEntries((prev) => {
+						const merged = [...logs.entries, ...prev];
+						const seen = new Set<string>();
+						return merged
+							.filter((e) => {
+								if (seen.has(e.id)) return false;
+								seen.add(e.id);
+								return true;
+							})
+							.slice(0, 500);
+					});
+				} else {
+					setEntries(logs.entries);
+				}
+
+				if (logs.entries.length) {
+					const newest = sort === "desc" ? logs.entries[0] : logs.entries[logs.entries.length - 1];
+					if (newest?.id) newestIdRef.current = newest.id;
+				}
+				setTotal(logs.total);
+				setStats(statsRes);
+				setError(null);
+			} catch (e) {
+				setError(String(e));
+			} finally {
+				setLoading(false);
 			}
-
-			const [logs, statsRes] = await Promise.all([
-				apiFetch<LogsResponse>(`/api/logs?${params.toString()}`),
-				apiFetch<LogStats>("/api/logs/stats"),
-			]);
-
-			if (mode === "tail" && tail && !pauseTail && newestIdRef.current && logs.entries.length) {
-				setEntries((prev) => {
-					const merged = [...logs.entries, ...prev];
-					const seen = new Set<string>();
-					return merged.filter((e) => {
-						if (seen.has(e.id)) return false;
-						seen.add(e.id);
-						return true;
-					}).slice(0, 500);
-				});
-			} else {
-				setEntries(logs.entries);
-			}
-
-			if (logs.entries.length) {
-				const newest = sort === "desc" ? logs.entries[0] : logs.entries[logs.entries.length - 1];
-				if (newest?.id) newestIdRef.current = newest.id;
-			}
-			setTotal(logs.total);
-			setStats(statsRes);
-			setError(null);
-		} catch (e) {
-			setError(String(e));
-		} finally {
-			setLoading(false);
-		}
-	}, [limit, offset, level, kind, debouncedSearch, sort, tail, pauseTail]);
+		},
+		[limit, offset, level, kind, debouncedSearch, sort, tail, pauseTail],
+	);
 
 	useEffect(() => {
 		setLoading(true);
@@ -313,23 +310,15 @@ export default function LogsPage() {
 			</div>
 
 			{error && (
-				<div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-300">
-					{error}
-				</div>
+				<div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-300">{error}</div>
 			)}
 
 			<div className="bg-[#0a0a0c] border border-white/10 rounded-xl overflow-hidden">
 				<div className="px-4 py-2 border-b border-white/10 flex items-center justify-between text-sm text-slate-300">
 					<span className="font-mono">/api/logs</span>
-					<span>
-						{loading ? "Loading…" : `${entries.length} shown · ${total} matched`}
-					</span>
+					<span>{loading ? "Loading…" : `${entries.length} shown · ${total} matched`}</span>
 				</div>
-				<div
-					ref={scrollRef}
-					onScroll={onScroll}
-					className="h-[58vh] overflow-y-auto p-2 font-mono text-xs"
-				>
+				<div ref={scrollRef} onScroll={onScroll} className="h-[58vh] overflow-y-auto p-2 font-mono text-xs">
 					{entries.length === 0 ? (
 						<p className="text-slate-500 italic p-2">No log entries match filters.</p>
 					) : (

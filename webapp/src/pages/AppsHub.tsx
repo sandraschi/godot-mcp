@@ -52,9 +52,7 @@ export default function AppsHub() {
 						</button>
 					</div>
 				) : (
-					<p className="text-sm text-slate-300">
-						{localStatus ? `Service: ${localStatus}` : "Checking..."}
-					</p>
+					<p className="text-sm text-slate-300">{localStatus ? `Service: ${localStatus}` : "Checking..."}</p>
 				)}
 				<p className="text-sm text-slate-400">Port: 10992 (frontend) / 10993 (backend)</p>
 			</div>
@@ -69,9 +67,7 @@ export default function AppsHub() {
 								<Wifi size={16} />
 								<span className="font-bold text-sm">{svc.name}</span>
 							</div>
-							<span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">
-								:{svc.port}
-							</span>
+							<span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">:{svc.port}</span>
 						</div>
 						<p className="text-sm text-slate-400">{svc.description}</p>
 						<div className="flex items-center gap-1.5 text-xs text-slate-500">

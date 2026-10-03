@@ -9,25 +9,88 @@ interface ToolDef {
 }
 
 const coreTools: ToolDef[] = [
-	{ name: "godot_status", description: "Engine availability, version, scene info, node tree", annotation: "READ_ONLY", version: "0.1.0" },
-	{ name: "godot_import_stl", description: "Import STL mesh from qcad-mcp pipeline as MeshInstance3D", annotation: "MUTATING", version: "0.1.0" },
-	{ name: "godot_spawn_particles", description: "Create GPU particle system with emission, lifetime, velocity config", annotation: "MUTATING", version: "0.1.0" },
-	{ name: "godot_load_velocity", description: "Load FluidX3D velocity field data and bind to particle system", annotation: "MUTATING", version: "0.1.0" },
-	{ name: "godot_animate_streamline", description: "Animate particles along streamlines from velocity field", annotation: "MUTATING", version: "0.1.0" },
-	{ name: "godot_set_material", description: "Assign PBR materials with albedo, roughness, metallic to meshes", annotation: "MUTATING", version: "0.1.0" },
-	{ name: "godot_add_light", description: "Add OmniLight3D, SpotLight3D, or DirectionalLight3D", annotation: "MUTATING", version: "0.1.0" },
-	{ name: "godot_create_camera", description: "Create Camera3D with transform, FOV, near/far planes", annotation: "MUTATING", version: "0.1.0" },
-	{ name: "godot_export_web", description: "Export scene to HTML5/WebAssembly for Web deployment", annotation: "MUTATING", version: "0.1.0" },
-	{ name: "godot_run_simulation", description: "Trigger physics simulation step or particle system run", annotation: "MUTATING", version: "0.1.0" },
-	{ name: "godot_list_scenes", description: "List all scenes currently loaded in the Godot editor", annotation: "READ_ONLY", version: "0.1.0" },
-	{ name: "godot_get_node_tree", description: "Get full node tree of the active scene", annotation: "READ_ONLY", version: "0.1.0" },
+	{
+		name: "godot_status",
+		description: "Engine availability, version, scene info, node tree",
+		annotation: "READ_ONLY",
+		version: "0.1.0",
+	},
+	{
+		name: "godot_import_stl",
+		description: "Import STL mesh from qcad-mcp pipeline as MeshInstance3D",
+		annotation: "MUTATING",
+		version: "0.1.0",
+	},
+	{
+		name: "godot_spawn_particles",
+		description: "Create GPU particle system with emission, lifetime, velocity config",
+		annotation: "MUTATING",
+		version: "0.1.0",
+	},
+	{
+		name: "godot_load_velocity",
+		description: "Load FluidX3D velocity field data and bind to particle system",
+		annotation: "MUTATING",
+		version: "0.1.0",
+	},
+	{
+		name: "godot_animate_streamline",
+		description: "Animate particles along streamlines from velocity field",
+		annotation: "MUTATING",
+		version: "0.1.0",
+	},
+	{
+		name: "godot_set_material",
+		description: "Assign PBR materials with albedo, roughness, metallic to meshes",
+		annotation: "MUTATING",
+		version: "0.1.0",
+	},
+	{
+		name: "godot_add_light",
+		description: "Add OmniLight3D, SpotLight3D, or DirectionalLight3D",
+		annotation: "MUTATING",
+		version: "0.1.0",
+	},
+	{
+		name: "godot_create_camera",
+		description: "Create Camera3D with transform, FOV, near/far planes",
+		annotation: "MUTATING",
+		version: "0.1.0",
+	},
+	{
+		name: "godot_export_web",
+		description: "Export scene to HTML5/WebAssembly for Web deployment",
+		annotation: "MUTATING",
+		version: "0.1.0",
+	},
+	{
+		name: "godot_run_simulation",
+		description: "Trigger physics simulation step or particle system run",
+		annotation: "MUTATING",
+		version: "0.1.0",
+	},
+	{
+		name: "godot_list_scenes",
+		description: "List all scenes currently loaded in the Godot editor",
+		annotation: "READ_ONLY",
+		version: "0.1.0",
+	},
+	{
+		name: "godot_get_node_tree",
+		description: "Get full node tree of the active scene",
+		annotation: "READ_ONLY",
+		version: "0.1.0",
+	},
 ];
 
 const annotationColor = (a: ToolDef["annotation"]) => {
 	switch (a) {
-		case "READ_ONLY": return "bg-emerald-500/20 text-emerald-400";
-		case "MUTATING": return "bg-blue-500/20 text-blue-400";
-		case "DESTRUCTIVE": return "bg-red-500/20 text-red-400";
+		case "READ_ONLY":
+			return "bg-emerald-500/20 text-emerald-400";
+		case "MUTATING":
+			return "bg-blue-500/20 text-blue-400";
+		case "DESTRUCTIVE":
+			return "bg-red-500/20 text-red-400";
 	}
 };
 
@@ -76,7 +139,9 @@ export default function ToolsTools() {
 					</div>
 				))}
 			</div>
-			<p className="text-sm text-slate-500">{filtered.length} of {coreTools.length} tools</p>
+			<p className="text-sm text-slate-500">
+				{filtered.length} of {coreTools.length} tools
+			</p>
 		</div>
 	);
 }

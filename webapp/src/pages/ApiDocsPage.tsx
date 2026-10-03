@@ -108,9 +108,7 @@ export default function ApiDocsPage() {
 						key={ep.path}
 						className="flex items-center gap-2 shrink-0 px-3 py-1.5 rounded-lg bg-fleet-800 border border-white/10 text-xs"
 					>
-						<span className={`font-bold ${methodColor[ep.method] || "text-slate-400"}`}>
-							{ep.method}
-						</span>
+						<span className={`font-bold ${methodColor[ep.method] || "text-slate-400"}`}>{ep.method}</span>
 						<span className="text-slate-300 font-mono text-xs">{ep.path}</span>
 					</div>
 				))}

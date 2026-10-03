@@ -30,8 +30,12 @@ export default function SettingsPage() {
 				if (j.itch) setItch(j.itch);
 			})
 			.catch(() => {});
-		apiFetch<Record<string, unknown>>("/api/v1/llm/detect").then(setLlmDetect).catch(() => {});
-		apiFetch<Record<string, unknown>>("/api/v1/llm/recommend").then(setLlmRec).catch(() => {});
+		apiFetch<Record<string, unknown>>("/api/v1/llm/detect")
+			.then(setLlmDetect)
+			.catch(() => {});
+		apiFetch<Record<string, unknown>>("/api/v1/llm/recommend")
+			.then(setLlmRec)
+			.catch(() => {});
 	}, []);
 
 	const save = async () => {
@@ -98,18 +102,22 @@ export default function SettingsPage() {
 					{(llmRec as Record<string, string>).mode === "local" ? (
 						<>
 							<p className="text-sm text-slate-300">
-								GPU: {(llmDetect as Record<string, Record<string, string>>)?.gpu?.name || "Unknown"} ({(llmRec as Record<string, number>).vram_gb} GB) — Tier {(llmRec as Record<string, number>).tier}: {(llmRec as Record<string, string>).tier_label}
+								GPU: {(llmDetect as Record<string, Record<string, string>>)?.gpu?.name || "Unknown"} (
+								{(llmRec as Record<string, number>).vram_gb} GB) — Tier {(llmRec as Record<string, number>).tier}:{" "}
+								{(llmRec as Record<string, string>).tier_label}
 							</p>
 							<p className="text-sm">
 								<span className="text-amber-400 font-bold">Model: {(llmRec as Record<string, string>).model}</span>
-								<span className={`ml-2 text-xs ${(llmRec as Record<string, boolean>).installed ? "text-emerald-400" : "text-yellow-400"}`}>
+								<span
+									className={`ml-2 text-xs ${(llmRec as Record<string, boolean>).installed ? "text-emerald-400" : "text-yellow-400"}`}
+								>
 									{(llmRec as Record<string, boolean>).installed ? "installed" : "not installed — run ollama pull"}
 								</span>
 							</p>
 						</>
 					) : (
 						<p className="text-sm text-slate-400">
-							No GPU or Ollama detected.{' '}
+							No GPU or Ollama detected.{" "}
 							<span className="text-blue-400">Configure a cloud API key below, or install Ollama.</span>
 						</p>
 					)}
@@ -133,7 +141,12 @@ export default function SettingsPage() {
 				</label>
 				<p className="text-sm text-slate-400">
 					Godot 4.0 is required. Download from{" "}
-					<a href="https://godotengine.org/download" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:underline">
+					<a
+						href="https://godotengine.org/download"
+						target="_blank"
+						rel="noopener noreferrer"
+						className="text-amber-400 hover:underline"
+					>
 						godotengine.org
 					</a>
 					.
@@ -146,9 +159,9 @@ export default function SettingsPage() {
 					<h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">MCP Bridge Addon</h3>
 				</div>
 				<p className="text-sm text-slate-400">
-					Install the MCP Bridge GDScript addon into a Godot project so it can receive MCP commands.
-					After installation, add <code className="text-amber-400">addons/mcp_bridge/mcp_bridge.gd</code> as an Autoload
-					in Project &gt; Project Settings &gt; Autoload.
+					Install the MCP Bridge GDScript addon into a Godot project so it can receive MCP commands. After installation,
+					add <code className="text-amber-400">addons/mcp_bridge/mcp_bridge.gd</code> as an Autoload in Project &gt;
+					Project Settings &gt; Autoload.
 				</p>
 				<label className="block text-sm text-slate-400">
 					Godot project path (folder containing project.godot)
@@ -231,8 +244,12 @@ export default function SettingsPage() {
 					<p>ITCH_TARGET: {itch?.defaults?.itch_target || "(not set)"}</p>
 				</div>
 				<p className="text-xs text-slate-500">
-					Secrets are read from environment only: BUTLER_API_KEY, ITCH_TARGET, BUTLER_PATH, ITCH_CHANNEL_WEB, ITCH_CHANNEL_WIN, GODOT_EXPORT_GAME.
-					Use the <a href="/ship" className="text-pink-400 hover:underline">Ship page</a> to export and push.
+					Secrets are read from environment only: BUTLER_API_KEY, ITCH_TARGET, BUTLER_PATH, ITCH_CHANNEL_WEB,
+					ITCH_CHANNEL_WIN, GODOT_EXPORT_GAME. Use the{" "}
+					<a href="/ship" className="text-pink-400 hover:underline">
+						Ship page
+					</a>{" "}
+					to export and push.
 				</p>
 			</div>
 

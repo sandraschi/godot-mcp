@@ -1,5 +1,5 @@
-import { Loader2, MessageSquare, Send, Sparkles, X } from "lucide-react";
 import { motion } from "framer-motion";
+import { Loader2, MessageSquare, Send, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 import { apiFetch } from "../lib/api";
 
@@ -27,9 +27,7 @@ const prompts: PromptDef[] = [
 		name: "suggest_lighting",
 		description: "Get AI suggestions for improving scene lighting.",
 		prompt_template: "Given a scene with {light_count} lights, suggest improvements for better visual quality.",
-		parameters: [
-			{ name: "light_count", type: "number", description: "Number of lights in scene" },
-		],
+		parameters: [{ name: "light_count", type: "number", description: "Number of lights in scene" }],
 	},
 ];
 
@@ -69,11 +67,7 @@ export default function PromptsPage() {
 	const selected = prompts.find((p) => p.name === executing);
 
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 20 }}
-			animate={{ opacity: 1, y: 0 }}
-			className="space-y-6 max-w-6xl"
-		>
+		<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-6xl">
 			<h1 className="text-2xl font-bold text-white flex items-center gap-3">
 				<Sparkles className="text-amber-500" size={24} /> AI Prompt Templates
 			</h1>
@@ -98,9 +92,7 @@ export default function PromptsPage() {
 						</div>
 						<p className="text-sm text-slate-400">{p.description}</p>
 						{p.parameters.length > 0 && (
-							<div className="text-xs text-slate-500">
-								Parameters: {p.parameters.map((pr) => pr.name).join(", ")}
-							</div>
+							<div className="text-xs text-slate-500">Parameters: {p.parameters.map((pr) => pr.name).join(", ")}</div>
 						)}
 					</div>
 				))}
@@ -115,7 +107,13 @@ export default function PromptsPage() {
 						<h2 className="text-sm font-bold text-slate-200">
 							Execute: <code className="text-amber-400">{selected.name}</code>
 						</h2>
-						<button type="button" onClick={() => { setExecuting(null); setResponse(null); }}>
+						<button
+							type="button"
+							onClick={() => {
+								setExecuting(null);
+								setResponse(null);
+							}}
+						>
 							<X size={14} className="text-slate-400" />
 						</button>
 					</div>
@@ -126,7 +124,9 @@ export default function PromptsPage() {
 						<div className="space-y-2">
 							{selected.parameters.map((pr) => (
 								<div key={pr.name}>
-									<label htmlFor={`prompt-${pr.name}`} className="text-xs text-slate-400 block mb-1">{pr.name}</label>
+									<label htmlFor={`prompt-${pr.name}`} className="text-xs text-slate-400 block mb-1">
+										{pr.name}
+									</label>
 									<input
 										id={`prompt-${pr.name}`}
 										type="text"

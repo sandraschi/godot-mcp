@@ -1,5 +1,5 @@
-import { AlertTriangle, Database, Loader2, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { motion } from "framer-motion";
+import { AlertTriangle, Database, Loader2, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "../lib/api";
 
@@ -35,15 +35,26 @@ export default function DepotPage() {
 		}
 	}, []);
 
-	useEffect(() => { load(); }, [load]);
+	useEffect(() => {
+		load();
+	}, [load]);
 
 	const handleRegister = async () => {
-		const tags = form.tags.split(",").map((t) => t.trim()).filter(Boolean);
+		const tags = form.tags
+			.split(",")
+			.map((t) => t.trim())
+			.filter(Boolean);
 		try {
 			await apiFetch("/api/v1/artifacts", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ name: form.name, type: form.type, description: form.description, author: form.author, tags }),
+				body: JSON.stringify({
+					name: form.name,
+					type: form.type,
+					description: form.description,
+					author: form.author,
+					tags,
+				}),
 			});
 			setShowForm(false);
 			setForm({ name: "", type: "Mesh", description: "", author: "", tags: "" });
@@ -64,11 +75,7 @@ export default function DepotPage() {
 	};
 
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 20 }}
-			animate={{ opacity: 1, y: 0 }}
-			className="space-y-6 max-w-6xl"
-		>
+		<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-6xl">
 			<div className="flex items-center justify-between">
 				<h1 className="text-2xl font-bold text-white flex items-center gap-3">
 					<Database className="text-amber-500" size={24} /> Artifact Depot
@@ -116,7 +123,9 @@ export default function DepotPage() {
 							className="px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-sm text-slate-200 outline-none"
 						>
 							{artifactTypes.map((t) => (
-								<option key={t} value={t}>{t}</option>
+								<option key={t} value={t}>
+									{t}
+								</option>
 							))}
 						</select>
 						<input

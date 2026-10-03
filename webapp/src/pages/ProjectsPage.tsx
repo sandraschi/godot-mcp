@@ -1,13 +1,5 @@
 import { motion } from "framer-motion";
-import {
-	AlertTriangle,
-	Box,
-	ExternalLink,
-	FolderOpen,
-	Gamepad2,
-	Loader2,
-	RefreshCw,
-} from "lucide-react";
+import { AlertTriangle, Box, ExternalLink, FolderOpen, Gamepad2, Loader2, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface Sample {
@@ -29,7 +21,8 @@ export default function ProjectsPage() {
 	const [samples] = useState<Sample[]>([
 		{
 			name: "2D Platformer",
-			description: "Official Godot 2D platformer demo with character controller, platforms, collectibles, and level design.",
+			description:
+				"Official Godot 2D platformer demo with character controller, platforms, collectibles, and level design.",
 			genre: "2D Platformer",
 			source: "godot-demo-projects/2d/platformer",
 			type: "sample",
@@ -50,7 +43,8 @@ export default function ProjectsPage() {
 		},
 		{
 			name: "Heart Platformer",
-			description: "Juicy 2D platformer movement template with coyote time, variable jump height, and particle effects.",
+			description:
+				"Juicy 2D platformer movement template with coyote time, variable jump height, and particle effects.",
 			genre: "2D Platformer",
 			source: "heart-platformer",
 			type: "sample",
@@ -64,7 +58,8 @@ export default function ProjectsPage() {
 		},
 		{
 			name: "CFD River Flow",
-			description: "Computational fluid dynamics visualization: river geometry with GPU particles following velocity streamlines.",
+			description:
+				"Computational fluid dynamics visualization: river geometry with GPU particles following velocity streamlines.",
 			genre: "Scientific",
 			source: "godot-mcp",
 			type: "sample",
@@ -115,19 +110,13 @@ export default function ProjectsPage() {
 	}
 
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 20 }}
-			animate={{ opacity: 1, y: 0 }}
-			className="space-y-8 p-6"
-		>
+		<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 p-6">
 			<div>
 				<h1 className="text-2xl font-bold text-white flex items-center gap-3">
 					<Gamepad2 className="text-blue-400" size={28} />
 					Projects
 				</h1>
-				<p className="text-slate-400 mt-1 text-sm">
-					Sample Godot 4 projects and MCPB bundles ready to run or inspect.
-				</p>
+				<p className="text-slate-400 mt-1 text-sm">Sample Godot 4 projects and MCPB bundles ready to run or inspect.</p>
 			</div>
 
 			{/* Sample Projects */}
@@ -152,16 +141,14 @@ export default function ProjectsPage() {
 								</span>
 							</div>
 							<h3 className="text-white font-semibold mb-1">{s.name}</h3>
-							<p className="text-slate-400 text-sm leading-relaxed mb-3">
-								{s.description}
-							</p>
+							<p className="text-slate-400 text-sm leading-relaxed mb-3">{s.description}</p>
 							<div className="flex items-center justify-between">
-								<span className="text-xs text-slate-400 truncate max-w-[180px]">
-									{s.source}
-								</span>
+								<span className="text-xs text-slate-400 truncate max-w-[180px]">{s.source}</span>
 								<button
 									type="button"
-									onClick={() => window.open(`https://github.com/sandraschi/godot-mcp/tree/master/samples/${s.source}`, "_blank")}
+									onClick={() =>
+										window.open(`https://github.com/sandraschi/godot-mcp/tree/master/samples/${s.source}`, "_blank")
+									}
 									className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
 								>
 									<ExternalLink size={12} />
@@ -188,7 +175,11 @@ export default function ProjectsPage() {
 					<div className="flex items-center gap-3 text-red-400 bg-red-500/10 rounded-xl p-4">
 						<AlertTriangle size={18} />
 						<span className="text-sm">{error}</span>
-						<button type="button" onClick={loadBundles} className="ml-auto text-xs text-red-300 hover:text-red-200 flex items-center gap-1">
+						<button
+							type="button"
+							onClick={loadBundles}
+							className="ml-auto text-xs text-red-300 hover:text-red-200 flex items-center gap-1"
+						>
 							<RefreshCw size={12} /> Retry
 						</button>
 					</div>

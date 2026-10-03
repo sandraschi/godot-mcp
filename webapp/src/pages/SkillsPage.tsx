@@ -1,5 +1,5 @@
-import { AlertTriangle, Book, BookOpen, FileText, Loader2, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
+import { AlertTriangle, Book, BookOpen, FileText, Loader2, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "../lib/api";
 
@@ -35,14 +35,16 @@ export default function SkillsPage() {
 		}
 	}, []);
 
-	useEffect(() => { load(); }, [load]);
+	useEffect(() => {
+		load();
+	}, [load]);
 
 	const viewSkill = async (skill: SkillInfo) => {
 		setDetailLoading(true);
 		setSelected(null);
 		try {
 			const j = await apiFetch<{ name?: string; content?: string; tools?: string[]; workflows?: string[] }>(
-				`/api/v1/skills/${encodeURIComponent(skill.name)}`
+				`/api/v1/skills/${encodeURIComponent(skill.name)}`,
 			);
 			setSelected({
 				name: j.name || skill.name,
@@ -63,11 +65,7 @@ export default function SkillsPage() {
 	};
 
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 20 }}
-			animate={{ opacity: 1, y: 0 }}
-			className="space-y-6 max-w-6xl"
-		>
+		<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-6xl">
 			<h1 className="text-2xl font-bold text-white flex items-center gap-3">
 				<Book className="text-amber-500" size={24} /> Server Skills
 			</h1>

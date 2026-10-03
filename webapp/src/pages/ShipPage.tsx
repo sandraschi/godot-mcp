@@ -1,5 +1,5 @@
-import { ExternalLink, Loader2, Package, Rocket, Upload } from "lucide-react";
 import { motion } from "framer-motion";
+import { ExternalLink, Loader2, Package, Rocket, Upload } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "../lib/api";
 
@@ -78,19 +78,14 @@ export default function ShipPage() {
 		}
 	};
 
-	const exportBuild = () =>
-		runTool("godot_export_release", { target, game }, "export");
+	const exportBuild = () => runTool("godot_export_release", { target, game }, "export");
 
 	const previewPush = () => {
 		if (!uploadDir) {
 			setResult("Export first or set upload directory.");
 			return;
 		}
-		runTool(
-			"itch_push_preview",
-			{ upload_dir: uploadDir, itch_target: itchTarget || undefined, channel },
-			"preview",
-		);
+		runTool("itch_push_preview", { upload_dir: uploadDir, itch_target: itchTarget || undefined, channel }, "preview");
 	};
 
 	const pushBuild = () => {
@@ -98,11 +93,7 @@ export default function ShipPage() {
 			setResult("Export first or set upload directory.");
 			return;
 		}
-		runTool(
-			"itch_push",
-			{ upload_dir: uploadDir, itch_target: itchTarget || undefined, channel, hidden },
-			"push",
-		);
+		runTool("itch_push", { upload_dir: uploadDir, itch_target: itchTarget || undefined, channel, hidden }, "push");
 	};
 
 	const shipAll = () =>
@@ -124,18 +115,14 @@ export default function ShipPage() {
 	const keyOk = status?.auth?.api_key_set;
 
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 20 }}
-			animate={{ opacity: 1, y: 0 }}
-			className="space-y-6 max-w-4xl"
-		>
+		<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-4xl">
 			<h1 className="text-2xl font-bold text-white flex items-center gap-3">
 				<Rocket className="text-pink-400" size={24} /> Ship to itch.io
 			</h1>
 			<p className="text-sm text-slate-400">
 				Export a sample Godot game, preview Butler diff, and push to itch.io. Set{" "}
-				<code className="text-pink-300">BUTLER_API_KEY</code> and{" "}
-				<code className="text-pink-300">ITCH_TARGET</code> in your environment (never in this UI).
+				<code className="text-pink-300">BUTLER_API_KEY</code> and <code className="text-pink-300">ITCH_TARGET</code> in
+				your environment (never in this UI).
 			</p>
 
 			<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -144,9 +131,7 @@ export default function ShipPage() {
 					<p className={`text-sm font-medium ${butlerOk ? "text-emerald-400" : "text-amber-400"}`}>
 						{butlerOk ? `Found: ${status?.butler?.path}` : "Not found — install Butler or set BUTLER_PATH"}
 					</p>
-					{status?.butler?.version && (
-						<p className="text-xs text-slate-500">{status.butler.version}</p>
-					)}
+					{status?.butler?.version && <p className="text-xs text-slate-500">{status.butler.version}</p>}
 				</div>
 				<div className="bg-[#1e1e26] border border-white/10 rounded-2xl p-4 space-y-2">
 					<p className="text-xs uppercase tracking-wider text-slate-500 font-bold">API key</p>

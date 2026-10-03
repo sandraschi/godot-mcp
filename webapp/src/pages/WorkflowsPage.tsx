@@ -1,5 +1,5 @@
-import { CheckCircle2, List, Loader2, Play, X } from "lucide-react";
 import { motion } from "framer-motion";
+import { CheckCircle2, List, Loader2, Play, X } from "lucide-react";
 import { useState } from "react";
 import { apiFetch } from "../lib/api";
 
@@ -25,9 +25,7 @@ const workflows: WorkflowDef[] = [
 			{ step: 2, tool: "godot_add_light", input: { type: "DirectionalLight3D" } },
 			{ step: 3, tool: "godot_set_material", input: {} },
 		],
-		parameters: [
-			{ name: "csv_path", type: "string", description: "Path to velocity CSV" },
-		],
+		parameters: [{ name: "csv_path", type: "string", description: "Path to velocity CSV" }],
 	},
 	{
 		name: "particle_cfd",
@@ -37,9 +35,7 @@ const workflows: WorkflowDef[] = [
 			{ step: 2, tool: "godot_spawn_particles", input: { count: "5000" } },
 			{ step: 3, tool: "godot_animate_streamline", input: {} },
 		],
-		parameters: [
-			{ name: "csv_path", type: "string", description: "Path to velocity CSV" },
-		],
+		parameters: [{ name: "csv_path", type: "string", description: "Path to velocity CSV" }],
 	},
 	{
 		name: "ship_web_itch",
@@ -101,11 +97,7 @@ export default function WorkflowsPage() {
 	const selected = workflows.find((w) => w.name === running);
 
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 20 }}
-			animate={{ opacity: 1, y: 0 }}
-			className="space-y-6 max-w-6xl"
-		>
+		<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-6xl">
 			<h1 className="text-2xl font-bold text-white flex items-center gap-3">
 				<Play className="text-amber-500" size={24} /> Agentic Workflows
 			</h1>
@@ -151,7 +143,13 @@ export default function WorkflowsPage() {
 						<h2 className="text-sm font-bold text-slate-200">
 							Run: <code className="text-amber-400">{selected.name}</code>
 						</h2>
-						<button type="button" onClick={() => { setRunning(null); setResult(null); }}>
+						<button
+							type="button"
+							onClick={() => {
+								setRunning(null);
+								setResult(null);
+							}}
+						>
 							<X size={14} className="text-slate-400" />
 						</button>
 					</div>
@@ -160,7 +158,9 @@ export default function WorkflowsPage() {
 							<p className="text-xs text-slate-500 uppercase tracking-wider font-bold">Parameters</p>
 							{selected.parameters.map((p) => (
 								<div key={p.name}>
-									<label htmlFor={`wf-${p.name}`} className="text-xs text-slate-400 block mb-1">{p.name}</label>
+									<label htmlFor={`wf-${p.name}`} className="text-xs text-slate-400 block mb-1">
+										{p.name}
+									</label>
 									<input
 										id={`wf-${p.name}`}
 										type="text"

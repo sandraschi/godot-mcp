@@ -1,5 +1,5 @@
-import { Box, Layers, Loader2, Sliders, X } from "lucide-react";
 import { motion } from "framer-motion";
+import { Box, Layers, Loader2, Sliders, X } from "lucide-react";
 import { useState } from "react";
 import { apiFetch } from "../lib/api";
 
@@ -104,11 +104,7 @@ export default function PrefabsPage() {
 	const selected = prefabs.find((p) => p.name === applying);
 
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 20 }}
-			animate={{ opacity: 1, y: 0 }}
-			className="space-y-6 max-w-6xl"
-		>
+		<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-6xl">
 			<h1 className="text-2xl font-bold text-white flex items-center gap-3">
 				<Box className="text-amber-500" size={24} /> Prefab Templates
 			</h1>
@@ -175,7 +171,13 @@ export default function PrefabsPage() {
 						<h2 className="text-sm font-bold text-slate-200">
 							Apply: <code className="text-amber-400">{selected.name}</code>
 						</h2>
-						<button type="button" onClick={() => { setApplying(null); setResult(null); }}>
+						<button
+							type="button"
+							onClick={() => {
+								setApplying(null);
+								setResult(null);
+							}}
+						>
 							<X size={14} className="text-slate-400" />
 						</button>
 					</div>

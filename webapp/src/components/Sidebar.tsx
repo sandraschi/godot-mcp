@@ -13,10 +13,10 @@ import {
 	LayoutDashboard,
 	LayoutGrid,
 	Logs,
-	Puzzle,
 	MessageSquare,
 	Package,
 	Play,
+	Puzzle,
 	Rocket,
 	Settings,
 	Sparkles,
@@ -80,10 +80,7 @@ const navGroups = [
 	},
 ];
 
-export default function Sidebar({
-	collapsed,
-	onToggle,
-}: { collapsed: boolean; onToggle: () => void }) {
+export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
 	return (
 		<motion.aside
 			animate={{ width: collapsed ? 72 : 240 }}
@@ -92,11 +89,7 @@ export default function Sidebar({
 			<div className="h-14 flex items-center justify-between gap-3 px-4 border-b border-white/10 shrink-0">
 				<div className="flex items-center gap-3 overflow-hidden">
 					<Box className="text-amber-400 shrink-0" size={22} />
-					{!collapsed && (
-						<span className="text-sm font-bold text-white whitespace-nowrap">
-							Godot MCP
-						</span>
-					)}
+					{!collapsed && <span className="text-sm font-bold text-white whitespace-nowrap">Godot MCP</span>}
 				</div>
 				<button
 					type="button"
@@ -111,9 +104,7 @@ export default function Sidebar({
 				{navGroups.map((group) => (
 					<div key={group.label}>
 						{!collapsed && (
-							<p className="px-3 mb-1 text-xs font-semibold uppercase tracking-widest text-slate-500">
-								{group.label}
-							</p>
+							<p className="px-3 mb-1 text-xs font-semibold uppercase tracking-widest text-slate-500">{group.label}</p>
 						)}
 						<div className="space-y-0.5">
 							{group.items.map((item) => (
@@ -130,9 +121,7 @@ export default function Sidebar({
 									}
 								>
 									<item.icon size={16} className="shrink-0" />
-									{!collapsed && (
-										<span className="whitespace-nowrap">{item.label}</span>
-									)}
+									{!collapsed && <span className="whitespace-nowrap">{item.label}</span>}
 								</NavLink>
 							))}
 						</div>

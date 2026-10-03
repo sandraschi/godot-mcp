@@ -1,5 +1,5 @@
-import { AlertTriangle, Download, Filter, Loader2, Package, RefreshCw, Search } from "lucide-react";
 import { motion } from "framer-motion";
+import { AlertTriangle, Download, Filter, Loader2, Package, RefreshCw, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiFetch } from "../lib/api";
 
@@ -44,7 +44,9 @@ export default function Marketplace() {
 		}
 	}, []);
 
-	useEffect(() => { load(); }, [load]);
+	useEffect(() => {
+		load();
+	}, [load]);
 
 	const filtered = useMemo(() => {
 		return artifacts.filter((a) => {
@@ -58,11 +60,7 @@ export default function Marketplace() {
 	}, [artifacts, search, filterType]);
 
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 20 }}
-			animate={{ opacity: 1, y: 0 }}
-			className="space-y-6 max-w-6xl"
-		>
+		<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-6xl">
 			<div className="flex items-center justify-between">
 				<h1 className="text-2xl font-bold text-white flex items-center gap-3">
 					<Package className="text-amber-500" size={24} /> Artifact Library
@@ -118,9 +116,16 @@ export default function Marketplace() {
 				<div className="text-center py-16 text-slate-400">
 					<Package size={48} className="mx-auto mb-4 opacity-30" />
 					<p className="text-lg">No artifacts found.</p>
-					<p className="text-sm mb-2">This is a local artifact depot for storing Godot assets (scenes, meshes, materials, scripts) uploaded to this server.</p>
+					<p className="text-sm mb-2">
+						This is a local artifact depot for storing Godot assets (scenes, meshes, materials, scripts) uploaded to
+						this server.
+					</p>
 					<p className="text-sm text-slate-500">
-						Go to <a href="/depot" className="text-amber-400 hover:underline">Artifact Depot</a> to register new items, or import via the MCP tools.
+						Go to{" "}
+						<a href="/depot" className="text-amber-400 hover:underline">
+							Artifact Depot
+						</a>{" "}
+						to register new items, or import via the MCP tools.
 					</p>
 				</div>
 			) : (
@@ -147,10 +152,7 @@ export default function Marketplace() {
 							{a.tags && a.tags.length > 0 && (
 								<div className="flex flex-wrap gap-1">
 									{a.tags.map((tag) => (
-										<span
-											key={tag}
-											className="text-xs bg-white/10 text-slate-400 px-1.5 py-0.5 rounded"
-										>
+										<span key={tag} className="text-xs bg-white/10 text-slate-400 px-1.5 py-0.5 rounded">
 											{tag}
 										</span>
 									))}
