@@ -7,13 +7,13 @@ from pydantic import Field
 
 from godot_mcp.mcp_bridge import get_or_create_bridge
 
-_READ_ONLY = {"readonly": True}
-_MUTATING = {"mutating": True}
+_READ_ONLY = {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+_MUTATING = {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
 
 
 async def bridge_connect(
     server_url: Annotated[str, Field(description="URL of the remote MCP server (e.g. http://localhost:10966).")],
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Connect to another fleet MCP server via its REST API.
 
@@ -29,7 +29,7 @@ async def bridge_call_tool(
     server_url: Annotated[str, Field(description="Remote MCP server URL.")],
     tool_name: Annotated[str, Field(description="Tool name to call on remote server.")],
     arguments: Annotated[dict, Field(description="Tool arguments.", default={})] = {},
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Call a tool on a remote fleet MCP server.
 

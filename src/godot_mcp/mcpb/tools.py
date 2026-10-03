@@ -8,8 +8,8 @@ from pydantic import Field
 
 from godot_mcp.mcpb.format import build_bundle
 
-_READ_ONLY = {"readonly": True}
-_MUTATING = {"mutating": True}
+_READ_ONLY = {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+_MUTATING = {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
 
 
 async def mcpb_build(
@@ -17,7 +17,7 @@ async def mcpb_build(
     description: Annotated[str, Field(description="Bundle description.", default="")] = "",
     tool_sequence: Annotated[list[dict], Field(description="List of {tool, params} dicts.")] = [],
     output: Annotated[str, Field(description="Output .mcpb file path.", default="")] = "",
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Build an MCPB bundle from a tool sequence. This creates a portable .mcpb file.
 
@@ -41,7 +41,7 @@ async def mcpb_build(
 
 async def mcpb_inspect(
     bundle_path: Annotated[str, Field(description="Path to .mcpb file.")],
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Inspect the contents of an .mcpb bundle without extracting.
 
@@ -62,6 +62,8 @@ async def mcpb_inspect(
         with tarfile.open(bp, "r:gz") as tar:
             member = tar.getmember("manifest.json")
             f = tar.extractfile(member)
+            if f is None:
+                return {"success": False, "error": "manifest.json is not a regular file in bundle"}
             manifest = json.loads(f.read())
         return {"success": True, "manifest": manifest, "file_size": bp.stat().st_size}
     except Exception as e:

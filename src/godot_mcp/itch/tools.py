@@ -9,11 +9,11 @@ from pydantic import Field
 
 from godot_mcp.itch import service
 
-_READ_ONLY = {"readonly": True}
-_MUTATING = {"mutating": True}
+_READ_ONLY = {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+_MUTATING = {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
 
 
-async def itch_status(ctx: Context = None) -> dict:
+async def itch_status(ctx: Context | None = None) -> dict:
     """Check Butler install, API key env, and default itch.io slug.
 
     ## Return Format
@@ -32,7 +32,7 @@ async def godot_export_release(
         str | None, Field(description="Optional custom Godot project directory.", default=None)
     ] = None,
     output_path: Annotated[str | None, Field(description="Optional output file path.", default=None)] = None,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Export a Godot sample or custom project for itch.io (Web or Windows).
 
@@ -53,7 +53,7 @@ async def itch_push_preview(
         str | None, Field(description="Project slug user/game. Defaults to ITCH_TARGET env.", default=None)
     ] = None,
     channel: Annotated[str | None, Field(description="Butler channel name, e.g. html or win.", default=None)] = None,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Preview Butler push diff (NEW/MODIFIED/DELETED) before uploading.
 
@@ -68,7 +68,7 @@ async def itch_push(
     itch_target: Annotated[str | None, Field(description="Project slug user/game.", default=None)] = None,
     channel: Annotated[str | None, Field(description="Butler channel name.", default=None)] = None,
     hidden: Annotated[bool, Field(description="Hidden channel on first push.", default=False)] = False,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Upload a build directory to itch.io via Butler push.
 
@@ -81,7 +81,7 @@ async def itch_push(
 async def itch_latest_version(
     itch_target: Annotated[str | None, Field(default=None)] = None,
     channel: Annotated[str | None, Field(default=None)] = None,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Query api.itch.io/wharf/latest for the newest build version on a channel."""
     return service.itch_latest_version(itch_target=itch_target, channel=channel)
@@ -96,7 +96,7 @@ async def ship_to_itch(
     preview: Annotated[bool, Field(default=True)] = True,
     push: Annotated[bool, Field(default=True)] = True,
     hidden: Annotated[bool, Field(default=False)] = False,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Export Godot build, optionally preview and push to itch.io in one flow.
 
@@ -146,7 +146,7 @@ async def itch_ops(
     output_path: Annotated[
         str | None, Field(default=None, description="Optional output path. Used by: export.")
     ] = None,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """itch.io publishing - consolidated portmanteau for Butler operations.
 

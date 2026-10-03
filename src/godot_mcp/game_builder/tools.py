@@ -18,13 +18,13 @@ from godot_mcp.game_builder.plan import GamePlan
 
 logger = logging.getLogger("godot-mcp.game-builder-tools")
 
-_READ_ONLY = {"readonly": True}
-_MUTATING = {"mutating": True}
+_READ_ONLY = {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+_MUTATING = {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
 
 
 async def design_game(
     game_concept: Annotated[str, Field(description="Natural language description of the game to build.")],
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Design a game from a natural-language concept using AI."""
     try:
@@ -85,7 +85,7 @@ async def generate_game_logic(
         str,
         Field(default="", description="If set, write generated .gd files into project scripts/."),
     ] = "",
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Generate GDScript files; optionally persist to a Godot project."""
     try:
@@ -127,7 +127,7 @@ async def build_game(
     ] = "",
     ship: Annotated[bool, Field(description="Also ship to itch.io? Requires BUTLER_API_KEY.")] = False,
     itch_target: Annotated[str, Field(default="", description="Override itch.io slug when ship=true.")] = "",
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Build a complete game: design → worlds (fleet stage) → compose → logic → export."""
     return await pipeline.build_game(
@@ -143,7 +143,7 @@ async def build_game(
 async def generate_game_tests(
     game_plan_json: Annotated[str, Field(description="JSON game plan from design_game.")],
     game_project_path: Annotated[str, Field(description="Godot project directory with generated scripts.")],
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Generate GUT test scripts for generated game logic and optionally run them.
 
@@ -261,7 +261,7 @@ async def generate_game_tests(
 async def generate_dialogue(
     game_plan_json: Annotated[str, Field(description="JSON game plan from design_game.")],
     game_project_path: Annotated[str, Field(description="Godot project directory.")],
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Generate dialogue scripts and optional Dialogic timelines from GamePlan narrative.
 

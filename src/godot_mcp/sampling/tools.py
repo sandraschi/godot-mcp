@@ -7,15 +7,15 @@ from pydantic import Field
 
 from godot_mcp.sampling.service import SamplingUnavailableError, sample_text
 
-_READ_ONLY = {"readonly": True}
-_MUTATING = {"mutating": True}
+_READ_ONLY = {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+_MUTATING = {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
 
 
 async def ai_describe_artifact(
     name: Annotated[str, Field(description="Artifact name to describe.")],
     artifact_type: Annotated[str, Field(description="Type: scene, mesh, material, etc.")],
     features: Annotated[str, Field(description="Key features / details.", default="")] = "",
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Generate an AI-powered description for an artifact using LLM sampling.
 
@@ -41,7 +41,7 @@ async def ai_describe_artifact(
 
 async def ai_generate_gdscript(
     specification: Annotated[str, Field(description="What the GDScript should do.")],
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Generate GDScript code for a Godot node/behavior using LLM sampling.
 
