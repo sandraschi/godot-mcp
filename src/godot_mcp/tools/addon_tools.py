@@ -23,8 +23,8 @@ version=0.1.0
 script=mcp_bridge.gd
 """
 
-_READ_ONLY = {"readonly": True}
-_MUTATING = {}
+_READ_ONLY = {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+_MUTATING = {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
 
 # Community plugin registry: {name: {repo, path_in_zip, description}}
 # Add new plugins here - the install tool discovers them automatically.
@@ -75,7 +75,7 @@ PLUGIN_REGISTRY: dict[str, dict[str, str]] = {
 async def install_community_plugin(
     plugin_name: str,
     project_path: str,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Install a community Godot plugin from GitHub into the project.
 
@@ -151,7 +151,7 @@ def register(mcp: FastMCP):
         project_path: Annotated[
             str, Field(description="Absolute path to the Godot project root (contains project.godot)")
         ],
-        ctx: Context = None,
+        ctx: Context | None = None,
     ) -> dict:
         """Install the Godot MCP bridge addon into a Godot project.
 
@@ -192,7 +192,7 @@ def register(mcp: FastMCP):
         project_path: Annotated[
             str, Field(description="Absolute path to the Godot project root (contains project.godot)")
         ],
-        ctx: Context = None,
+        ctx: Context | None = None,
     ) -> dict:
         """Download and install a community Godot plugin from GitHub into the project.
 

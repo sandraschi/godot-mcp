@@ -9,12 +9,12 @@ from pydantic import Field
 from godot_mcp.artifacts.depot.store import get_depot
 from godot_mcp.artifacts.models import Artifact, ArtifactType
 
-_READ_ONLY = {"readonly": True}
-_MUTATING = {"mutating": True}
+_READ_ONLY = {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+_MUTATING = {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
 
 
 async def artifact_list(
-    ctx: Context = None,
+    ctx: Context | None = None,
     artifact_type: Annotated[
         str | None,
         Field(
@@ -47,7 +47,7 @@ async def artifact_list(
 async def artifact_search(
     query: Annotated[str, Field(description="Search query (matches name, description, tags).")],
     artifact_type: Annotated[str | None, Field(description="Optional type filter.", default=None)] = None,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Search artifacts in the local depot by name, description, or tags.
 
@@ -71,7 +71,7 @@ async def artifact_search(
 
 async def artifact_get(
     artifact_id: Annotated[str, Field(description="Artifact ID to retrieve.")],
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Get a single artifact's details by ID.
 
@@ -107,7 +107,7 @@ async def artifact_register(
             default=None,
         ),
     ] = None,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Register a new artifact in the depot, optionally attaching a file.
 
@@ -147,7 +147,7 @@ async def artifact_update(
     description: Annotated[str | None, Field(description="New description.", default=None)] = None,
     tags: Annotated[list[str] | None, Field(description="Replacement tag list.", default=None)] = None,
     author: Annotated[str | None, Field(description="New author/creator name.", default=None)] = None,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Edit an artifact's metadata (name/description/tags/author). The attached file, if any,
     is untouched - only fields explicitly given are changed.
@@ -167,7 +167,7 @@ async def artifact_update(
     return {"success": True, "artifact": artifact.model_dump()}
 
 
-async def artifact_backup(ctx: Context = None) -> dict:
+async def artifact_backup(ctx: Context | None = None) -> dict:
     """Zip-snapshot the depot's files/thumbs/index.json into a timestamped backup archive.
 
     Added 2026-09-03 - no backup/restore existed before this (same gap overte-mcp/resonite-mcp
@@ -184,7 +184,7 @@ async def artifact_backup(ctx: Context = None) -> dict:
     return {"success": True, **result}
 
 
-async def artifact_list_backups(ctx: Context = None) -> dict:
+async def artifact_list_backups(ctx: Context | None = None) -> dict:
     """List available depot backup archives, newest first.
 
     ## Return Format
@@ -200,7 +200,7 @@ async def artifact_list_backups(ctx: Context = None) -> dict:
 
 async def artifact_restore_backup(
     name: Annotated[str, Field(description="Backup archive filename, from artifact_list_backups.")],
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Restore a depot backup archive, OVERWRITING current files/thumbs/index.json (matching
     names only - does not delete entries the backup doesn't mention).
@@ -220,7 +220,7 @@ async def artifact_restore_backup(
 
 async def artifact_delete(
     artifact_id: Annotated[str, Field(description="Artifact ID to delete.")],
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Delete an artifact from the depot.
 

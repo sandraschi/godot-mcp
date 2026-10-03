@@ -30,7 +30,7 @@ async def godot_docs(
             default=None,
         ),
     ] = None,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Fetch Godot engine documentation as clean markdown.
 

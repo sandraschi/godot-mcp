@@ -11,11 +11,12 @@ from godot_mcp.services.godot_bridge import find_godot, get_bridge, launch_bridg
 
 logger = logging.getLogger("godot-mcp.tools")
 
-_READ_ONLY = {"readonly": True}
-_MUTATING = {"mutating": True}
+_READ_ONLY = {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+_MUTATING = {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
+_DESTRUCTIVE = {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": False}
 
 
-async def godot_status(ctx: Context = None) -> dict:
+async def godot_status(ctx: Context | None = None) -> dict:
     """Query the Godot engine for version, scene root node count, and current FPS.
 
     Calls the GDScript bridge over TCP to read live engine state.
@@ -59,7 +60,7 @@ async def godot_import_stl(
     position_x: Annotated[float, Field(description="X position in the scene.", default=0.0)] = 0.0,
     position_y: Annotated[float, Field(description="Y position in the scene.", default=0.0)] = 0.0,
     position_z: Annotated[float, Field(description="Z position in the scene.", default=0.0)] = 0.0,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Import an STL mesh into the current Godot scene as a MeshInstance3D.
 
@@ -96,7 +97,7 @@ async def godot_import_glb(
     position_x: Annotated[float, Field(description="X position in the scene.", default=0.0)] = 0.0,
     position_y: Annotated[float, Field(description="Y position in the scene.", default=0.0)] = 0.0,
     position_z: Annotated[float, Field(description="Z position in the scene.", default=0.0)] = 0.0,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Import a GLB/GLTF 3D model into the current Godot scene.
 
@@ -132,7 +133,7 @@ async def godot_import_glb(
 async def godot_import_vrm(
     path: Annotated[str, Field(description="Absolute path to .vrm file on disk.")],
     name: Annotated[str, Field(description="Node name for the imported avatar.", default="VRM_Import")] = "VRM_Import",
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Import a VRM avatar model into the current Godot scene.
 
@@ -162,7 +163,7 @@ async def godot_list_vrm(
     depot_path: Annotated[
         str, Field(description="Path to VRM depot directory.", default="~/.avatarmcp/models")
     ] = "~/.avatarmcp/models",
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """List available VRM models in the shared avatar depot.
 
@@ -196,7 +197,7 @@ async def godot_import_obj(
     position_x: Annotated[float, Field(description="X position in the scene.", default=0.0)] = 0.0,
     position_y: Annotated[float, Field(description="Y position in the scene.", default=0.0)] = 0.0,
     position_z: Annotated[float, Field(description="Z position in the scene.", default=0.0)] = 0.0,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Import an OBJ 3D model into the current Godot scene.
 
@@ -244,7 +245,7 @@ async def godot_play_animation(
     ] = "",
     loop: Annotated[bool, Field(description="Loop the animation.", default=True)] = True,
     speed_scale: Annotated[float, Field(description="Playback speed multiplier.", default=1.0, ge=0.01, le=10.0)] = 1.0,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Play or list animations on an imported GLB character via AnimationPlayer.
 
@@ -282,7 +283,7 @@ async def godot_load_velocity_field(
     name: Annotated[
         str, Field(description="Data node name for the velocity field.", default="VelocityField")
     ] = "VelocityField",
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Load a CSV velocity field dataset into the Godot scene.
 
@@ -305,7 +306,7 @@ async def godot_load_velocity_field(
 
 
 async def godot_spawn_particles(
-    ctx: Context = None,
+    ctx: Context | None = None,
     count: Annotated[int, Field(description="Number of GPU particles.", default=1000, ge=1, le=1000000)] = 1000,
     name: Annotated[
         str, Field(description="Node name for the GPUParticles3D system.", default="StreamlineParticles")
@@ -349,7 +350,7 @@ async def godot_spawn_particles(
 
 
 async def godot_animate_streamlines(
-    ctx: Context = None,
+    ctx: Context | None = None,
     velocity_field: Annotated[
         str, Field(description="Name of the velocity field data node.", default="VelocityField")
     ] = "VelocityField",
@@ -383,7 +384,7 @@ async def godot_animate_streamlines(
 
 
 async def godot_create_camera(
-    ctx: Context = None,
+    ctx: Context | None = None,
     name: Annotated[str, Field(description="Node name for the camera.", default="MCP_Camera")] = "MCP_Camera",
     position_x: Annotated[float, Field(description="Camera X position.", default=0.0)] = 0.0,
     position_y: Annotated[float, Field(description="Camera Y position.", default=5.0)] = 5.0,
@@ -423,7 +424,7 @@ async def godot_create_camera(
 
 
 async def godot_add_light(
-    ctx: Context = None,
+    ctx: Context | None = None,
     light_type: Annotated[
         str, Field(description="Light type: 'directional', 'ambient', or 'omni'.", default="directional")
     ] = "directional",
@@ -469,7 +470,7 @@ async def godot_set_material(
     roughness: Annotated[
         float, Field(description="PBR roughness (0 = mirror, 1 = matte).", default=0.5, ge=0.0, le=1.0)
     ] = 0.5,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Assign a StandardMaterial3D (PBR) to a mesh node in the Godot scene.
 
@@ -491,7 +492,7 @@ async def godot_set_material(
 
 
 async def godot_export_web(
-    ctx: Context = None,
+    ctx: Context | None = None,
     output_path: Annotated[
         str,
         Field(
@@ -585,7 +586,7 @@ async def godot_export_web(
         return {"success": False, "error": f"Export error: {e}"}
 
 
-async def godot_read_scene_tree(ctx: Context = None) -> dict:
+async def godot_read_scene_tree(ctx: Context | None = None) -> dict:
     """Read the full Godot scene tree as a nested JSON structure.
 
     Returns the root node with all children recursively, showing name, type, and path
@@ -610,7 +611,7 @@ async def godot_set_config(
     section: Annotated[str, Field(description="Config section name (e.g. 'application', 'rendering').")],
     key: Annotated[str, Field(description="Config key to set.")],
     value: Annotated[str, Field(description="Config value (string).")],
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Write a setting to the project.godot configuration file.
 
@@ -633,7 +634,7 @@ async def godot_set_config(
 
 
 async def godot_headless_verify(
-    ctx: Context = None,
+    ctx: Context | None = None,
     script: Annotated[
         str, Field(description="Path to a GDScript file to verify in headless mode.", default="res://dev/mcp_verify.gd")
     ] = "res://dev/mcp_verify.gd",
@@ -662,7 +663,7 @@ async def godot_capture_viewport(
     output_path: Annotated[
         str | None, Field(description="Absolute path for the PNG (optional, auto-generated if omitted).", default=None)
     ] = None,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Capture the current Godot viewport as a PNG image.
 
@@ -717,7 +718,7 @@ async def godot_simulate_input(
   {"type": "text", "text": "hello"}""",
         ),
     ],
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Simulate input in the Godot engine - keyboard, action, joypad, mouse, and text.
 
@@ -767,7 +768,7 @@ async def godot_read_node(
         str,
         Field(description="Node path (e.g. 'Player' or 'World/Enemy') or node name to search for recursively."),
     ],
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Read properties of a single node by path or name.
 
@@ -799,7 +800,7 @@ async def godot_inspect_resource(
             description="Resource path (e.g. 'res://assets/player.tres', 'res://tileset.tres'). Loaded via ResourceLoader inside the Godot engine."
         ),
     ],
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Inspect a resource file loaded in the Godot engine.
 
@@ -855,7 +856,7 @@ async def godot_tilemap(
             default=None,
         ),
     ] = None,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Read or edit TileMapLayer and GridMap cells.
 
@@ -935,7 +936,7 @@ async def godot_animation(
             default=None,
         ),
     ] = None,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Read and edit animation keyframes and tracks on an AnimationPlayer.
 
@@ -989,7 +990,7 @@ async def godot_profile(
         bool | None,
         Field(description="Toggle auto-sampling on/off (used with ``enable`` operation).", default=None),
     ] = None,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Read Godot performance metrics and detect frame spikes.
 
@@ -1035,7 +1036,7 @@ async def godot_help(
             default=None,
         ),
     ] = None,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Get context-aware help for godot-mcp tools and workflows.
 
@@ -1247,7 +1248,7 @@ async def godot_import_splat(
     pos_scale: Annotated[
         float, Field(description="Position scale factor (use 0.01 for cm→m conversion).", default=1.0)
     ] = 1.0,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Import a 3D Gaussian Splatting (.ply or .spz) file into the Godot scene.
 
@@ -1293,7 +1294,7 @@ async def godot_import_splat(
 
 
 async def godot_validate_meshes(
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Validate all MeshInstance3D meshes in the scene for geometric corruption.
 
@@ -1330,7 +1331,7 @@ async def godot_state_digest(
             default=None,
         ),
     ] = None,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Read structured runtime state from the game scene.
 
@@ -1379,7 +1380,7 @@ async def godot_game_time(
     frames: Annotated[
         int, Field(description="Number of frames to advance (required for ``step`` action).", default=1, ge=1, le=3600)
     ] = 1,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Control the game clock for deterministic playtesting.
 
@@ -1427,7 +1428,7 @@ async def godot_step_until(
             le=86400,
         ),
     ] = 3600,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Step the game frame-by-frame until a GDScript expression becomes true.
 
@@ -1563,7 +1564,9 @@ async def godot_scene(
     ] = None,
     rotation: Annotated[
         list[float] | None,
-        Field(description="[x, y, z] Euler rotation in radians. Used by: add_node (Node3D subtypes only).", default=None),
+        Field(
+            description="[x, y, z] Euler rotation in radians. Used by: add_node (Node3D subtypes only).", default=None
+        ),
     ] = None,
     dimensions: Annotated[
         list[float] | None,
@@ -1577,7 +1580,10 @@ async def godot_scene(
     ] = None,
     mesh_type: Annotated[
         str | None,
-        Field(description="'Box' or 'Sphere' - attaches a primitive mesh. Used by: add_node (MeshInstance3D only).", default=None),
+        Field(
+            description="'Box' or 'Sphere' - attaches a primitive mesh. Used by: add_node (MeshInstance3D only).",
+            default=None,
+        ),
     ] = None,
     color: Annotated[
         dict[str, float] | None,
@@ -1589,9 +1595,7 @@ async def godot_scene(
             default=None,
         ),
     ] = None,
-    mode: Annotated[
-        str, Field(description="animate_node mode: 'spin', 'bob', or 'bounce'.", default="spin")
-    ] = "spin",
+    mode: Annotated[str, Field(description="animate_node mode: 'spin', 'bob', or 'bounce'.", default="spin")] = "spin",
     axis: Annotated[
         list[float] | None, Field(description="[x, y, z] rotation axis for animate_node's 'spin' mode.", default=None)
     ] = None,
@@ -1620,9 +1624,10 @@ async def godot_scene(
         ),
     ] = 0.0,
     fixture: Annotated[
-        str | None, Field(description="fixture_spawn preset name: 'box', 'cup', 'ball', 'table', or 'chair'.", default=None)
+        str | None,
+        Field(description="fixture_spawn preset name: 'box', 'cup', 'ball', 'table', or 'chair'.", default=None),
     ] = None,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Manage the Godot scene tree: add, remove, modify, animate nodes, spawn a test fixture,
     or save the scene.
@@ -1767,7 +1772,7 @@ async def godot_generate_procedural_texture(
     frequency: Annotated[float, Field(default=0.05, ge=0.001, le=1.0, description="Noise frequency.")] = 0.05,
     seed: Annotated[int | None, Field(default=None, description="Noise seed (random if omitted).")] = None,
     output_path: Annotated[str | None, Field(default=None, description="Optional output path for the PNG.")] = None,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Generate a procedural texture (gradient, noise, checker, solid) in Godot.
 
@@ -1810,7 +1815,7 @@ async def start_bridge(
     project_root: Annotated[
         str | None, Field(description="Godot project root path (optional - auto-detected).", default=None)
     ] = None,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Locate Godot and launch it headless with the MCP bridge addon.
 
@@ -1826,6 +1831,24 @@ async def start_bridge(
     await start_bridge(project_root="C:/MyGame")
     """
     return await asyncio.to_thread(launch_bridge, project_root)
+
+
+async def godot_shutdown(confirmed: bool = False, ctx: Context | None = None) -> dict:
+    """Shut down the godot-mcp server process.
+
+    ## Return Format
+    {"success": bool, "message": str}
+
+    ## Examples
+    await godot_shutdown(confirmed=True)
+    """
+    if not confirmed:
+        return {"success": False, "message": "Refusing: pass confirmed=true to terminate the godot-mcp server process."}
+    import os as _os
+    import signal as _signal
+
+    _os.kill(_os.getpid(), _signal.SIGTERM)
+    return {"success": True, "message": "godot-mcp server terminating."}
 
 
 def register(mcp):
@@ -1862,3 +1885,4 @@ def register(mcp):
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_scene)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(godot_generate_procedural_texture)
     mcp.tool(annotations=_MUTATING, version="0.1.0")(start_bridge)
+    mcp.tool(annotations=_DESTRUCTIVE, version="0.5.0")(godot_shutdown)
