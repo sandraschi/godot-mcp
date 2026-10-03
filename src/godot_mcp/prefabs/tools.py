@@ -7,15 +7,15 @@ from pydantic import Field
 
 from godot_mcp.prefabs.catalog import get_prefab, list_prefabs
 
-_READ_ONLY = {"readonly": True}
-_MUTATING = {"mutating": True}
+_READ_ONLY = {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+_MUTATING = {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
 
 
 async def prefab_list(
     category: Annotated[
         str | None, Field(description="Filter by category: lighting, camera, particles, materials.", default=None)
     ] = None,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """List available prefab templates, optionally filtered by category.
 
@@ -33,7 +33,7 @@ async def prefab_list(
 async def prefab_apply(
     prefab_id: Annotated[str, Field(description="Prefab ID to apply.")],
     params: Annotated[dict, Field(description="Parameter overrides as dict.", default={})] = {},
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Apply a prefab template, executing its tool sequence with given parameters.
 

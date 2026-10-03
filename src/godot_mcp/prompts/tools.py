@@ -8,11 +8,11 @@ from pydantic import Field
 from godot_mcp.prompts.templates import get_prompt, list_prompts
 from godot_mcp.sampling.service import sample_text
 
-_READ_ONLY = {"readonly": True}
-_MUTATING = {"mutating": True}
+_READ_ONLY = {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+_MUTATING = {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
 
 
-async def prompt_list(ctx: Context = None) -> dict:
+async def prompt_list(ctx: Context | None = None) -> dict:
     """List available prompt templates.
 
     ## Return Format
@@ -25,7 +25,7 @@ async def prompt_list(ctx: Context = None) -> dict:
 async def prompt_execute(
     prompt_id: Annotated[str, Field(description="Prompt template ID.")],
     params: Annotated[dict, Field(description="Parameter values for the template.", default={})] = {},
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Execute a prompt template with given parameters and return the LLM response.
 

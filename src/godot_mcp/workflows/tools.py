@@ -7,8 +7,8 @@ from pydantic import Field
 
 from godot_mcp.workflows.engine import BUILTIN_WORKFLOWS
 
-_READ_ONLY = {"readonly": True}
-_MUTATING = {"mutating": True}
+_READ_ONLY = {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+_MUTATING = {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
 
 PYTHON_TOOLS = {
     "itch_status",
@@ -27,7 +27,7 @@ PYTHON_TOOLS = {
 }
 
 
-async def workflow_list(ctx: Context = None) -> dict:
+async def workflow_list(ctx: Context | None = None) -> dict:
     """List all built-in agentic workflows.
 
     ## Return Format
@@ -57,7 +57,7 @@ async def workflow_run(
     game: Annotated[str | None, Field(description="Sample game for ship_web_itch.", default="dodge")] = None,
     itch_target: Annotated[str | None, Field(description="user/game slug for ship_web_itch.", default=None)] = None,
     channel: Annotated[str | None, Field(description="Butler channel for ship_web_itch.", default="html")] = None,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> dict:
     """Run a built-in agentic workflow.
 

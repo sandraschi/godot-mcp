@@ -16,8 +16,8 @@ from godot_mcp.vbot import _get_bridge
 
 logger = logging.getLogger("godot_mcp.vbot.tools")
 
-_READ_ONLY = {"readonly": True}
-_MUTATING = {"mutating": True}
+_READ_ONLY = {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
+_MUTATING = {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False}
 
 
 def register(mcp: FastMCP) -> None:
