@@ -15,6 +15,7 @@ import os
 import shutil
 import sys
 import time as _time
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -29,7 +30,7 @@ from fastmcp.server import create_proxy
 from pydantic import BaseModel, Field
 
 try:
-    from fastmcp.experimental.transforms import CodeMode
+    from fastmcp.experimental.transforms.code_mode import CodeMode
 except ImportError:
     CodeMode = None
 
@@ -92,7 +93,7 @@ _state: dict = {}
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     godot_exe = _find_godot()
     _state["godot_path"] = godot_exe or ""
     _state["godot_available"] = godot_exe is not None
@@ -553,31 +554,31 @@ async def _run_python_tool(tool: str, arguments: dict) -> dict:
             arguments.get("itch_target", ""),
         )
     if tool == "prompt_execute":
-        from godot_mcp.prompts.tools import execute_prompt
+        from godot_mcp.prompts.tools import prompt_execute
 
-        return await execute_prompt(
+        return await prompt_execute(
             arguments.get("prompt_id", ""),
             arguments.get("params", {}),
         )
     if tool == "prefab_apply":
-        from godot_mcp.prefabs.tools import apply_prefab
+        from godot_mcp.prefabs.tools import prefab_apply
 
-        return await apply_prefab(
+        return await prefab_apply(
             arguments.get("prefab", ""),
             arguments.get("params", {}),
         )
     if tool == "mcpb_build":
-        from godot_mcp.mcpb.tools import build_mcpb
+        from godot_mcp.mcpb.tools import mcpb_build
 
-        return await build_mcpb(
+        return await mcpb_build(
             arguments.get("name", ""),
             arguments.get("description", ""),
             arguments.get("tool_sequence", []),
         )
     if tool == "mcpb_inspect":
-        from godot_mcp.mcpb.tools import inspect_mcpb
+        from godot_mcp.mcpb.tools import mcpb_inspect
 
-        return inspect_mcpb(arguments.get("path", ""))
+        return await mcpb_inspect(arguments.get("path", ""))
     raise HTTPException(400, f"Unknown tool: {tool}")
 
 
@@ -1363,6 +1364,7 @@ def main():
     args = parser.parse_args()
 
     import os as _os
+
     if _os.getenv("GODOT_TAURI") == "1":
         args.mode = "http"
         args.port = int(_os.getenv("MCP_PORT", args.port))

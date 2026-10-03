@@ -64,8 +64,10 @@ class VBotBridge:
         if not self._connected:
             return False
         try:
+            ws = self._ws
+            assert ws is not None
             msg = json.dumps({"type": "subscribe", "bot_ids": bot_ids})
-            await self._ws.send(msg)
+            await ws.send(msg)
             self._subscribed_bots.update(bot_ids)
             return True
         except Exception as e:
@@ -91,7 +93,9 @@ class VBotBridge:
             }
             if world_state:
                 msg["world_state"] = world_state
-            await self._ws.send(json.dumps(msg))
+            ws = self._ws
+            assert ws is not None
+            await ws.send(json.dumps(msg))
             return True
         except Exception as e:
             self._last_error = str(e)
@@ -115,7 +119,9 @@ class VBotBridge:
                 msg["rotation"] = rotation
             if animation:
                 msg["animation"] = animation
-            await self._ws.send(json.dumps(msg))
+            ws = self._ws
+            assert ws is not None
+            await ws.send(json.dumps(msg))
             return True
         except Exception as e:
             self._last_error = str(e)
@@ -125,9 +131,10 @@ class VBotBridge:
         """Read pending actions from the bridge."""
         if not self._connected or not self._ws:
             return self._pending_actions
+        ws = self._ws
         try:
             async with asyncio.timeout(timeout):
-                raw = await self._ws.recv()
+                raw = await ws.recv()
             msg = json.loads(raw)
             action_type = msg.get("type", "")
             if action_type in ("bot_command", "action"):
@@ -146,9 +153,11 @@ class VBotBridge:
         """Request bot list from the bridge."""
         if not self._connected:
             return []
+        ws = self._ws
+        assert ws is not None
         try:
-            await self._ws.send(json.dumps({"type": "list_bots"}))
-            raw = await self._ws.recv()
+            await ws.send(json.dumps({"type": "list_bots"}))
+            raw = await ws.recv()
             resp = json.loads(raw)
             return resp.get("bots", [])
         except Exception as e:

@@ -5,9 +5,10 @@ import logging
 from typing import Annotated
 
 from fastmcp import Context
-from fastmcp.server.server import ToolResult
+from fastmcp.tools.base import ToolResult  # canonical home (BUG-059: server re-export trips static checks)
 from prefab_ui import PrefabApp
-from prefab_ui.components import Heading, Row
+from prefab_ui.components import Heading as _Heading
+from prefab_ui.components import Text
 from pydantic import Field
 
 from godot_mcp.fleet import service as fleet_service
@@ -17,10 +18,28 @@ from godot_mcp.steam import service as steam_service
 
 logger = logging.getLogger("godot-mcp.cards")
 
-_READ_ONLY = {"readonly": True}
+_READ_ONLY = {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
 
 
-async def show_godot_status_card(ctx: Context = None) -> ToolResult:
+def Heading(text: str, **kwargs) -> _Heading:
+    """Positional-text shim: prefab-ui 0.20 made content keyword-only.
+
+    This module was written against the old positional API
+    (``Heading("Title")``, ``Row("Label", "value")``), which now raises
+    TypeError at render time. The shims preserve every call site's intent
+    without a 46-site rewrite; drop them if prefab-ui ever restores
+    positional content.
+    """
+    return _Heading(content=text, **kwargs)
+
+
+def Row(label: str, value: str = "", **kwargs) -> Text:
+    """Two-arg row shim: 0.20 Row takes children only, not label/value."""
+    kwargs.pop("color", None)  # old severity tint has no 0.20 equivalent
+    return Text(f"{label}: {value}".strip(": ").strip())
+
+
+async def show_godot_status_card(ctx: Context | None = None) -> ToolResult:
     """Show Godot engine status as a rich Prefab card.
 
     ## Return Format
@@ -56,7 +75,7 @@ async def show_godot_status_card(ctx: Context = None) -> ToolResult:
     return ToolResult(content=plain, structured_content=app)
 
 
-async def show_itch_status_card(ctx: Context = None) -> ToolResult:
+async def show_itch_status_card(ctx: Context | None = None) -> ToolResult:
     """Show itch.io/Butler publishing status as a rich Prefab card.
 
     ## Return Format
@@ -82,7 +101,7 @@ async def show_itch_status_card(ctx: Context = None) -> ToolResult:
     return ToolResult(content=plain, structured_content=app)
 
 
-async def show_steam_status_card(ctx: Context = None) -> ToolResult:
+async def show_steam_status_card(ctx: Context | None = None) -> ToolResult:
     """Show Steam publishing readiness as a rich Prefab card.
 
     ## Return Format
@@ -104,7 +123,7 @@ async def show_steam_status_card(ctx: Context = None) -> ToolResult:
     return ToolResult(content=plain, structured_content=app)
 
 
-async def show_fleet_status_card(ctx: Context = None) -> ToolResult:
+async def show_fleet_status_card(ctx: Context | None = None) -> ToolResult:
     """Show fleet exchange depot status as a rich Prefab card.
 
     ## Return Format
@@ -128,7 +147,7 @@ async def show_fleet_status_card(ctx: Context = None) -> ToolResult:
     return ToolResult(content=plain, structured_content=app)
 
 
-async def show_workflows_card(ctx: Context = None) -> ToolResult:
+async def show_workflows_card(ctx: Context | None = None) -> ToolResult:
     """Show built-in workflows as a rich Prefab card.
 
     ## Return Format
@@ -149,7 +168,7 @@ async def show_workflows_card(ctx: Context = None) -> ToolResult:
     return ToolResult(content=plain, structured_content=app)
 
 
-async def show_viewport_card(ctx: Context = None) -> ToolResult:
+async def show_viewport_card(ctx: Context | None = None) -> ToolResult:
     """Capture and show the Godot viewport as a Prefab card.
 
     Requires the Godot bridge to be connected. Falls back to a hint
@@ -196,7 +215,7 @@ async def show_viewport_card(ctx: Context = None) -> ToolResult:
     return ToolResult(content=plain, structured_content=app)
 
 
-async def show_profile_card(ctx: Context = None) -> ToolResult:
+async def show_profile_card(ctx: Context | None = None) -> ToolResult:
     """Show Godot performance metrics as a rich Prefab card.
 
     ## Return Format
@@ -232,7 +251,7 @@ async def show_profile_card(ctx: Context = None) -> ToolResult:
     return ToolResult(content=plain, structured_content=app)
 
 
-async def show_validate_meshes_card(ctx: Context = None) -> ToolResult:
+async def show_validate_meshes_card(ctx: Context | None = None) -> ToolResult:
     """Show mesh validation results as a rich Prefab card.
 
     ## Return Format
@@ -269,7 +288,7 @@ async def show_state_digest_card(
     node_names: Annotated[
         list[str] | None, Field(description="Optional node name filter. Omit for all watched nodes.", default=None)
     ] = None,
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> ToolResult:
     """Show structured game state as a rich Prefab card.
 
@@ -315,7 +334,7 @@ async def show_state_digest_card(
 
 async def show_read_node_card(
     node: Annotated[str, Field(description="Node path or name to inspect.")],
-    ctx: Context = None,
+    ctx: Context | None = None,
 ) -> ToolResult:
     """Show a single node's properties as a rich Prefab card.
 

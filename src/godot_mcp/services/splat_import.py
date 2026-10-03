@@ -252,7 +252,7 @@ def parse_splat_ply(
                 positions.append((px * pos_scale, py * pos_scale, pz * pos_scale))
                 colors.append((int(sh_to_rgb(r) * 255), int(sh_to_rgb(g) * 255), int(sh_to_rgb(b) * 255)))
 
-                if has_scale:
+                if has_scale and scales_3d is not None:
                     sx = vals[prop_names.index("scale_0")]
                     sy = vals[prop_names.index("scale_1")]
                     sz = vals[prop_names.index("scale_2")]
@@ -303,7 +303,7 @@ def write_compact_binary(
             px, py, pz = positions[i]
             r, g, b = colors[i]
             f.write(_STRUCT_SPLAT.pack(px, py, pz, r, g, b, 255))
-            if has_scale:
+            if has_scale and scales_3d is not None:
                 sx, sy, sz = scales_3d[i]
                 f.write(struct.pack("<fff", sx, sy, sz))
             else:

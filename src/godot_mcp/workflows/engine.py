@@ -16,7 +16,7 @@ class WorkflowStep:
 
     async def execute(self, execute_tool_fn) -> dict:
         logger.info("Workflow step: %s -> %s", self.name, self.tool)
-        self.result = await execute_tool_fn(self.tool, self.params)
+        self.result = (await execute_tool_fn(self.tool, self.params)) or {}
         return self.result
 
 
