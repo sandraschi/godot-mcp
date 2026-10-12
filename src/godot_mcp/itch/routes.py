@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter
 from pydantic import BaseModel
 
@@ -85,4 +87,4 @@ async def ship_route(body: ShipRequest):
 
 @router.get("/latest")
 async def latest_route(itch_target: str | None = None, channel: str | None = None):
-    return service.itch_latest_version(itch_target=itch_target, channel=channel)
+    return await asyncio.to_thread(service.itch_latest_version, itch_target=itch_target, channel=channel)

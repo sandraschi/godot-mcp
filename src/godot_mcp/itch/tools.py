@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Annotated, Literal
 
 from fastmcp import Context
@@ -84,7 +85,7 @@ async def itch_latest_version(
     ctx: Context | None = None,
 ) -> dict:
     """Query api.itch.io/wharf/latest for the newest build version on a channel."""
-    return service.itch_latest_version(itch_target=itch_target, channel=channel)
+    return await asyncio.to_thread(service.itch_latest_version, itch_target=itch_target, channel=channel)
 
 
 async def ship_to_itch(
@@ -173,7 +174,7 @@ async def itch_ops(
         case "push":
             return s.itch_push(upload_dir or "", itch_target=itch_target, channel=channel, hidden=hidden)
         case "latest":
-            return s.itch_latest_version(itch_target=itch_target, channel=channel)
+            return await asyncio.to_thread(s.itch_latest_version, itch_target=itch_target, channel=channel)
         case "ship":
             return s.ship_to_itch(
                 target=target or "web",
