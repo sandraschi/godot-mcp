@@ -4,7 +4,7 @@
     Name         = 'godot-mcp'
     BackendPort  = 10993
     FrontendPort = 10992
-    HealthPath   = '/api/v1/status'
+    HealthPath   = '/api/v1/health'
     WebRoot      = 'webapp'
     Backend = @{
         Kind          = 'uvicorn'
