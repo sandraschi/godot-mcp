@@ -33,9 +33,19 @@ export default function HelpPage() {
 				))}
 			</div>
 			<div className="bg-[#1e1e26] border border-white/10 rounded-2xl p-6 text-sm text-slate-400 leading-relaxed space-y-4">
-				{tab === "intro" && (
-					<>
-						<p>
+			{tab === "intro" && (
+				<>
+					<a
+						href="/game-builder"
+						className="block p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 to-pink-500/20 border border-amber-500/30 hover:border-amber-400/50 transition-all"
+					>
+						<p className="text-amber-400 font-bold text-sm">Start here: Game Builder - prompt to playable game</p>
+						<p className="text-xs text-slate-300 mt-1">
+							Describe a game in one sentence, get back a GamePlan, Godot scene, GDScript, and HTML5
+							export. Open the Game Builder page to run the 6-step pipeline. Precursor to gamecraft.
+						</p>
+					</a>
+					<p>
 							<strong className="text-slate-200">Godot MCP</strong> is a FastMCP 3.4 server with 80+ tools for Godot 4
 							engine control, AI-powered game generation, and cross-repo publishing pipelines.
 						</p>
@@ -102,9 +112,19 @@ export default function HelpPage() {
 					</>
 				)}
 
-				{tab === "game-builder" && (
-					<>
-						<p>
+			{tab === "game-builder" && (
+				<>
+					<a
+						href="/game-builder"
+						className="block p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 to-pink-500/20 border border-amber-500/30 hover:border-amber-400/50 transition-all"
+					>
+						<p className="text-amber-400 font-bold text-sm">Open Game Builder - run the full pipeline</p>
+						<p className="text-xs text-slate-300 mt-1">
+							Design, Worlds, Compose, Logic, Export, Ship - from prompt to itch.io. Precursor to
+							gamecraft: the standalone builder/depot that validates and play-checks every game.
+						</p>
+					</a>
+					<p>
 							<strong className="text-slate-200">Game Builder</strong> — turn a natural language concept into a Godot
 							game.
 						</p>

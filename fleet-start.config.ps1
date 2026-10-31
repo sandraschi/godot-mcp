@@ -9,6 +9,9 @@
     Backend = @{
         Kind          = 'uvicorn'
         UvicornTarget = 'godot_mcp.server:app'
+        # Slow starter: heavy import (fastmcp + 95 tools) + bridge probe.
+        # Central default is 20s; godot needs 40s cold.
+        HealthTimeoutSec = 40
         Env           = @{ WEB_PORT = '10993' }
     }
     Frontend = @{

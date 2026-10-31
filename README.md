@@ -30,6 +30,30 @@ See [INSTALL.md](INSTALL.md) for all options (MCPB, dev setup, naked PC).
 
 ---
 
+## Start Here: Game Builder (prompt to playable game)
+
+New here? This is the showpiece. Describe a game in one sentence and get back
+a structured **GamePlan** (worlds, scenes, scripts, mechanics), Marble 3D worlds,
+a composed Godot 4.4 scene, validated GDScript, and an HTML5 export ready for
+itch.io. Precursor to our standalone **gamecraft** repo.
+
+```powershell
+just gb-demo "A 2D runner where you collect stars and avoid spikes"
+```
+
+- Open the dashboard: **Game Builder** page (`/game-builder`) — 6-step pipeline viz (Design, Worlds, Compose, Logic, Export, Ship).
+- Walkthrough: [Game Builder Tutorial](docs/game-builder-tutorial.md) — prompt to game, end to end.
+- Help tab in the webapp (`/help` — Game Builder section) lists every tool with copy-paste examples.
+- Needs Ollama for LLM planning (`ollama pull gemma4:12b`), worldlabs-mcp `:10865` for Marble worlds (optional), Godot bridge `:9080` for scene import.
+
+> Next generation: **[gamecraft](../gamecraft)** is our new champion game
+> builder and depot. It takes a sentence, validates the plan, compiles a real
+> Godot 4 project folder, boots Godot headless, and verifies the game can
+> actually be finished. godot-mcp Game Builder is the in-dashboard precursor;
+> gamecraft is where new builder work lands.
+
+---
+
 ## Features
 
 - **Game Builder** — `design_game` -> `generate_game_logic` -> `generate_game_tests` -> `generate_dialogue` -> export. Validated with gdlint + godot --check-only, auto-repaired by LLM. [Tutorial](docs/game-builder-tutorial.md)

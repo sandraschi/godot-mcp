@@ -99,6 +99,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     _state["godot_available"] = godot_exe is not None
     _state["godot_host"] = GODOT_HOST
     _state["godot_port"] = GODOT_PORT
+    _state["bridge_status"] = "probing"
 
     if godot_exe:
         logger.info("Godot MCP startup - engine found at %s", godot_exe)
@@ -107,18 +108,28 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     logger.info("Godot MCP TCP bridge: %s:%s", GODOT_HOST, GODOT_PORT)
 
-    # Attempt bridge connection at startup (blocking socket - off the event loop)
-    result = await asyncio.to_thread(_bridge.connect)
-    if result["success"]:
-        logger.info("Godot bridge connected: %s", result.get("data", {}))
-    else:
-        logger.warning("Godot bridge not available at startup: %s", result.get("error", "unknown"))
+    async def _probe_bridge_async() -> None:
+        # Background probe so /api/v1/status goes green without waiting
+        # for the Godot editor (10s socket timeout when Godot is absent).
+        try:
+            result = await asyncio.to_thread(_bridge.connect)
+            if result["success"]:
+                _state["bridge_status"] = "connected"
+                logger.info("Godot bridge connected: %s", result.get("data", {}))
+            else:
+                _state["bridge_status"] = "unavailable"
+                logger.warning("Godot bridge not available at startup: %s", result.get("error", "unknown"))
+        except Exception as exc:
+            _state["bridge_status"] = "error"
+            logger.warning("Godot bridge probe failed: %s", exc)
 
     # Start iOS mobile gateway background tasks (log push, status push)
     install_log_handler()
     log_activity("server", "Godot MCP started", level="INFO", meta={"version": __version__})
     start_background_tasks()
     logger.info(get_endpoint_summary())
+
+    bridge_task = asyncio.create_task(_probe_bridge_async())
 
     try:
         if _mcp_http_app is not None:
@@ -128,6 +139,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         else:
             yield
     finally:
+        if not bridge_task.done():
+            bridge_task.cancel()
         stop_background_tasks()
         _bridge.disconnect()
         logger.info("Godot MCP shutdown - bridge disconnected")
@@ -161,7 +174,11 @@ app.include_router(itch_router)
 app.include_router(steam_router)
 app.include_router(logs_router)
 
-mcp = FastMCP.from_fastapi(app, name="Godot MCP")
+# Standalone MCP server: exposes ONLY the curated tools from register_all()
+# below. Do NOT use FastMCP.from_fastapi(app) here — it auto-converts every
+# REST route into a mirror tool (build_route_api_v1_* etc.), which doubled the
+# agent-visible tool list to ~150 with REST duplicates. REST stays on FastAPI.
+mcp = FastMCP("Godot MCP")
 
 # ── Skills Provider (FastMCP 3.1+ Resource-based) ──────────────────────────
 
