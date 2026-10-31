@@ -38,5 +38,10 @@ _dashboard/
 *.bak
 *.bak.*
 
+# Runtime output (regenerated every run; never commit)
+.godot/
+logs/
+gdextension_interface.h
+
 # Assfix working snapshots (regenerable; committed copy lives in docs/assess-reports/)
 reports/
