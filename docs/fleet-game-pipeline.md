@@ -47,8 +47,7 @@ worldlabs-mcp bridge (10865)
   → godot_import_glb (bridge 9080)
 ```
 
-Just: `just fleet-status`, `just fleet-worldlabs-import <world_id>`.  
-Assessment: [FLEET_ASSESSMENT.md](FLEET_ASSESSMENT.md) (reassessed 2026-05-25).
+Just: `just fleet-status`, `just fleet-worldlabs-import <world_id>`.
 
 ### 0b. Game Builder (Phase 1 — orchestration gaps)
 

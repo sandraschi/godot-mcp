@@ -1,6 +1,7 @@
-# godot-mcp — TODO (from assessment 2026-07-11)
+# godot-mcp — TODO
 
-Source: `docs/ASSESSMENT_2026-07-11.md`. This file tracks active work items.
+This file tracks active work items. The July 2026 assessments it was sourced
+from are deleted (work completed; history in CHANGELOG.md).
 Mark items off as completed and update CHANGELOG.md.
 
 ---

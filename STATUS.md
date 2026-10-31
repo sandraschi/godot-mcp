@@ -85,7 +85,7 @@ Workflows: `ship_windows_steam_beta`, `ship_windows_steam_release`. Env: `STEAM_
 | `fleet_worldlabs_stage_splat` | Implemented (SPZ to exchange; **not** Godot import) |
 | `fleet_worldlabs_import_mesh` | Implemented (stage + `godot_import_glb`) |
 
-REST: `/api/v1/fleet/*`. Assessment: `docs/FLEET_ASSESSMENT.md`. Just: `fleet-status`, `fleet-import`, `fleet-worldlabs-*`.
+REST: `/api/v1/fleet/*`. Just: `fleet-status`, `fleet-import`, `fleet-worldlabs-*`.
 
 **Splat gap: RESOLVED (2026-07-30).** This note was stale — `godot_import_splat`
 (with a custom billboarded Gaussian shader, per-splat scale, SH DC color) now
@@ -234,7 +234,7 @@ Full catalog: `samples/vibecode-runner/README.md`.
 - Tauri 2.0 + PyInstaller sidecar
 - MCD gamedev + project pages updated
 - VibeCode Runner sample + `docs/ai-and-indie-games.md`
-- `docs/fleet-game-pipeline.md` + `docs/FLEET_ASSESSMENT.md`
+- `docs/fleet-game-pipeline.md`
 
 ## Fleet standards compliance
 
@@ -289,12 +289,11 @@ Full catalog: `samples/vibecode-runner/README.md`.
 | **godot --export-release** | Headless HTML5/Windows export | `godot_export_release` tool |
 
 See `docs/godot-ecosystem.md` for the full ecosystem catalog.
-See `docs/ASSESSMENT_2026-07-11.md` for the full improvement roadmap.
 
 ## Next steps
 
 1. Live E2E test: `build_game` with worldlabs + bridge + sampling (needs worldlabs-mcp running) — ~4h
-2. All other items from the 54h assessment are **done** — see `docs/ASSESSMENT_2026-07-11.md`
+2. All other items from the July assessment are **done** (assessments removed 2026-10-31; history in CHANGELOG.md)
 
 ## Tools registered
 

@@ -177,7 +177,7 @@ just fleet-worldlabs-stage-mesh YOUR_WORLD_ID
 just fleet-worldlabs-import YOUR_WORLD_ID LevelCollider
 ```
 
-See [fleet-game-pipeline.md](./fleet-game-pipeline.md) and [FLEET_ASSESSMENT.md](./FLEET_ASSESSMENT.md).
+See [fleet-game-pipeline.md](./fleet-game-pipeline.md).
 
 #### `just health`
 
