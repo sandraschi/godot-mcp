@@ -737,9 +737,9 @@ class BridgeStartRequest:
 
 
 @app.post("/api/v1/bridge/start")
-async def start_bridge_endpoint(req: BridgeStartRequest):
+async def start_bridge_endpoint(req: BridgeStartRequest | None = None):
     """Locate Godot and launch it headless with the MCP bridge addon."""
-    return launch_bridge(req.project_root)
+    return launch_bridge(req.project_root if req else None)
 
 
 @dataclass

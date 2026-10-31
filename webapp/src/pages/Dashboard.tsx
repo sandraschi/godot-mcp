@@ -87,7 +87,11 @@ function LaunchBridgeButton() {
 	const launch = useCallback(async () => {
 		setLaunching(true);
 		try {
-			await apiFetch("/api/v1/bridge/start", { method: "POST" });
+			await apiFetch("/api/v1/bridge/start", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: "{}",
+			});
 			setTimeout(() => window.location.reload(), 5000);
 		} catch {
 			setLaunching(false);

@@ -37,7 +37,11 @@ def test_godot_status_hints_when_bridge_down():
 
 
 def test_bridge_reconnect_cycle():
-    """Disconnect -> reconnect should succeed even without a real Godot running."""
+    """Disconnect -> reconnect must never crash, with or without live Godot.
+
+    Bridge-down (CI default): connect fails gracefully with refused/timeout.
+    Bridge-up (dev with Godot running): connect succeeds; disconnect cleans up.
+    """
     bridge = GodotBridge()
 
     # Start disconnected
@@ -47,13 +51,23 @@ def test_bridge_reconnect_cycle():
     result = bridge.disconnect()
     assert result["success"] is True
 
-    # Reconnect will fail (no Godot running) but should not crash
+    # Reconnect: outcome depends on environment, both are valid
     result = bridge.connect()
-    assert result["success"] is False
-    assert "refused" in result["error"].lower() or "timeout" in result["error"].lower()
-
-    # Bridge should still be usable after failed connect
-    assert not bridge.connected
+    if result["success"]:
+        # Live Godot with the MCP bridge addon answered
+        assert bridge.connected
+        assert bridge.disconnect()["success"] is True
+        assert not bridge.connected
+    elif "no handshake" in result.get("error", "").lower():
+        # Bridge is alive but busy serving another client (e.g. the dev
+        # backend). Single-client server: no handshake until that client
+        # leaves. Nothing to assert - do not disturb the live session.
+        pytest.skip("bridge busy serving another client")
+    else:
+        # No Godot running: must fail gracefully, never crash
+        assert "refused" in result["error"].lower() or "timeout" in result["error"].lower()
+        # Bridge should still be usable after failed connect
+        assert not bridge.connected
 
 
 def test_bridge_idempotent_disconnect():

@@ -464,7 +464,7 @@ func _cmd_import_vrm(request_id: String, params: Dictionary):
 		_send_error("VRM addon failed to import: resource returned null", request_id)
 		return
 
-	var instance := scene.instantiate()
+	var instance: Node = (scene as PackedScene).instantiate()
 	if not instance:
 		_send_error("Failed to instantiate VRM scene", request_id)
 		return
@@ -1209,7 +1209,7 @@ func _cmd_simulate_input(request_id: String, params: Dictionary):
 		if key_name.is_empty():
 			continue
 		var event := InputEventKey.new()
-		event.keycode = OS.find_keycode(key_name)
+		event.keycode = OS.find_keycode_from_string(key_name)
 		if event.keycode == 0:
 			event.keycode = key_name.unicode_at(0)
 		event.pressed = pressed
@@ -1278,10 +1278,10 @@ func _cmd_inspect_resource(request_id: String, params: Dictionary):
 		elif res is ShaderMaterial:
 			var shm := res as ShaderMaterial
 			mat_info["shader_path"] = shm.shader.resource_path if shm.shader else null
-			var param_list := shm.get_shader_parameter_list()
+			var param_list: Array = shm.get_shader_parameter_list()
 			var params_dict := {}
 			for p in param_list:
-				var val := shm.get_shader_parameter(p.name)
+				var val: Variant = shm.get_shader_parameter(p.name)
 				if val is Color:
 					params_dict[p.name] = "#" + val.to_html()
 				else:
@@ -1320,15 +1320,14 @@ func _collect_profile_snapshot() -> Dictionary:
 		"process_time": Performance.get_monitor(Performance.TIME_PROCESS),
 		"physics_time": Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS),
 		"memory_static": Performance.get_monitor(Performance.MEMORY_STATIC),
-		"memory_dynamic": Performance.get_monitor(Performance.MEMORY_DYNAMIC),
 		"objects": Performance.get_monitor(Performance.OBJECT_COUNT),
 		"nodes": Performance.get_monitor(Performance.OBJECT_NODE_COUNT),
 		"orphan_nodes": Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT),
 		"render_draw_calls": Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
-		"render_primitives": Performance.get_monitor(Performance.RENDER_PRIMITIVES_IN_FRAME),
+		"render_primitives": Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME),
 		"render_video_mem": Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED),
-		"physics_active": Performance.get_monitor(Performance.PHYSICS_ACTIVE_OBJECTS),
-		"physics_collisions": Performance.get_monitor(Performance.PHYSICS_COLLISION_PAIRS),
+		"physics_active": Performance.get_monitor(Performance.PHYSICS_2D_ACTIVE_OBJECTS) + Performance.get_monitor(Performance.PHYSICS_3D_ACTIVE_OBJECTS),
+		"physics_collisions": Performance.get_monitor(Performance.PHYSICS_2D_COLLISION_PAIRS) + Performance.get_monitor(Performance.PHYSICS_3D_COLLISION_PAIRS),
 		"audio_latency": Performance.get_monitor(Performance.AUDIO_OUTPUT_LATENCY),
 	}
 
@@ -1352,13 +1351,13 @@ func _detect_spikes(snapshots: Array) -> Array:
 		avg /= vals.size()
 		var variance := 0.0
 		for v in vals:
-			var d := v - avg
+			var d: float = v - avg
 			variance += d * d
 		variance /= vals.size()
 		var std := sqrt(variance)
 		if std < 0.001:
 			continue
-		var latest := vals[-1]
+		var latest: float = vals[-1]
 		if abs(latest - avg) > 2.0 * std:
 			spikes.append({"metric": key, "value": latest, "mean": avg, "std": std})
 	return spikes
@@ -1422,7 +1421,7 @@ func _cmd_import_splat(request_id: String, params: Dictionary):
 	file.close()
 
 	# Load the Gaussian splat shader
-	var shader_path := "res://shaders/gaussian_splat.gdshader"
+	var shader_path := "res://src/godot_mcp/bridge/shaders/gaussian_splat.gdshader"
 	var shader := ResourceLoader.load(shader_path)
 	var mat := ShaderMaterial.new()
 	mat.shader = shader
@@ -1434,7 +1433,7 @@ func _cmd_import_splat(request_id: String, params: Dictionary):
 	var multimesh := MultiMesh.new()
 	multimesh.transform_format = MultiMesh.TRANSFORM_3D
 	multimesh.use_colors = true
-	multimesh.custom_data_format = MultiMesh.CUSTOM_DATA_FLOAT_SIZE_4
+	multimesh.use_custom_data = true
 	multimesh.instance_count = n
 
 	# Unit quad — the shader does the billboarding
@@ -1450,7 +1449,7 @@ func _cmd_import_splat(request_id: String, params: Dictionary):
 		t.origin = positions[i]
 		multimesh.set_instance_transform(i, t)
 		multimesh.set_instance_color(i, colors[i])
-		multimesh.set_instance_custom_data(i, custom_data[i])
+		multimesh.set_instance_custom_data(i, Color(custom_data[i].x, custom_data[i].y, custom_data[i].z, custom_data[i].w))
 
 	var mi := MultiMeshInstance3D.new()
 	mi.name = node_name
@@ -1482,7 +1481,7 @@ func _cmd_validate_meshes(request_id: String):
 	var all_meshes := _find_all_mesh_instances(root)
 	for mi in all_meshes:
 		total_meshes += 1
-		var mesh := mi.mesh
+		var mesh: Mesh = mi.mesh
 		if not mesh:
 			continue
 		var mesh_issues := _validate_single_mesh(mi)
@@ -1536,8 +1535,8 @@ func _validate_single_mesh(mi: MeshInstance3D) -> Array:
 		# Check for NaN/inf in vertices
 		if verts is PackedVector3Array:
 			for i in verts.size():
-				var v := verts[i]
-				if isnan(v.x) or isnan(v.y) or isnan(v.z) or is_inf(v.x) or is_inf(v.y) or is_inf(v.z):
+				var v: Vector3 = verts[i]
+				if is_nan(v.x) or is_nan(v.y) or is_nan(v.z) or is_inf(v.x) or is_inf(v.y) or is_inf(v.z):
 					found.append({"node": mi.name, "surface": surf_idx, "severity": "error",
 						"detail": "Vertex %d has NaN/inf: (%s, %s, %s)" % [i, v.x, v.y, v.z]})
 					if found.size() >= 5:
@@ -1546,7 +1545,7 @@ func _validate_single_mesh(mi: MeshInstance3D) -> Array:
 		# Check for zero-length normals
 		if normals is PackedVector3Array:
 			for i in normals.size():
-				var n := normals[i]
+				var n: Vector3 = normals[i]
 				if n.length_squared() < 0.0001:
 					found.append({"node": mi.name, "surface": surf_idx, "severity": "warning",
 						"detail": "Normal %d is zero-length" % i})
@@ -1566,9 +1565,9 @@ func _validate_single_mesh(mi: MeshInstance3D) -> Array:
 						tri_indices.append([i, i+1, i+2])
 
 			for tri in tri_indices:
-				var a := verts[tri[0]]
-				var b := verts[tri[1]]
-				var c := verts[tri[2]]
+				var a: Vector3 = verts[tri[0]]
+				var b: Vector3 = verts[tri[1]]
+				var c: Vector3 = verts[tri[2]]
 				var cross = (b - a).cross(c - a)
 				if cross.length_squared() < 0.0000001:
 					found.append({"node": mi.name, "surface": surf_idx, "severity": "warning",
@@ -1673,7 +1672,7 @@ func _cmd_animation_edit(request_id: String, params: Dictionary):
 		var keys := []
 		for k in anim.track_get_key_count(track_index):
 			var ktime := anim.track_get_key_time(track_index, k)
-			var kval := anim.track_get_key_value(track_index, k)
+			var kval: Variant = anim.track_get_key_value(track_index, k)
 			var ktrans := anim.track_get_key_transition(track_index, k)
 			keys.append({"index": k, "time": ktime, "value": str(kval), "transition": ktrans})
 		_send_response(request_id, {
@@ -1805,7 +1804,7 @@ func _cmd_tilemap_edit(request_id: String, params: Dictionary):
 		for c in cells:
 			var coord := Vector2i(c.get("x", 0), c.get("y", 0))
 			var source_id: int = c.get("source_id", 0)
-			var ac := c.get("atlas_coords", {"x": 0, "y": 0})
+			var ac: Dictionary = c.get("atlas_coords", {"x": 0, "y": 0})
 			var atlas := Vector2i(ac.get("x", 0), ac.get("y", 0))
 			var alt: int = c.get("alternative_tile", 0)
 			tml.set_cell(coord, source_id, atlas, alt)
@@ -2056,7 +2055,7 @@ func _collect_node_state(node: Node) -> Dictionary:
 	# Opt-in custom state via _mcp_state() method
 	if node.has_method("_mcp_state"):
 		result["mcp_state"] = true
-		var custom := node._mcp_state()
+		var custom: Variant = node.call("_mcp_state")
 		if typeof(custom) == TYPE_DICTIONARY:
 			for key in custom:
 				result[key] = custom[key]
